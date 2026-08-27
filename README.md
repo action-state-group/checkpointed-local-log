@@ -1,7 +1,5 @@
 # checkpointed-local-log
 
-*An Action State Group project.*
-
 **The Checkpointed Local Log (CLL)** — an IETF Internet-Draft specifying a
 producer-operated, append-only local log with periodic signed checkpoints.
 Entries are appended locally and never published; only a small checkpoint —
