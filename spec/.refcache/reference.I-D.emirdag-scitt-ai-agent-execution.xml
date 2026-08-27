@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.emirdag-scitt-ai-agent-execution" target="https://datatracker.ietf.org/doc/html/draft-emirdag-scitt-ai-agent-execution-00">
+   <front>
+      <title>AI Agent Execution Profile of SCITT</title>
+      <author initials="P." surname="Emirdag" fullname="Pinar Emirdag">
+         <organization>VERIDIC Inc.</organization>
+      </author>
+      <date month="April" day="11" year="2026" />
+      <abstract>
+	 <t>   This document defines a SCITT (Supply Chain Integrity, Transparency,
+   and Trust) profile for creating independently verifiable, tamper-
+   evident records of autonomous AI agent actions.  The profile defines
+   the AgentInteractionRecord (AIR) as the COSE_Sign1 signed statement
+   payload for material agent actions; maps SCITT roles to the agent
+   execution context, with the Agent Operator as Issuer and an
+   independent Evidence Custodian as Transparency Service; specifies
+   Registration Policy requirements including hash chain integrity,
+   temporal ordering, and sequence completeness; defines a redaction
+   receipt mechanism for privacy-preserving evidence custody; and
+   provides compliance mappings to EU AI Act Articles 12 and 19, DORA,
+   NIST AI RMF, MAS AI Risk Management Guidelines, PCI DSS v4.0, and
+   MiFID II.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-emirdag-scitt-ai-agent-execution-00" />
+   
+</reference>

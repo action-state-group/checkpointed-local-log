@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-cose-merkle-tree-proofs" target="https://datatracker.ietf.org/doc/html/draft-ietf-cose-merkle-tree-proofs-18">
+   <front>
+      <title>COSE (CBOR Object Signing and Encryption) Receipts</title>
+      <author initials="O." surname="Steele" fullname="Orie Steele">
+         <organization>Tradeverifyd</organization>
+      </author>
+      <author initials="H." surname="Birkholz" fullname="Henk Birkholz">
+         <organization>Fraunhofer SIT</organization>
+      </author>
+      <author initials="A." surname="Delignat-Lavaud" fullname="Antoine Delignat-Lavaud">
+         <organization>Microsoft</organization>
+      </author>
+      <author initials="C." surname="Fournet" fullname="Cedric Fournet">
+         <organization>Microsoft</organization>
+      </author>
+      <date month="December" day="2" year="2025" />
+      <abstract>
+	 <t>   COSE (CBOR Object Signing and Encryption) Receipts prove properties
+   of a verifiable data structure to a verifier.  Verifiable data
+   structures and associated proof types enable security properties,
+   such as minimal disclosure, transparency and non-equivocation.
+   Transparency helps maintain trust over time, and has been applied to
+   certificates, end to end encrypted messaging systems, and supply
+   chain security.  This specification enables concise transparency
+   oriented systems, by building on CBOR (Concise Binary Object
+   Representation) and COSE.  The extensibility of the approach is
+   demonstrated by providing CBOR encodings for Merkle inclusion and
+   consistency proofs.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-cose-merkle-tree-proofs-18" />
+   
+</reference>

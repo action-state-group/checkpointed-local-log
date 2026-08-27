@@ -1,0 +1,616 @@
+
+
+
+
+SCITT                                                             S. Mih
+Internet-Draft                                        Action State Group
+Intended status: Standards Track                          27 August 2026
+Expires: 28 February 2027
+
+
+                    The Checkpointed Local Log (CLL)
+               draft-mih-scitt-checkpointed-local-log-00
+
+Abstract
+
+   Many systems emit individually signed records — receipts,
+   attestations, statements — and store them locally.  Each record
+   verifies on its own, but the collection proves nothing: records can
+   be deleted, reordered, or created after the fact without detection.
+   This document specifies the Checkpointed Local Log (CLL): a producer-
+   operated append-only log, built on the Merkle Mountain Range
+   structure whose COSE proof formats are specified in
+   [I-D.bryce-cose-receipts-mmr-profile], together with a small signed
+   checkpoint that commits to the log's entire history.  Records of any
+   format are appended as they are produced; checkpoints are emitted on
+   a declared cadence and may be registered with one or more independent
+   Transparency Services or witnesses using existing SCITT registration.
+   A CLL upgrades a set of point receipts into a stream with provable
+   order, contemporaneity, and completeness — while defining precisely,
+   and narrowly, what such a log does and does not establish.  This
+   document defines the log discipline and the checkpoint structure; it
+   defines no new proof formats, no transparency service behavior, and
+   no payload semantics.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 28 February 2027.
+
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 1]
+
+Internet-Draft                     CLL                       August 2026
+
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Conventions and Definitions . . . . . . . . . . . . . . .   3
+   2.  The Log Discipline  . . . . . . . . . . . . . . . . . . . . .   4
+   3.  The Checkpoint  . . . . . . . . . . . . . . . . . . . . . . .   4
+     3.1.  Required constraints — elected once, then binding . . . .   6
+     3.2.  Witnessing  . . . . . . . . . . . . . . . . . . . . . . .   7
+     3.3.  Stub Countersignatures  . . . . . . . . . . . . . . . . .   7
+   4.  Verification  . . . . . . . . . . . . . . . . . . . . . . . .   8
+   5.  What a CLL Does and Does Not Establish  . . . . . . . . . . .   8
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
+   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  10
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  10
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  10
+     8.2.  Informative References  . . . . . . . . . . . . . . . . .  11
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  11
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  11
+
+1.  Introduction
+
+   A signed record proves that its issuer produced those bytes.  It does
+   not prove when the record was produced relative to its neighbors,
+   that no record between two others was deleted, or that the set
+   presented to a verifier is the set that existed.  In current
+   practice, producers of agent receipts, decision records, build
+   attestations, SBOM and other supply-chain artifact revisions, and
+   similar records sign each record and store the results in ordinary
+   storage — a "log" whose integrity rests entirely on the operator's
+   word.  A relying party examining such a collection cannot distinguish
+   an honest archive from a curated one.  The problem is payload-
+   neutral: a stream of SBOM revisions and a stream of agent action
+   receipts fail in exactly the same way, and this document treats them
+   identically.
+
+
+
+Mih                     Expires 28 February 2027                [Page 2]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   Transparency logs in the style of [RFC9162] address this by
+   publishing entries to a small number of large, centrally operated
+   logs, where anyone can audit the whole.  That model asks two things
+   the local case cannot give: that the entries themselves be published
+   to a log the producer does not control, which is unacceptable when
+   the content is private; and that each record be registered with a
+   central service as it is produced, which a producer emitting
+   thousands of records a day will not sustain in cost or latency.  The
+   need is a construction that keeps entries local and private and still
+   lets a relying party check order and completeness.
+
+   The Checkpointed Local Log occupies the middle position: the log is
+   local and private; only a small *checkpoint* — a signed commitment to
+   the log's entire history — ever leaves the producer.  The local log
+   makes the record set tamper-evident to anyone who trusts the
+   producer; the checkpoint collapses that history, however many
+   entries, into one commitment cheap enough to publish on every
+   emission; and a witness — because it verifies each checkpoint's
+   consistency with the one before — is what removes "trust the
+   producer" from existence and ordering claims.  The Merkle Mountain
+   Range (MMR) structure makes this practical: appends are streaming and
+   never restructure earlier entries, and inclusion and consistency
+   proofs are logarithmic.  This document deliberately specifies a
+   thing, not a protocol: the log discipline (when entries are
+   appended), the checkpoint structure and its REQUIRED constraints, and
+   the verification claims the pair supports.  Proof formats come from
+   [I-D.bryce-cose-receipts-mmr-profile]; checkpoint registration, where
+   elected, uses SCITT registration [I-D.ietf-scitt-architecture]
+   unchanged.
+
+1.1.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   *Entry:* a byte string appended to the log.  Entries are opaque to
+   this specification.  An entry is typically the digest of a signed
+   record produced by the operator or received from another party; the
+   binding between an entry and the record it commits to MAY be
+   expressed using a declared digest context (e.g.,
+   [I-D.mih-sokolov-scitt-payload-binding]), including contexts that
+   commit to already-signed bytes exactly as transmitted.
+
+
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 3]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   *Log:* an append-only sequence of entries organized as a Merkle
+   Mountain Range per [I-D.bryce-cose-receipts-mmr-profile]'s underlying
+   structure.
+
+   *Checkpoint:* a signed statement committing to the log's state at a
+   given size, structured per Section 3.
+
+   *Witness:* a party other than the log operator that receives
+   checkpoints, verifies their consistency with previously received
+   checkpoints from the same log identity, and retains or countersigns
+   them.  A SCITT Transparency Service acting on registered checkpoint
+   statements is one kind of witness.
+
+   *Producer / operator:* the party that appends entries and signs
+   checkpoints.  This specification assumes they are the same party
+   (Section 5).
+
+   *Log identity:* the pair (producer identity, log identifier) carried
+   in the checkpoint's CWT_Claims (Section 3.2).  All continuity
+   requirements in this document are per log identity.
+
+2.  The Log Discipline
+
+   1.  *Append at production time.* An entry SHOULD be appended when the
+       record it commits to is produced or received, not batched for
+       later assembly.  The evidentiary difference is the point of this
+       document: an entry appended at time t is committed by every
+       subsequent checkpoint, so contemporaneity becomes checkable; end-
+       of-period assembly permits curation that no later verification
+       can detect.
+
+   2.  *Append-only.* Entries MUST NOT be modified or removed.  Erasure
+       of the _content_ an entry commits to is a separate act on
+       separate storage and does not touch the log; the entry (a digest)
+       remains.
+
+   3.  *One log, one signing identity.* A log's checkpoints are signed
+       under one key at a time.  Key rotation is announced by an entry
+       declaring the rotation — produced under the outgoing key and
+       naming the incoming key identifier — appended before the first
+       checkpoint signed under the new key.  The log identity
+       (Section 3.2) is unchanged by rotation.
+
+3.  The Checkpoint
+
+   A checkpoint is a COSE_Sign1 [RFC9052] whose payload is a CBOR map
+   [RFC8949] with the following claims:
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 4]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   +=================+======+=========================================+
+   | Claim           | Type | Description                             |
+   +=================+======+=========================================+
+   | kind            | tstr | MUST be "cll-checkpoint"                |
+   +-----------------+------+-----------------------------------------+
+   | log_size        | uint | number of entries committed             |
+   +-----------------+------+-----------------------------------------+
+   | commitment      | bstr | the accumulator state (peak commitment) |
+   |                 |      | for the MMR over entries 0..log_size-1, |
+   |                 |      | exactly the commitment object of        |
+   |                 |      | [I-D.bryce-cose-receipts-mmr-profile]   |
+   |                 |      | at that size                            |
+   +-----------------+------+-----------------------------------------+
+   | prev_size       | uint | log_size of this log's previous         |
+   |                 |      | checkpoint; 0 for the first             |
+   +-----------------+------+-----------------------------------------+
+   | prev_commitment | bstr | the previous checkpoint's commitment;   |
+   |                 |      | zero-length for the first               |
+   +-----------------+------+-----------------------------------------+
+   | issued_at       | tstr | issuance time per [RFC3339]             |
+   +-----------------+------+-----------------------------------------+
+   | cadence         | uint | OPTIONAL: declared maximum seconds      |
+   |                 |      | between checkpoints (Section 3.1)       |
+   +-----------------+------+-----------------------------------------+
+
+                                 Table 1
+
+   The protected header carries the algorithm and the key identifier of
+   the log's signing identity, and the CWT_Claims of Section 3.2.
+   Additional claims MAY be present; verifiers MUST ignore claims they
+   do not understand.
+
+   When a checkpoint is conveyed to a witness, the producer MUST make
+   available, with it or on request, the
+   [I-D.bryce-cose-receipts-mmr-profile] consistency proof from
+   prev_size/prev_commitment to log_size/commitment; the witness cannot
+   perform the Section 3.1 check without it.
+
+   *Cryptographic agility.* This document defines no hash or signature
+   algorithm of its own.  The commitment is an opaque byte string whose
+   construction, including its hash algorithm, is entirely that of
+   [I-D.bryce-cose-receipts-mmr-profile]; the checkpoint's signature
+   algorithm is carried in the COSE protected header per [RFC9052].  A
+   CLL therefore inherits algorithm agility from both underlying
+   specifications and adds no agility surface of its own.
+
+
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 5]
+
+Internet-Draft                     CLL                       August 2026
+
+
+3.1.  Required constraints — elected once, then binding
+
+   Publishing checkpoints is OPTIONAL. *Once a producer elects to
+   publish, the following are REQUIREMENTS*, because a checkpoint regime
+   with discretionary gaps supports none of the claims in Section 5:
+
+   1.  *Declared cadence.* The producer MUST declare a maximum interval
+       between checkpoints (and MAY declare a maximum entry lag).  The
+       declaration SHOULD be carried in the checkpoint's cadence claim;
+       however conveyed, it MUST be available to every witness.  A
+       missing checkpoint at any witness is thereby a detectable event,
+       not an ambiguity.
+
+   2.  *Continuity.* Each checkpoint's log_size MUST be greater than or
+       equal to its prev_size, and the consistency relation of
+       [I-D.bryce-cose-receipts-mmr-profile] MUST hold between
+       prev_commitment at prev_size and commitment at log_size.  This
+       _internal_ relation is checkable offline by any verifier holding
+       the two checkpoints and the proof between them; it establishes
+       that the presented history was not rewritten between them.  It
+       does *not*, by itself, establish that no divergent history
+       exists: a forking producer can satisfy the internal relation on
+       each fork separately.  Detecting that requires state across time,
+       which a single offline verifier does not have.  Therefore a
+       *checkpoint-aware witness* — one representing itself as
+       conferring continuity — MUST additionally verify that the
+       presented prev_size/prev_commitment equal the log_size/commitment
+       of the last checkpoint _it itself accepted_ for this log
+       identity, and on failure MUST refuse to register or countersign
+       and MUST treat the failure as evidence of log mutation, never as
+       an error to be retried.  A witness that only registers or
+       timestamps the checkpoint without this check confers existence
+       and time, not continuity (Section 3.2).
+
+   3.  *Named, independent witnesses.* A producer representing a log as
+       witnessed to a relying party MUST name the witnesses it relies on
+       for that representation.  A witness operated by the producer
+       confers no witnessed status; it is a replica.
+
+   4.  *No claims beyond the last witnessed checkpoint.* Entries
+       appended after the most recent witnessed checkpoint are, to a
+       relying party, exactly as strong as an unwitnessed log.
+       Producers MUST NOT represent them otherwise.
+
+
+
+
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 6]
+
+Internet-Draft                     CLL                       August 2026
+
+
+3.2.  Witnessing
+
+   A checkpoint is conveyed to a witness by any transport.  The
+   checkpoint's protected header MUST carry the CWT_Claims required by
+   [I-D.ietf-scitt-architecture] for Signed Statements: iss identifies
+   the producer, and sub identifies the log (together, the *log
+   identity* all continuity checks key on).  A witness's confirmation
+   takes one of two forms:
+
+   1.  *SCITT registration.* The checkpoint COSE_Sign1 is registered as
+       a Signed Statement per [I-D.ietf-scitt-architecture], and the
+       [RFC9942] Receipt returned by the Transparency Service is the
+       witness's confirmation — third-party evidence of the checkpoint's
+       existence and time of registration.  A Transparency Service
+       unaware of this document can accept the checkpoint as an ordinary
+       Signed Statement; one that additionally performs the Section 3.1
+       continuity check before registration is a *checkpoint-aware
+       witness*, and only its Receipts carry the continuity meaning of
+       Section 5.
+
+   2.  *Direct countersignature.* A witness that is not a Transparency
+       Service returns a COSE countersignature (Countersignature version
+       2, [RFC9338]) over the checkpoint COSE_Sign1, conveyed in the
+       checkpoint's unprotected header or alongside it.  Such a witness
+       MUST perform the Section 3.1 continuity check before
+       countersigning.
+
+   Either confirmation attests existence and time.  The continuity
+   attestation — that this checkpoint extends the last one this witness
+   accepted — is exactly what Section 3.1 adds, and a verifier weighing
+   a witnessed checkpoint SHOULD know which kind of witness produced it.
+
+   Multiple independent witnesses strengthen the log against
+   equivocation (presenting different histories to different parties):
+   an equivocating producer must partition every witness a verifier
+   might consult (Section 6).
+
+3.3.  Stub Countersignatures
+
+   Implementations MAY provide a local, non-witness countersigner for
+   test and development use (a "stub").  A stub's countersignature
+   ([RFC9338]) MUST include the header parameter cll-stub (label TBD1,
+   value true) in its protected header, and MUST list that label in the
+   crit parameter (Section 3.1 of [RFC9052]).  A verifier that
+   recognizes cll-stub MUST treat the countersignature as conferring no
+   witnessing: entries covered only by stub countersignatures retain the
+   assurance of an unwitnessed checkpoint.  An implementation performing
+   [RFC9052]-conformant validation that does not recognize the parameter
+
+
+
+Mih                     Expires 28 February 2027                [Page 7]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   will treat the countersignature as invalid under crit processing — in
+   either case the result is unwitnessed, never witnessed.  A stub
+   countersignature MUST NOT be presented as an [RFC9942] Receipt, and a
+   witness MUST NOT emit the cll-stub parameter.
+
+4.  Verification
+
+   Given a checkpoint (witnessed or not), a verifier can check, using
+   only the proof formats of [I-D.bryce-cose-receipts-mmr-profile]:
+
+   *  *Inclusion:* a given entry is committed at a given position under
+      commitment.
+
+   *  *Consistency:* a later checkpoint's log extends an earlier
+      checkpoint's log without modification.
+
+   *  *Range completeness:* the entries between positions i and j under
+      a checkpoint are exactly the presented set — nothing between them
+      was omitted.
+
+   Given a _witnessed_ checkpoint, each of these claims additionally
+   holds against a party who does not trust the producer, to the extent
+   the verifier trusts that the witnesses are independent of the
+   producer and would not jointly conceal an inconsistency.
+
+5.  What a CLL Does and Does Not Establish
+
+   A CLL with witnessed checkpoints establishes: that each committed
+   entry existed no later than the first witnessed checkpoint covering
+   it (*contemporaneity*); that the committed sequence has not been
+   reordered, had entries removed, or been rewritten (*order and
+   integrity*); and that a presented range is complete (*completeness*).
+
+   These claims come from what the witness sees, which is *only
+   checkpoints, not entries*. A checkpoint witness receives commitments;
+   it does not receive, index, or retain the entries themselves.  It
+   therefore attests the _shape_ of the committed history — existence,
+   order, completeness of the committed sequence — and nothing about any
+   individual entry beyond its membership.  Two consequences a reader
+   familiar with per-record transparency logs must not overlook: a
+   checkpoint witness cannot be queried as an independent index or
+   lookup for a particular record, because it never held one; and
+   verifying any individual entry still requires the producer, or
+   another holder, to present that entry and its inclusion proof — the
+   witness confirms the commitment they resolve against, not the entry.
+   A deployment that needs a witness to independently serve or attest
+   individual records registers those records with a Transparency
+   Service directly ([I-D.ietf-scitt-architecture]); that is a different
+
+
+
+Mih                     Expires 28 February 2027                [Page 8]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   trade — publication and per-record registration cost in exchange for
+   independent per-record lookup — and is outside this document, which
+   commits only the checkpoint.
+
+   A CLL establishes *nothing about the truth of any entry's content*. A
+   perfectly witnessed log of false records is a perfectly witnessed set
+   of false records.  Whether a record's content is accurate, whether
+   its signer was authorized, and whether any claimed real-world effect
+   occurred are separate claims requiring separate evidence
+   (counterparty confirmation, external corroboration), outside this
+   document's scope.  Producers and tools MUST NOT present witnessed
+   status as evidence of content accuracy.
+
+   A CLL likewise does not establish that the log is the producer's
+   _only_ log, nor that all records the producer created were appended.
+   It bounds omission _within_ the committed history; it cannot prove a
+   parallel uncommitted history does not exist.  Deployments for which
+   that distinction matters bind the log identity to an accountable
+   party by mechanisms outside this document.
+
+6.  Security Considerations
+
+   *Equivocation.* A producer maintaining two divergent logs under one
+   identity must present each witness a consistent view.  With k
+   independent witnesses and a verifier that checks any subset of them,
+   sustained equivocation requires controlling or partitioning every
+   witness that verifier consults; the cheapness of MMR checkpoint
+   verification (a witness verifies consistency from the prior
+   commitment and a logarithmic proof, holding no entry data) is what
+   makes a meaningful number of independent witnesses economically
+   plausible.  Verifiers SHOULD consult more than one witness where the
+   deployment's threat model includes producer-witness collusion.
+
+   *Backdating.* An entry can be created with any internal timestamp,
+   but its position in the log bounds its creation time from above by
+   the first witnessed checkpoint covering it.  The backdating window is
+   therefore the declared cadence plus witness latency.  Producers
+   wanting a smaller window declare a shorter cadence.
+
+   *Key compromise.* A stolen signing key permits forged future
+   checkpoints but cannot rewrite history already held by witnesses: a
+   forged checkpoint inconsistent with a witnessed predecessor is
+   detected by constraint 2 of Section 3.1.  Witness retention of
+   checkpoints is therefore part of the security function, and witnesses
+   SHOULD retain all checkpoints for a log identity, not merely the
+   latest.
+
+
+
+
+
+Mih                     Expires 28 February 2027                [Page 9]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   *Privacy.* A checkpoint reveals the log's size and cadence and
+   nothing else; entries are digests; content never leaves the producer.
+   Deployments for which entry _count_ is sensitive MAY pad with
+   reserved entries; this document does not define a padding scheme.
+
+7.  IANA Considerations
+
+   This document will request registration of the cll-stub COSE header
+   parameter (Section 3.3) in the "COSE Header Parameters" registry
+   (label TBD1, value type bool, reference this document).
+
+8.  References
+
+8.1.  Normative References
+
+   [I-D.bryce-cose-receipts-mmr-profile]
+              Bryce, R., "COSE Receipts for MMRs", Work in Progress,
+              Internet-Draft, draft-bryce-cose-receipts-mmr-profile-02,
+              14 June 2026, <https://datatracker.ietf.org/doc/html/
+              draft-bryce-cose-receipts-mmr-profile-02>.
+
+   [I-D.ietf-scitt-architecture]
+              Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
+              Y., and S. Lasker, "An Architecture for Trustworthy and
+              Transparent Digital Supply Chains", Work in Progress,
+              Internet-Draft, draft-ietf-scitt-architecture-22, 10
+              October 2025, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-scitt-architecture-22>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/rfc/rfc3339>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+   [RFC8949]  Bormann, C. and P. Hoffman, "Concise Binary Object
+              Representation (CBOR)", STD 94, RFC 8949,
+              DOI 10.17487/RFC8949, December 2020,
+              <https://www.rfc-editor.org/rfc/rfc8949>.
+
+
+
+
+
+Mih                     Expires 28 February 2027               [Page 10]
+
+Internet-Draft                     CLL                       August 2026
+
+
+   [RFC9052]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Structures and Process", STD 96, RFC 9052,
+              DOI 10.17487/RFC9052, August 2022,
+              <https://www.rfc-editor.org/rfc/rfc9052>.
+
+   [RFC9338]  Schaad, J., "CBOR Object Signing and Encryption (COSE):
+              Countersignatures", STD 96, RFC 9338,
+              DOI 10.17487/RFC9338, December 2022,
+              <https://www.rfc-editor.org/rfc/rfc9338>.
+
+   [RFC9942]  Steele, O., Birkholz, H., Delignat-Lavaud, A., and C.
+              Fournet, "CBOR Object Signing and Encryption (COSE)
+              Receipts", RFC 9942, DOI 10.17487/RFC9942, June 2026,
+              <https://www.rfc-editor.org/rfc/rfc9942>.
+
+8.2.  Informative References
+
+   [I-D.mih-sokolov-scitt-payload-binding]
+              Mih, S. and A. Sokolov, "Canonical Payload Binding: A
+              Signed Statement Construction Profile", Work in Progress,
+              Internet-Draft, draft-mih-sokolov-scitt-payload-binding-
+              01, 27 July 2026, <https://datatracker.ietf.org/doc/html/
+              draft-mih-sokolov-scitt-payload-binding-01>.
+
+   [RFC9162]  Laurie, B., Messeri, E., and R. Stradling, "Certificate
+              Transparency Version 2.0", RFC 9162, DOI 10.17487/RFC9162,
+              December 2021, <https://www.rfc-editor.org/rfc/rfc9162>.
+
+Acknowledgments
+
+   The Merkle Mountain Range structure and its COSE proof formats are
+   the work of the authors of [I-D.bryce-cose-receipts-mmr-profile];
+   this document exists because that structure makes streaming local
+   commitment practical.
+
+Author's Address
+
+   Steven Mih
+   Action State Group
+   Email: steven@actionstate.ai
+
+
+
+
+
+
+
+
+
+
+
+Mih                     Expires 28 February 2027               [Page 11]

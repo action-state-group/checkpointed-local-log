@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.sato-soos-gar" target="https://datatracker.ietf.org/doc/html/draft-sato-soos-gar-06">
+   <front>
+      <title>The Governance Audit Record (GAR) for Agentic AI Systems</title>
+      <author initials="" surname="Sato" fullname="Tom Sato">
+         <organization>MyAuberge K.K.</organization>
+      </author>
+      <date month="August" day="25" year="2026" />
+      <abstract>
+	 <t>   This document specifies the Governance Audit Record (GAR), the audit
+   architecture for agentic AI systems.  GAR defines five audit types,
+   the Session Audit Record (SAR), the Audit Alert system, auditor
+   principal categories, and the Audit Package for external regulatory
+   inspection.  GAR provides verifiable evidence that AI agent sessions
+   were governed in accordance with the Intent Declaration Primitive and
+   the Human Escalation Mechanism.  GAR answers the governance question:
+   can any of this be proven to a regulator?  GAR is a domain-specific
+   application of the SCITT (Supply Chain Integrity, Transparency and
+   Trust) architecture extended with causal ordering semantics for
+   agentic governance events.  GAR defines the Authority Lifecycle Event
+   (ALE) category: a normative set of causally-ordered event types
+   covering the complete agent session revocation and recovery
+   lifecycle, including single-agent revocation, authority suspension,
+   partial state recording, recovery initiation, credential restoration,
+   and multi-agent delegation tree events.
+
+   Version -03 adds the SOOS Governance Semantic Convention: the
+   normative soos.governance.* OpenTelemetry attribute namespace for
+   governance observability, the SOOS GAR Processor specification for
+   OTel-to-SAR pipeline construction with Session Block Merkle
+   integrity, four new Authority Lifecycle Events, three mandatory
+   provenance fields on Cedar evaluation records, and the XPID mirror
+   field on ACD session ALEs.
+
+   Version -04 made the Session Block construction rules more explicit,
+   closing three ambiguities found during independent interop
+   verification at the IETF 126 Hackathon.
+
+   Version -05 supersedes -04&#x27;s Session Block construction text with a
+   corrected construction: the Merkle leaf and internal-node hashes are
+   now domain-separated (RFC 9162&#x27;s Merkle Tree Hash, with 0x00/0x01
+   prefix octets) and odd-length levels use RFC 9162&#x27;s k-split recursive
+   tree shape rather than duplicate-node padding, closing a malleability
+   class structurally equivalent to CVE-2012-2459 that was present in
+   -04&#x27;s construction.  This revision is fully self-contained: unlike
+   -03 and -04, it does not carry forward unreproduced text from an
+   earlier version.  Version -05 also adds a subject_digest field to
+   Cedar-evaluation GAR records, the same construction used by the Agent
+   Accountability Composition as its cross-slot join key, positioning
+   GAR as a conforming AEP instance under the RATS-bound composition;
+   the field is normatively scoped to prohibit independent re-
+   serialization where an upstream party has already established the
+   action&#x27;s canonical serialization, per the failure mode documented in
+   the SCITT typed-reference specification.
+
+   Version -06 closes gaps surfaced by a WIMSE-style security review
+   pass against -05&#x27;s own text and reference sample code: a JWKS trust-
+   anchor bootstrap requirement, a corrected key-compromise remediation
+   procedure that no longer requires re-signing already-committed audit
+   artifacts, an explicit Level 1/2 residual-risk disclosure for a
+   compromised-but-signing GEC, a defined failure path for KIA signer
+   quorum failure at Session Block close, referential-integrity
+   enforcement for causal_parent_id, and guidance against alert-fatigue
+   false positives in session_sequence_number gap detection.  This
+   revision also carries an idnits repair pass covering reference
+   classification, citation hygiene, and formatting.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-sato-soos-gar-06" />
+   
+</reference>

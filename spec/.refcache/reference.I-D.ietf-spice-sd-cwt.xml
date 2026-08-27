@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-spice-sd-cwt" target="https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08">
+   <front>
+      <title>Selective Disclosure CBOR Web Tokens (SD-CWT)</title>
+      <author initials="M." surname="Prorock" fullname="Michael Prorock">
+         <organization>mesur.io</organization>
+      </author>
+      <author initials="O." surname="Steele" fullname="Orie Steele">
+         <organization>Tradeverifyd</organization>
+      </author>
+      <author initials="H." surname="Birkholz" fullname="Henk Birkholz">
+         <organization>Fraunhofer SIT</organization>
+      </author>
+      <author initials="R." surname="Mahy" fullname="Rohan Mahy">
+         </author>
+      <date month="June" day="1" year="2026" />
+      <abstract>
+	 <t>   This specification describes a data minimization technique for use
+   with CBOR Web Tokens (CWTs).  The approach is inspired by the
+   Selective Disclosure JSON Web Token (SD-JWT), with changes to align
+   with CBOR Object Signing and Encryption (COSE) and CWTs.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-spice-sd-cwt-08" />
+   
+</reference>

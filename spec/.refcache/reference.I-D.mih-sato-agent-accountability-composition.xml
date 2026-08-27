@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.mih-sato-agent-accountability-composition" target="https://datatracker.ietf.org/doc/html/draft-mih-sato-agent-accountability-composition-00">
+   <front>
+      <title>Agent Accountability: Composition and Conformance</title>
+      <author initials="S." surname="Mih" fullname="Steven Mih">
+         <organization>Action State Group, Inc.</organization>
+      </author>
+      <author initials="" surname="Sato" fullname="Tom Sato">
+         <organization>MyAuberge K.K.</organization>
+      </author>
+      <author initials="S." surname="Bu" fullname="Songbo Bu">
+         <organization>Independent</organization>
+      </author>
+      <author initials="I." surname="Schrock" fullname="Iman Schrock">
+         <organization>EMILIA Protocol, Inc.</organization>
+      </author>
+      <date month="July" day="5" year="2026" />
+      <abstract>
+	 <t>   Autonomous and semi-autonomous software agents increasingly take
+   consequential actions across administrative and trust domains.
+   Holding such an action accountable — to a regulator, auditor, or
+   counterparty who does not trust the operator — requires answering
+   several questions, each answerable by an independently-verifiable
+   profile: whether the agent was permitted to act (CAN), which
+   accountable human authorized the specific action (WHO), what the
+   agent actually did (WHAT), and whether the runtime enforced correctly
+   (AUDIT).
+
+   This document specifies, in Informational terms, how such profiles
+   compose — by a shared action-digest, each verifying independently —
+   and defines a shared conformance-vector suite against which any
+   profile may be tested.  It complements existing audit-architecture
+   and record-format work rather than replacing it, reusing existing
+   signing, transport, and transparency mechanisms.  Its focus is an
+   assurance tier those documents leave open: most agent records today
+   are self-attested by an interested party; this document makes
+   reachable and testable an anchored, third-party-verifiable tier, in
+   which a record is registered to a transparency service (SCITT) so a
+   party who trusts neither the agent nor the operator can verify it.
+   Self-attestation remains a valid baseline; convergence on the
+   disinterested tier — by any conforming profile — is the goal, not a
+   single mandated format.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-mih-sato-agent-accountability-composition-00" />
+   
+</reference>

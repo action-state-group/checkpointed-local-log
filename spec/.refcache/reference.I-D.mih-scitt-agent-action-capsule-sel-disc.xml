@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.mih-scitt-agent-action-capsule-sel-disc" target="https://datatracker.ietf.org/doc/html/draft-mih-scitt-agent-action-capsule-sel-disc-00">
+   <front>
+      <title>Selective Disclosure Profile for Agent Action Capsules</title>
+      <author initials="S." surname="Mih" fullname="Steven Mih">
+         <organization>Action State Group, Inc.</organization>
+      </author>
+      <date month="June" day="19" year="2026" />
+      <abstract>
+	 <t>   This document normatively profiles the per-field selective-disclosure
+   extension point reserved in draft-mih-scitt-agent-action-capsule-01
+   Section 9.2 (Selective Disclosure).  It defines the salted-hash
+   commitment encoding, decoy-digest construction, disclosure format,
+   producer requirements, and verifier checks for selectively
+   disclosable fields in Agent Action Capsule payloads.  The mechanism
+   follows the SD-JWT selective-disclosure model (RFC 9901) — salted-
+   hash commitments, decoy digests, and disclosed [salt, name, value]
+   triples — using JCS (RFC 8785) canonicalization, which is already the
+   base Capsule profile&#x27;s canonical form.  SD-JWT (RFC 9901) is the JSON
+   form; SD-CWT (draft-ietf-spice-sd-cwt) is the CBOR/dCBOR sibling.
+   Because the Capsule payload is JSON, this profile uses the SD-JWT
+   (JSON) construction, cited alongside the SPICE WG&#x27;s SD-CWT work for
+   SCITT-ecosystem consistency.  Verifier checks are deterministic and
+   reproducible from the Capsule bytes plus a provided disclosure set
+   alone; no clock, network access, model invocation, or external lookup
+   beyond the provided disclosures is required.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-mih-scitt-agent-action-capsule-sel-disc-00" />
+   
+</reference>

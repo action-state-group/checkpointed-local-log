@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.ietf-scitt-architecture" target="https://datatracker.ietf.org/doc/html/draft-ietf-scitt-architecture-22">
+   <front>
+      <title>An Architecture for Trustworthy and Transparent Digital Supply Chains</title>
+      <author initials="H." surname="Birkholz" fullname="Henk Birkholz">
+         <organization>Fraunhofer SIT</organization>
+      </author>
+      <author initials="A." surname="Delignat-Lavaud" fullname="Antoine Delignat-Lavaud">
+         <organization>Microsoft Research</organization>
+      </author>
+      <author initials="C." surname="Fournet" fullname="Cedric Fournet">
+         <organization>Microsoft Research</organization>
+      </author>
+      <author initials="Y." surname="Deshpande" fullname="Yogesh Deshpande">
+         <organization>ARM</organization>
+      </author>
+      <author initials="S." surname="Lasker" fullname="Steve Lasker">
+         </author>
+      <date month="October" day="10" year="2025" />
+      <abstract>
+	 <t>   Traceability in supply chains is a growing security concern.  While
+   verifiable data structures have addressed specific issues, such as
+   equivocation over digital certificates, they lack a universal
+   architecture for all supply chains.  This document defines such an
+   architecture for single-issuer signed statement transparency.  It
+   ensures extensibility, interoperability between different
+   transparency services, and compliance with various auditing
+   procedures and regulatory requirements.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-ietf-scitt-architecture-22" />
+   
+</reference>

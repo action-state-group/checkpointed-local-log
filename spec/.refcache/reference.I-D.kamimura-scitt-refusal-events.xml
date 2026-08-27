@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reference anchor="I-D.kamimura-scitt-refusal-events" target="https://datatracker.ietf.org/doc/html/draft-kamimura-scitt-refusal-events-03">
+   <front>
+      <title>Verifiable AI Refusal Events using SCITT</title>
+      <author initials="K." surname="Tokachi" fullname="TOKACHI KAMIMURA">
+         <organization>VeritasChain Standards Organization</organization>
+      </author>
+      <date month="August" day="2" year="2026" />
+      <abstract>
+	 <t>   This document defines a claim set for recording AI content refusal
+   events.  The claim set specifies the semantic content and correlation
+   rules for refusal audit trails, independent of any particular
+   serialization format.  The claims are designed to be carried within
+   SCITT Signed Statements and verified using SCITT Receipts.
+
+   This specification addresses claim semantics and verification
+   requirements; it does not mandate a specific encoding.  A CDDL
+   definition is provided for CBOR-based implementations, and equivalent
+   JSON representations are shown in an appendix for illustration.
+
+   This specification provides auditability of logged refusal decisions.
+   It does not define content moderation policies, classification
+   criteria, or what AI systems should refuse.
+
+	 </t>
+      </abstract>
+   </front>
+   <seriesInfo name="Internet-Draft" value="draft-kamimura-scitt-refusal-events-03" />
+   
+</reference>
