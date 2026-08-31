@@ -37,3 +37,9 @@ make DRAFT=draft-mih-scitt-checkpointed-local-log-00 \
 `spec/.refcache/` is committed so the build never depends on `bib.ietf.org`
 being reachable. See comments in `spec/Makefile` for `rebuild` and
 `refresh-refs` targets.
+
+## License
+
+See [LICENSE](LICENSE): the specification text is governed by
+[BCP 78](https://www.rfc-editor.org/info/bcp78) and the IETF Trust's Legal
+Provisions; code and reference material are under the Revised BSD License.
