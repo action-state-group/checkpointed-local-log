@@ -4,8 +4,8 @@
 
 SCITT                                                             S. Mih
 Internet-Draft                                        Action State Group
-Intended status: Standards Track                          27 August 2026
-Expires: 28 February 2027
+Intended status: Standards Track                          31 August 2026
+Expires: 4 March 2027
 
 
                     The Checkpointed Local Log (CLL)
@@ -47,13 +47,13 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 28 February 2027.
+   This Internet-Draft will expire on 4 March 2027.
 
 
 
 
 
-Mih                     Expires 28 February 2027                [Page 1]
+Mih                       Expires 4 March 2027                  [Page 1]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Mih                     Expires 28 February 2027                [Page 2]
+Mih                       Expires 4 March 2027                  [Page 2]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -165,7 +165,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 3]
+Mih                       Expires 4 March 2027                  [Page 3]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -221,7 +221,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 4]
+Mih                       Expires 4 March 2027                  [Page 4]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -277,7 +277,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 5]
+Mih                       Expires 4 March 2027                  [Page 5]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -333,7 +333,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 6]
+Mih                       Expires 4 March 2027                  [Page 6]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -389,7 +389,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 7]
+Mih                       Expires 4 March 2027                  [Page 7]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -445,7 +445,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 8]
+Mih                       Expires 4 March 2027                  [Page 8]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -501,7 +501,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027                [Page 9]
+Mih                       Expires 4 March 2027                  [Page 9]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -557,7 +557,7 @@ Internet-Draft                     CLL                       August 2026
 
 
 
-Mih                     Expires 28 February 2027               [Page 10]
+Mih                       Expires 4 March 2027                 [Page 10]
 
 Internet-Draft                     CLL                       August 2026
 
@@ -613,4 +613,4 @@ Author's Address
 
 
 
-Mih                     Expires 28 February 2027               [Page 11]
+Mih                       Expires 4 March 2027                 [Page 11]
