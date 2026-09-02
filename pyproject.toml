@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "checkpointed-local-log"
 version = "0.1.0"
-description = "CLL: an append-only local log with periodic signed checkpoints and third-party witnessing -- the reference implementation for draft-mih-scitt-checkpointed-local-log."
+description = "CLL: an append-only local log backed by a Merkle Mountain Range (MMR), with periodic signed COSE checkpoints and third-party witnessing -- the reference implementation for draft-mih-scitt-checkpointed-local-log."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Action State Group" }]
-keywords = ["scitt", "mmr", "merkle", "transparency", "checkpoint", "audit"]
+keywords = ["scitt", "mmr", "merkle-mountain-range", "merkle", "transparency", "checkpoint", "audit"]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
