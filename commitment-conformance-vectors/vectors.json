@@ -1,0 +1,144 @@
+{
+  "format_version": "1",
+  "spec": "draft-bryce-cose-receipts-mmr-profile-00 SS6/SS7 accumulator, canonical-CBOR array-of-bstr encoding (capsule-emit [cll-commitment-interop])",
+  "encoding": "CBOR definite-length array of definite-length 32-byte strings (RFC 8949 SS4.2 deterministic encoding), one element per accumulator peak hash, ordered tallest-to-smallest (descending height).",
+  "count": 12,
+  "cases": [
+    {
+      "name": "empty-accumulator",
+      "kind": "positive",
+      "description": "MMR with zero peaks (empty log) -- commitment is the empty CBOR array.",
+      "peak_hashes": [],
+      "commitment_hex": "80"
+    },
+    {
+      "name": "kat39-mmr-index-0-single-leaf-peak",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=0 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 1 peak(s).",
+      "peak_hashes": [
+        "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+      ],
+      "commitment_hex": "815820af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "name": "kat39-mmr-index-3-two-peaks",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=3 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 2 peak(s).",
+      "peak_hashes": [
+        "ad104051c516812ea5874ca3ff06d0258303623d04307c41ec80a7a18b332ef8",
+        "d5688a52d55a02ec4aea5ec1eadfffe1c9e0ee6a4ddbe2377f98326d42dfc975"
+      ],
+      "commitment_hex": "825820ad104051c516812ea5874ca3ff06d0258303623d04307c41ec80a7a18b332ef85820d5688a52d55a02ec4aea5ec1eadfffe1c9e0ee6a4ddbe2377f98326d42dfc975"
+    },
+    {
+      "name": "kat39-mmr-index-10-three-peaks-mixed-height",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=10 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 3 peak(s).",
+      "peak_hashes": [
+        "827f3213c1de0d4c6277caccc1eeca325e45dfe2c65adce1943774218db61f88",
+        "b8faf5f748f149b04018491a51334499fd8b6060c42a835f361fa9665562d12d",
+        "8d85f8467240628a94819b26bee26e3a9b2804334c63482deacec8d64ab4e1e7"
+      ],
+      "commitment_hex": "835820827f3213c1de0d4c6277caccc1eeca325e45dfe2c65adce1943774218db61f885820b8faf5f748f149b04018491a51334499fd8b6060c42a835f361fa9665562d12d58208d85f8467240628a94819b26bee26e3a9b2804334c63482deacec8d64ab4e1e7"
+    },
+    {
+      "name": "kat39-mmr-index-18-three-peaks",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=18 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 3 peak(s).",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "f4a0db79de0fee128fbe95ecf3509646203909dc447ae911aa29416bf6fcba21",
+        "5bc67471c189d78c76461dcab6141a733bdab3799d1d69e0c419119c92e82b3d"
+      ],
+      "commitment_hex": "83582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f1125820f4a0db79de0fee128fbe95ecf3509646203909dc447ae911aa29416bf6fcba2158205bc67471c189d78c76461dcab6141a733bdab3799d1d69e0c419119c92e82b3d"
+    },
+    {
+      "name": "kat39-mmr-index-25-four-peaks",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=25 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 4 peak(s).",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "84582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae5820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+    },
+    {
+      "name": "kat39-mmr-index-38-three-peaks-tail",
+      "kind": "positive",
+      "description": "Peak set at KAT39 mmr_index=38 (datatrails/go-datatrails-merklelog draft_kat39_test.go, cross-checked by tests/checkpoint/test_mmr_kat39.py) -- 3 peak(s).",
+      "peak_hashes": [
+        "d4fb5649422ff2eaf7b1c0b851585a8cfd14fb08ce11addb30075a96309582a7",
+        "6a169105dcc487dbbae5747a0fd9b1d33a40320cf91cf9a323579139e7ff72aa",
+        "e9a5f5201eb3c3c856e0a224527af5ac7eb1767fb1aff9bd53ba41a60cde9785"
+      ],
+      "commitment_hex": "835820d4fb5649422ff2eaf7b1c0b851585a8cfd14fb08ce11addb30075a96309582a758206a169105dcc487dbbae5747a0fd9b1d33a40320cf91cf9a323579139e7ff72aa5820e9a5f5201eb3c3c856e0a224527af5ac7eb1767fb1aff9bd53ba41a60cde9785"
+    },
+    {
+      "name": "reversed-peak-order",
+      "kind": "must-fail",
+      "description": "Same 4 peak hashes as kat39-mmr-index-25-four-peaks but in reversed (ascending-height) order -- violates the required descending-height ordering.",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "845820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded2135820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+      "reason": "peak order must be descending-height (tallest first); this encodes ascending order instead"
+    },
+    {
+      "name": "dropped-trailing-peak",
+      "kind": "must-fail",
+      "description": "Only the first 3 of the 4 peaks at kat39-mmr-index-25 -- an incomplete accumulator.",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "83582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+      "reason": "commitment encodes only 3 of the 4 true peaks"
+    },
+    {
+      "name": "duplicated-trailing-peak",
+      "kind": "must-fail",
+      "description": "The 4 true peaks at kat39-mmr-index-25 plus a duplicate of the last one appended -- an over-long accumulator.",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "85582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae5820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded2135820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213",
+      "reason": "commitment encodes 5 peaks, one of them a duplicate not present in the true accumulator"
+    },
+    {
+      "name": "bit-flipped-peak",
+      "kind": "must-fail",
+      "description": "Same 4 peaks as kat39-mmr-index-25 but the first byte of the second peak hash has one bit flipped.",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "84582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582060b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae5820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213",
+      "reason": "one peak hash byte does not match the true accumulator"
+    },
+    {
+      "name": "indefinite-length-array-encoding",
+      "kind": "must-fail",
+      "description": "The true 4 peaks at kat39-mmr-index-25, CBOR-encoded with an indefinite-length array header instead of the required definite-length (RFC 8949 SS4.2 deterministic) form. Same logical content, non-canonical bytes.",
+      "peak_hashes": [
+        "78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112",
+        "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710",
+        "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae",
+        "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"
+      ],
+      "commitment_hex": "9f582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae5820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213ff",
+      "reason": "uses an indefinite-length CBOR array header; the conformant encoding is always definite-length"
+    }
+  ]
+}
