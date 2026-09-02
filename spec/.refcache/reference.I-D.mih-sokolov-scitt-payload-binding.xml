@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.mih-sokolov-scitt-payload-binding" target="https://datatracker.ietf.org/doc/html/draft-mih-sokolov-scitt-payload-binding-01">
+<reference anchor="I-D.mih-sokolov-scitt-payload-binding" target="https://datatracker.ietf.org/doc/html/draft-mih-sokolov-scitt-payload-binding-02">
    <front>
       <title>Canonical Payload Binding: A Signed Statement Construction Profile</title>
       <author initials="S." surname="Mih" fullname="Steven Mih">
-         <organization>Action State Group</organization>
+         <organization>Action State Group, Inc.</organization>
       </author>
       <author initials="A." surname="Sokolov" fullname="Anton Sokolov">
          <organization>Tyche Institute</organization>
       </author>
-      <date month="July" day="27" year="2026" />
+      <date month="August" day="27" year="2026" />
       <abstract>
 	 <t>   Independently written systems that anchor records to a SCITT
    Transparency Service repeatedly re-derive the same construction: a
@@ -21,13 +21,22 @@
    canonicalization algorithm and exclusion set once, obtains an
    interoperable derived identifier, and inherits statement-to-receipt
    binding and typed digest reference semantics without restating the
-   mechanics in every profile.  IANA registries govern both the
-   canonicalization algorithms and the artifact types that may appear in
-   typed references; entries are immutable.
+   mechanics in every profile.  It complements the COSE Hash Envelope
+   mechanism defined in RFC 9995: where that mechanism signals that a
+   Signed Statement&#x27;s payload is a digest standing in for content held
+   elsewhere, this document defines how that digest is computed from
+   structured content so that independently written implementations
+   converge on the same bytes.  An IANA registry governs the
+   canonicalization algorithms; entries are immutable.  This document
+   defines no payload content formats and registers no artifact types;
+   the artifact types that a typed reference may cite, and their
+   meaning, are registered in a single shared Artifact Type Registry,
+   governed separately from this document, that payload profiles
+   register into.
 
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-mih-sokolov-scitt-payload-binding-01" />
+   <seriesInfo name="Internet-Draft" value="draft-mih-sokolov-scitt-payload-binding-02" />
    
 </reference>
