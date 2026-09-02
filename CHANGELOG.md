@@ -28,6 +28,12 @@ the W3 one-neutral-library-per-spec decision. `cll` ships:
   + witness stamp + consistency proof) for handing one log record to a
   stranger; content-agnostic (parameterized leaf-id/kind fields, no
   hardcoded capsule vocabulary).
+- **Time-fenced key revocation + a local signer** (`cll.revocation`,
+  `cll.signing`) — `LedgerStore.verify()` rebuilds the key-rotation timeline
+  from the ledger's own `key_rotation` events and flags a record signed by an
+  already-revoked key as a DEFAULT finding, zero caller configuration
+  required; `extra_findings` remains available for a caller's own additional
+  checks layered on top.
 
 See [`docs/module-map.md`](docs/module-map.md) for the section-by-section map
 from `draft-mih-scitt-checkpointed-local-log-00` to the package's modules,
@@ -36,6 +42,6 @@ claim names don't yet byte-match the shipping field names, and RFC9338 stub
 countersignatures aren't wired yet.
 
 `cll` installs standalone (`pip install checkpointed-local-log`); its own
-test suite is green (167 passed, 1 skipped — the opt-in live-TS network
+test suite is green (180 passed, 1 skipped — the opt-in live-TS network
 test). `capsule-emit` (0.7.0+) and `capsule-ledger` depend on it rather than
 each forking their own MMR/checkpoint/ledger-store implementation.

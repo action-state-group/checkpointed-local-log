@@ -13,17 +13,15 @@ field and ``scan(counterparty=...)`` matches ``operator`` — the closest availa
 mapping. Flagged as an open question in STATUS.md rather than guessed silently.
 
 **Ported from ``capsule-ledger`` per the W3.1 CLL extraction (2026-09-01).**
-:meth:`verify` here does base capsule verification only — it deliberately
-carries no key-revocation check. The original ``capsule-ledger`` version
-layered a time-fenced revocation check (``guards/revocation.py``) on top;
-that module is guard/policy-layer product code (W3.2, destined for
-capsule-engine), and this package must not depend on it (guards -> cll is
-the wrong direction; a counterparty verifying a log does not need
-``capsule-ledger``'s specific guard policy to interoperate). A caller that
-wants the revocation check composes it itself — see ``extra_findings`` below
-and ``capsule_ledger.ledger.store.LedgerStore`` for the reference
-composition that restores the original behavior for capsule-ledger's own
-callers.
+:meth:`verify` runs base capsule verification PLUS a time-fenced
+key-revocation check (:mod:`cll.revocation`) by DEFAULT — zero caller
+configuration required. The W3.1 extraction originally left that check out
+on the theory that it was guard/policy-layer product code; the 2026-09-01
+dependency-trace ruling reclassified it as a verify-primitive that belongs
+in this package (a counterparty verifying a log needs a complete verify out
+of the box, not an opt-in extra). ``extra_findings`` (below) remains the
+seam for a caller's OWN additional store-level checks layered on top — it
+is an extension point, not the delivery mechanism for revocation.
 """
 from __future__ import annotations
 
@@ -39,6 +37,7 @@ from typing import Any
 from agent_action_capsule import Finding, VerificationResult, compute_capsule_id
 from agent_action_capsule import verify as _verify_capsule
 
+from ..revocation import build_key_timeline, check_time_fenced_revocation
 from .admission import (
     AUTHENTICITY_SIGNED,
     AUTHENTICITY_UNSIGNED,
@@ -104,12 +103,13 @@ class LedgerStore(LedgerAPI):
         extra_findings: tuple[Callable[["LedgerStore", "LedgerRecord"], "Finding | None"], ...] = (),
     ):
         """``extra_findings`` -- optional store-level verification checks layered
-        onto :meth:`verify`, each called as ``check(store, record)`` and returning
-        a :class:`~agent_action_capsule.Finding` (appended, marking the result not
-        ok) or ``None``. This is the seam a guard/policy-layer consumer (e.g.
-        capsule-ledger's own time-fenced key-revocation check) uses to extend
-        verification without this package depending on that layer -- see the
-        module docstring."""
+        onto :meth:`verify` IN ADDITION to the default time-fenced key-revocation
+        check (:mod:`cll.revocation`, always on -- see the module docstring),
+        each called as ``check(store, record)`` and returning a
+        :class:`~agent_action_capsule.Finding` (appended, marking the result not
+        ok) or ``None``. This is the seam a caller uses to layer its OWN
+        additional store-level context checks; it is not how revocation itself
+        is delivered."""
         self._root = Path(root)
         self._segments_dir = self._root / "segments"
         self._segments_dir.mkdir(parents=True, exist_ok=True)
@@ -481,17 +481,19 @@ class LedgerStore(LedgerAPI):
             return self._row_to_record(row)
 
     def verify(self, capsule_id: str) -> VerificationResult | None:
-        """``agent_action_capsule.verify`` for a stored capsule, plus any
-        ``extra_findings`` checks this store was constructed with.
+        """``agent_action_capsule.verify`` for a stored capsule, PLUS the
+        time-fenced key-revocation check (:mod:`cll.revocation`, rebuilt from
+        this ledger's own ``key_rotation`` events) as a DEFAULT finding, plus
+        any ``extra_findings`` checks this store was constructed with.
 
         The reference verifier is spec-level and payload-only — it has no
         notion of a caller's local signing keys or their rotation history.
-        A caller that wants store-level context checked too (e.g. a
-        time-fenced key-revocation check rebuilt from this ledger's own
-        ``key_rotation`` events) supplies it via ``extra_findings`` at
-        construction — the same category as the parent-existence check
-        below, but composed rather than hardcoded (see the module and
-        ``__init__`` docstrings).
+        Revocation is checked unconditionally here (zero caller
+        configuration): a counterparty's verify must be complete out of the
+        box, not opt-in. ``extra_findings`` stays available for a caller's
+        OWN additional store-level context checks — the same category as the
+        parent-existence check below, but composed rather than hardcoded
+        (see the module and ``__init__`` docstrings).
         """
         with self._lock:
             record = self.fetch(capsule_id)
@@ -499,6 +501,12 @@ class LedgerStore(LedgerAPI):
                 return None
             all_ids = [r[0] for r in self._conn.execute("SELECT capsule_id FROM records")]
             result = _verify_capsule(record.capsule, store=all_ids)
+
+            timeline = build_key_timeline(self)
+            revocation = check_time_fenced_revocation(record.capsule, timeline)
+            if not revocation.ok:
+                result.findings.append(Finding("key_revoked_at_timestamp", revocation.reason, severity="error"))
+                result.ok = False
 
             for check in self._extra_findings:
                 finding = check(self, record)
