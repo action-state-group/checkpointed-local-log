@@ -13,9 +13,9 @@ how and why it differs from ``cll.checkpoint``'s own checkpoint/emit path.
 
 **Ported from ``capsule-ledger/capsule_ledger/ledger/*.py`` per the W3.1 CLL
 extraction (2026-09-01).** ``capsule-ledger`` now depends on this package
-and re-exports these symbols as thin compatibility wrappers (its own
-``LedgerStore`` subclass layers the guard-layer key-revocation check this
-package deliberately does not carry — see ``store.py``'s module docstring).
+and re-exports these symbols as thin compatibility wrappers. ``LedgerStore
+.verify`` carries the time-fenced key-revocation check (:mod:`cll.revocation`)
+as a DEFAULT finding — see ``store.py``'s module docstring.
 """
 from .admission import (
     AUTHENTICITY_SIGNED,
