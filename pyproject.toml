@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "checkpointed-local-log"
+version = "0.1.0"
+description = "CLL: an append-only local log backed by a Merkle Mountain Range (MMR), with periodic signed COSE checkpoints and third-party witnessing -- the reference implementation for draft-mih-scitt-checkpointed-local-log."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Action State Group" }]
+keywords = ["scitt", "mmr", "merkle-mountain-range", "merkle", "transparency", "checkpoint", "audit"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security :: Cryptography",
+    "Development Status :: 3 - Alpha",
+]
+# cll.checkpoint (the MMR/COSE core) needs only cbor2 + scitt-cose (the
+# checkpoint-wire COSE_Sign1 machinery, reused rather than hand-rolled --
+# same boundary rule as every other consumer of scitt-cose). cll.ledger (the
+# store binding) additionally needs agent-action-capsule -- this binding
+# verifies Agent Action Capsules specifically; see cll/__init__.py's
+# docstring for why that is today's honest scope, not a neutrality claim.
+dependencies = [
+    "cbor2>=5.5",
+    "scitt-cose>=0.2.0",
+    "agent-action-capsule>=0.2.0",
+    "cryptography>=42.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/action-state-group/checkpointed-local-log"
+Source = "https://github.com/action-state-group/checkpointed-local-log"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.4,<0.16"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cll*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# tests/checkpoint/conftest.py and tests/ledger/conftest.py are two
+# distinct, same-named modules (no __init__.py package markers, by design --
+# matches capsule-emit's own test layout). The default "prepend" import mode
+# caches modules by bare name in sys.modules, so a `from conftest import X`
+# in one directory can silently resolve to the OTHER directory's conftest.
+# "importlib" resolves by file path instead and has no such collision.
+addopts = "--import-mode=importlib"
