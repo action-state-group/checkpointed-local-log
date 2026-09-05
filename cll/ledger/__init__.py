@@ -28,6 +28,17 @@ from .admission import (
 )
 from .api import LedgerAPI, ScanQuery
 from .records import ChainGap, LedgerRecord
+from .segments import (
+    DEFAULT_MAX_SEGMENT_BYTES,
+    Checkpointer,
+    MmrCheckpointer,
+    SegmentEntry,
+    SegmentManifest,
+    SegmentRotationError,
+    SegmentUnmounted,
+    StoreManifest,
+    verify_segment,
+)
 from .store import LedgerStore
 
 __all__ = [
@@ -43,4 +54,13 @@ __all__ = [
     "SIGNED",
     "AUTHENTICITY_UNSIGNED",
     "AUTHENTICITY_SIGNED",
+    "DEFAULT_MAX_SEGMENT_BYTES",
+    "Checkpointer",
+    "MmrCheckpointer",
+    "SegmentEntry",
+    "SegmentManifest",
+    "SegmentRotationError",
+    "SegmentUnmounted",
+    "StoreManifest",
+    "verify_segment",
 ]
