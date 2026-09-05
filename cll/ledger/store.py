@@ -25,6 +25,7 @@ is an extension point, not the delivery mechanism for revocation.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -48,6 +49,17 @@ from .admission import (
 )
 from .api import LedgerAPI, ScanQuery
 from .records import ChainGap, LedgerRecord
+from .segments import (
+    DEFAULT_MAX_SEGMENT_BYTES,
+    Checkpointer,
+    SegmentEntry,
+    SegmentManifest,
+    SegmentRotationError,
+    SegmentUnmounted,
+    StoreManifest,
+    manifest_filename,
+    verify_segment,
+)
 
 __all__ = ["LedgerStore"]
 
@@ -101,6 +113,9 @@ class LedgerStore(LedgerAPI):
         *,
         segment_max_records: int = _DEFAULT_SEGMENT_MAX_RECORDS,
         extra_findings: tuple[Callable[["LedgerStore", "LedgerRecord"], "Finding | None"], ...] = (),
+        log_id: str = "",
+        max_segment_bytes: int = DEFAULT_MAX_SEGMENT_BYTES,
+        rotate_at_checkpoint: bool = False,
     ):
         """``extra_findings`` -- optional store-level verification checks layered
         onto :meth:`verify` IN ADDITION to the default time-fenced key-revocation
@@ -109,12 +124,31 @@ class LedgerStore(LedgerAPI):
         :class:`~agent_action_capsule.Finding` (appended, marking the result not
         ok) or ``None``. This is the seam a caller uses to layer its OWN
         additional store-level context checks; it is not how revocation itself
-        is delivered."""
+        is delivered.
+
+        ``rotate_at_checkpoint`` (default ``False`` -- existing stores/callers
+        are unaffected until they opt in) switches the active segment's
+        rotation trigger from ``segment_max_records`` to byte size
+        (``max_segment_bytes``, default 256 MiB) closed on a checkpoint
+        boundary: crossing the threshold forces a checkpoint via a
+        :class:`~cll.ledger.segments.Checkpointer` (see
+        :meth:`set_checkpointer`, required before the first append once this
+        is on), writes that segment's :class:`~cll.ledger.segments.SegmentManifest`,
+        and opens a fresh segment -- see ``cll.ledger.segments`` for why a
+        segment closes on a checkpoint, never a calendar. Requires a fresh
+        store: raises :class:`~cll.ledger.segments.SegmentRotationError` if
+        unmanaged ``seg-*.jsonl`` segments already exist with no store
+        manifest, rather than silently reusing their names.
+        """
         self._root = Path(root)
         self._segments_dir = self._root / "segments"
         self._segments_dir.mkdir(parents=True, exist_ok=True)
         self._segment_max_records = segment_max_records
         self._extra_findings = extra_findings
+        self._log_id = log_id
+        self._max_segment_bytes = max_segment_bytes
+        self._rotate_at_checkpoint = rotate_at_checkpoint
+        self._checkpointer: Checkpointer | None = None
 
         # Every method that touches self._conn / self._write_fh / self._open_fhs
         # takes this lock — a per-scope caller (holds/scope.py's ScopeLocks) may
@@ -141,7 +175,33 @@ class LedgerStore(LedgerAPI):
         self._write_fh = None
         self._write_segment_name = None
         self._open_fhs: dict[str, Any] = {}
+
+        self._manifest_path = self._root / "manifest.json"
+        if self._rotate_at_checkpoint:
+            if self._manifest_path.exists():
+                self._manifest = StoreManifest.from_dict(json.loads(self._manifest_path.read_text()))
+            elif self._existing_segments():
+                raise SegmentRotationError(
+                    f"{self._segments_dir} already holds unmanaged segments with no "
+                    f"{self._manifest_path.name} -- rotate_at_checkpoint requires a fresh store"
+                )
+            else:
+                self._manifest = StoreManifest(log_id=self._log_id)
+        else:
+            self._manifest = None
+
         self._sync_write_segment()
+
+    def set_checkpointer(self, checkpointer: Checkpointer) -> None:
+        """Attach the :class:`~cll.ledger.segments.Checkpointer` rotation
+        forces a checkpoint through. Required before the first append once
+        ``rotate_at_checkpoint=True`` -- deferred to a setter, not the
+        constructor, since a checkpointer typically wraps an
+        ``MmrLedger(this_store)`` and so cannot exist before this store does.
+        """
+        if not self._rotate_at_checkpoint:
+            raise ValueError("rotate_at_checkpoint is False -- no checkpointer is needed")
+        self._checkpointer = checkpointer
 
     @property
     def root(self) -> Path:
@@ -179,6 +239,10 @@ class LedgerStore(LedgerAPI):
 
     def _sync_write_segment(self) -> None:
         """Point the active write handle at the newest segment, rotating if full."""
+        if self._rotate_at_checkpoint:
+            self._sync_write_segment_managed()
+            return
+
         segments = self._existing_segments()
         if not segments or self._segment_record_count(segments[-1]) >= self._segment_max_records:
             next_index = len(segments) + 1
@@ -191,6 +255,50 @@ class LedgerStore(LedgerAPI):
             self._write_segment_name = name
             self._write_fh = self._get_fh(name, mode="a")
 
+    def _sync_write_segment_managed(self) -> None:
+        """The ``rotate_at_checkpoint=True`` counterpart of
+        :meth:`_sync_write_segment`: the active segment is whatever the store
+        manifest says it is (new segments are only ever created by
+        :meth:`_rotate_segment`, on a checkpoint boundary -- never by a
+        record-count threshold)."""
+        if self._manifest.active_segment is None:
+            name = self._new_segment_name()
+            (self._segments_dir / name).touch()
+            self._manifest.segments.append(SegmentEntry(name=name, mounted=True))
+            self._manifest.active_segment = name
+            self._save_store_manifest()
+
+        name = self._manifest.active_segment
+        if self._write_segment_name != name:
+            self._write_segment_name = name
+            self._write_fh = self._get_fh(name, mode="a")
+
+    def _new_segment_name(self) -> str:
+        return f"seg-{len(self._manifest.segments) + 1:06d}.jsonl"
+
+    def _save_store_manifest(self) -> None:
+        self._manifest_path.write_text(json.dumps(self._manifest.to_dict(), indent=2))
+
+    def _resolve_segment_path(self, segment: str) -> Path:
+        """Where ``segment``'s bytes actually live -- ``segments/`` if
+        mounted (or in a store not using managed rotation at all), the local
+        archive if unmounted. Used internally (rotation, reindex, mount/
+        unmount); the public read surface (:meth:`_row_to_record`) checks
+        :meth:`_require_mounted` FIRST and never reaches an archived file
+        through here."""
+        if self._rotate_at_checkpoint:
+            entry = self._manifest.entry(segment)
+            if entry is not None and not entry.mounted:
+                return self._segments_dir / ".archived" / segment
+        return self._segments_dir / segment
+
+    def _require_mounted(self, segment: str) -> None:
+        if not self._rotate_at_checkpoint:
+            return
+        entry = self._manifest.entry(segment)
+        if entry is not None and not entry.mounted:
+            raise SegmentUnmounted(entry.checkpoint_root, entry.mmr_size, segment=segment)
+
     def _get_fh(self, segment: str, *, mode: str = "rb"):
         # Binary mode: byte offsets from tell() must be true byte offsets so a
         # handle opened separately from the writer can seek to them reliably —
@@ -198,9 +306,85 @@ class LedgerStore(LedgerAPI):
         key = f"{segment}:{mode}"
         fh = self._open_fhs.get(key)
         if fh is None:
-            fh = open(self._segments_dir / segment, mode)
+            fh = open(self._resolve_segment_path(segment), mode)
             self._open_fhs[key] = fh
         return fh
+
+    def _rotate_segment(self) -> SegmentManifest:
+        """Close the active segment on a forced checkpoint, write its
+        :class:`~cll.ledger.segments.SegmentManifest`, and open a new active
+        segment. Called with :attr:`_lock` already held, immediately after
+        the append that crossed :attr:`_max_segment_bytes` -- so the
+        checkpoint this forces covers exactly this segment's last record,
+        never more, never less.
+        """
+        if self._checkpointer is None:
+            raise SegmentRotationError(
+                "rotate_at_checkpoint is True but no checkpointer is attached -- "
+                "call set_checkpointer() before appending"
+            )
+
+        name = self._write_segment_name
+        fh = self._write_fh
+        fh.flush()
+        os.fsync(fh.fileno())
+
+        first_seq, last_seq, first_ts, last_ts, record_count = self._conn.execute(
+            "SELECT MIN(seq), MAX(seq), MIN(timestamp), MAX(timestamp), COUNT(*) "
+            "FROM records WHERE segment = ?",
+            (name,),
+        ).fetchone()
+        if record_count == 0:
+            raise SegmentRotationError(f"segment {name!r} has no records -- nothing to close")
+
+        cp = self._checkpointer.checkpoint()
+        range_proof = self._checkpointer.range_proof(first_seq, last_seq)
+        if range_proof.size != cp.mmr_size:
+            raise SegmentRotationError(
+                f"checkpointer produced mmr_size={cp.mmr_size} but a range proof for "
+                f"segment {name!r}'s own records [{first_seq}, {last_seq}] needs "
+                f"size={range_proof.size} -- checkpoint does not close exactly at this "
+                "segment's boundary"
+            )
+
+        segment_bytes = (self._segments_dir / name).read_bytes()
+        seg_manifest = SegmentManifest(
+            log_id=self._log_id,
+            first_seq=first_seq,
+            last_seq=last_seq,
+            first_ts=first_ts,
+            last_ts=last_ts,
+            checkpoint_root=cp.root,
+            mmr_size=cp.mmr_size,
+            bytes=len(segment_bytes),
+            record_count=record_count,
+            sha256_of_segment=hashlib.sha256(segment_bytes).hexdigest(),
+            range_proof=range_proof,
+        )
+        manifest_name = manifest_filename(self._log_id, cp.mmr_size)
+        (self._segments_dir / manifest_name).write_text(json.dumps(seg_manifest.to_dict(), indent=2))
+
+        entry = self._manifest.entry(name)
+        entry.manifest = f"segments/{manifest_name}"
+        entry.checkpoint_root = cp.root
+        entry.mmr_size = cp.mmr_size
+
+        # Close the write handle for the now-closed segment so a later
+        # unmount() can move the file freely.
+        old_fh = self._open_fhs.pop(f"{name}:a", None)
+        if old_fh is not None:
+            old_fh.close()
+        self._write_fh = None
+        self._write_segment_name = None
+
+        new_name = self._new_segment_name()
+        (self._segments_dir / new_name).touch()
+        self._manifest.segments.append(SegmentEntry(name=new_name, mounted=True))
+        self._manifest.active_segment = new_name
+        self._save_store_manifest()
+
+        self._sync_write_segment()
+        return seg_manifest
 
     # -- write path -----------------------------------------------------
 
@@ -295,7 +479,7 @@ class LedgerStore(LedgerAPI):
             seq = self._conn.execute(
                 "SELECT seq FROM records WHERE capsule_id = ?", (capsule_id,)
             ).fetchone()[0]
-            return LedgerRecord(
+            record = LedgerRecord(
                 seq=seq,
                 capsule_id=capsule_id,
                 capsule=to_store,
@@ -304,6 +488,11 @@ class LedgerStore(LedgerAPI):
                 authenticity=resolution.authenticity,
                 envelopes=resolution.verified_envelopes,
             )
+
+            if self._rotate_at_checkpoint and fh.tell() >= self._max_segment_bytes:
+                self._rotate_segment()
+
+            return record
 
     def import_jsonl(self, path: str | os.PathLike, *, consequential: bool = False) -> int:
         """Append every record from an external JSONL file, in file order.
@@ -330,7 +519,12 @@ class LedgerStore(LedgerAPI):
         with self._lock:
             self._conn.execute("DELETE FROM records")
             self._conn.commit()
-            for segment in self._existing_segments():
+            segments = (
+                [s.name for s in self._manifest.segments]
+                if self._rotate_at_checkpoint
+                else self._existing_segments()
+            )
+            for segment in segments:
                 fh = self._get_fh(segment, mode="r")
                 fh.seek(0)
                 offset = 0
@@ -398,6 +592,7 @@ class LedgerStore(LedgerAPI):
         return ()
 
     def _row_to_record(self, row: sqlite3.Row) -> LedgerRecord:
+        self._require_mounted(row["segment"])
         fh = self._get_fh(row["segment"], mode="r")
         fh.seek(row["byte_offset"])
         line = fh.readline()
@@ -571,3 +766,73 @@ class LedgerStore(LedgerAPI):
                 )
             self._conn.row_factory = None
             return gaps
+
+    # -- segment archival ----------------------------------------------------
+
+    def list_segments(self) -> list[SegmentEntry]:
+        """Every segment this store has ever written, in append order,
+        with its mounted state and (once closed) its manifest path.
+        Requires ``rotate_at_checkpoint=True``."""
+        if not self._rotate_at_checkpoint:
+            raise ValueError("segment archival requires rotate_at_checkpoint=True")
+        with self._lock:
+            return list(self._manifest.segments)
+
+    def unmount_segment(self, name: str) -> None:
+        """Archive a closed segment: move its file out of ``segments/`` into
+        a local archive directory and mark it unmounted. A read that later
+        touches it raises :class:`~cll.ledger.segments.SegmentUnmounted`
+        instead of silently reporting ``no_such_subject`` -- the chain still
+        proves the record existed, it just isn't mounted here. Idempotent;
+        refuses to unmount the active write segment."""
+        with self._lock:
+            if name == self._manifest.active_segment:
+                raise ValueError(f"cannot unmount the active write segment {name!r}")
+            entry = self._manifest.entry(name)
+            if entry is None:
+                raise ValueError(f"no such segment {name!r}")
+            if not entry.mounted:
+                return
+            for mode in ("r", "rb"):
+                fh = self._open_fhs.pop(f"{name}:{mode}", None)
+                if fh is not None:
+                    fh.close()
+            archived_dir = self._segments_dir / ".archived"
+            archived_dir.mkdir(exist_ok=True)
+            (self._segments_dir / name).rename(archived_dir / name)
+            entry.mounted = False
+            self._save_store_manifest()
+
+    def mount_segment(self, name: str) -> None:
+        """Reverse :meth:`unmount_segment`. Idempotent."""
+        with self._lock:
+            entry = self._manifest.entry(name)
+            if entry is None:
+                raise ValueError(f"no such segment {name!r}")
+            if entry.mounted:
+                return
+            archived_dir = self._segments_dir / ".archived"
+            (archived_dir / name).rename(self._segments_dir / name)
+            entry.mounted = True
+            self._save_store_manifest()
+
+    def verify_segment_standalone(self, name: str) -> tuple[bool, list[str]]:
+        """Re-check a closed segment's records against its own closing
+        checkpoint, using nothing but that segment's bytes and its own
+        :class:`~cll.ledger.segments.SegmentManifest` -- see
+        :func:`~cll.ledger.segments.verify_segment`. Works whether ``name``
+        is currently mounted or archived."""
+        with self._lock:
+            entry = self._manifest.entry(name)
+            if entry is None:
+                return False, [f"no such segment {name!r}"]
+            if entry.manifest is None:
+                return False, [f"segment {name!r} has not been closed yet -- nothing to verify"]
+            manifest_path = self._root / entry.manifest
+            if not manifest_path.exists():
+                return False, [f"segment manifest {entry.manifest} is missing"]
+            seg_manifest = SegmentManifest.from_dict(json.loads(manifest_path.read_text()))
+            segment_path = self._resolve_segment_path(name)
+            if not segment_path.exists():
+                return False, [f"segment file {segment_path} is missing"]
+            return verify_segment(segment_path.read_bytes(), seg_manifest)

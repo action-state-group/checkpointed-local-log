@@ -5,6 +5,28 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Added — segment rotation at checkpoint boundaries
+
+`cll.ledger.store.LedgerStore` gains opt-in (`rotate_at_checkpoint=False` by
+default) byte-size-triggered segment rotation, closed on a checkpoint
+boundary rather than a calendar: crossing `max_segment_bytes` (default 256
+MiB) forces a checkpoint through an attached `cll.ledger.segments
+.Checkpointer` (the out-of-the-box `MmrCheckpointer` wraps an `MmrLedger` +
+any `cll.checkpoint.emit.Signer`), closes the segment exactly at that
+checkpoint's boundary, and writes `segments/<log_id>-<mmr_size>
+.manifest.json` — generic fields only (seq range, timestamps, byte/record
+counts, a content digest, and a range proof over the segment's own boundary
+leaves), so an archived segment is offline-verifiable from its own bytes
+plus manifest alone (`cll.ledger.segments.verify_segment`). New
+`unmount_segment`/`mount_segment`/`list_segments`/`verify_segment_standalone`
+methods on `LedgerStore`; a read that reaches an unmounted segment raises
+`SegmentUnmounted(checkpoint_root, mmr_size)` instead of reporting "not
+found". New `cll segments list|mount|unmount|verify` CLI
+(`pip install`'s `cll` console script). Existing stores/callers are
+unaffected until they opt in.
+
 ## 0.1.0
 
 ### Added — the `cll` package: spec + reference library + vectors

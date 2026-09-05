@@ -34,6 +34,9 @@ dependencies = [
 Homepage = "https://github.com/action-state-group/checkpointed-local-log"
 Source = "https://github.com/action-state-group/checkpointed-local-log"
 
+[project.scripts]
+cll = "cll.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff>=0.4,<0.16"]
 
