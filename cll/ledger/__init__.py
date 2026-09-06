@@ -27,6 +27,7 @@ from .admission import (
     ProducerEnvelope,
 )
 from .api import LedgerAPI, ScanQuery
+from .lookup import LookupIndex, extract_correlation_ids
 from .records import ChainGap, LedgerRecord
 from .segments import (
     DEFAULT_MAX_SEGMENT_BYTES,
@@ -47,6 +48,8 @@ __all__ = [
     "LedgerRecord",
     "ChainGap",
     "LedgerStore",
+    "LookupIndex",
+    "extract_correlation_ids",
     "AdmissionRequest",
     "AdmissionRejected",
     "ProducerEnvelope",
