@@ -12,7 +12,8 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    # no `environment:` — private free-tier repo, environments unavailable;
+    # PyPI trusted-publisher form: leave environment blank
     permissions:
       id-token: write  # OIDC — no token stored
     steps:
