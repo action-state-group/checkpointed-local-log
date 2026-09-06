@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import sqlite3
 import threading
@@ -48,6 +49,7 @@ from .admission import (
     resolve_admission,
 )
 from .api import LedgerAPI, ScanQuery
+from .lookup import LookupIndex, extract_correlation_ids
 from .records import ChainGap, LedgerRecord
 from .segments import (
     DEFAULT_MAX_SEGMENT_BYTES,
@@ -62,6 +64,8 @@ from .segments import (
 )
 
 __all__ = ["LedgerStore"]
+
+_LOG = logging.getLogger(__name__)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS records (
@@ -116,6 +120,7 @@ class LedgerStore(LedgerAPI):
         log_id: str = "",
         max_segment_bytes: int = DEFAULT_MAX_SEGMENT_BYTES,
         rotate_at_checkpoint: bool = False,
+        correlation_fields: tuple[str, ...] = (),
     ):
         """``extra_findings`` -- optional store-level verification checks layered
         onto :meth:`verify` IN ADDITION to the default time-fenced key-revocation
@@ -139,6 +144,16 @@ class LedgerStore(LedgerAPI):
         store: raises :class:`~cll.ledger.segments.SegmentRotationError` if
         unmanaged ``seg-*.jsonl`` segments already exist with no store
         manifest, rather than silently reusing their names.
+
+        ``correlation_fields`` declares which top-level (or dotted-path)
+        fields of an appended record's content count as correlation ids in
+        the derived lookup index (``index.sqlite`` -- see
+        :mod:`cll.ledger.lookup`; e.g. capsule-emit passes ``exchange_id``,
+        ``capsule_id``). Passing a non-empty tuple persists it to
+        ``<root>/lookup_config.json`` so a later open that omits this
+        argument (e.g. the ``cll index rebuild`` CLI, which has no way to
+        know an app's field names) still rebuilds the SAME index content
+        rather than a config-drifted one.
         """
         self._root = Path(root)
         self._segments_dir = self._root / "segments"
@@ -190,6 +205,18 @@ class LedgerStore(LedgerAPI):
         else:
             self._manifest = None
 
+        self._correlation_fields = self._resolve_correlation_fields(correlation_fields)
+        try:
+            self._lookup: LookupIndex | None = LookupIndex(
+                self._root, correlation_fields=self._correlation_fields
+            )
+        except sqlite3.DatabaseError:
+            _LOG.warning(
+                "%s is corrupt -- lookups will fall back to a full scan until `cll index rebuild`",
+                self._root / "index.sqlite",
+            )
+            self._lookup = None
+
         self._sync_write_segment()
 
     def set_checkpointer(self, checkpointer: Checkpointer) -> None:
@@ -202,6 +229,26 @@ class LedgerStore(LedgerAPI):
         if not self._rotate_at_checkpoint:
             raise ValueError("rotate_at_checkpoint is False -- no checkpointer is needed")
         self._checkpointer = checkpointer
+
+    def _resolve_correlation_fields(self, correlation_fields: tuple[str, ...]) -> tuple[str, ...]:
+        """A non-empty ``correlation_fields`` argument is the caller
+        declaring its field names and is persisted to ``lookup_config.json``;
+        an empty (default) argument means "use whatever was last declared",
+        read back from that file if present. This is what lets ``cll index
+        rebuild`` (which has no app-specific field names to pass) reproduce
+        the exact same index content a live caller would have built
+        incrementally.
+        """
+        config_path = self._root / "lookup_config.json"
+        if correlation_fields:
+            config_path.write_text(json.dumps({"correlation_fields": list(correlation_fields)}))
+            return tuple(correlation_fields)
+        if config_path.exists():
+            try:
+                return tuple(json.loads(config_path.read_text())["correlation_fields"])
+            except (json.JSONDecodeError, KeyError, TypeError):
+                _LOG.warning("%s is unreadable -- treating correlation_fields as empty", config_path)
+        return ()
 
     @property
     def root(self) -> Path:
@@ -219,6 +266,8 @@ class LedgerStore(LedgerAPI):
         self._open_fhs.clear()
         self._write_fh = None
         self._conn.close()
+        if self._lookup is not None:
+            self._lookup.close()
 
     def __enter__(self) -> LedgerStore:
         return self
@@ -488,6 +537,23 @@ class LedgerStore(LedgerAPI):
                 authenticity=resolution.authenticity,
                 envelopes=resolution.verified_envelopes,
             )
+
+            if self._lookup is not None:
+                try:
+                    self._lookup.record(
+                        seq=seq,
+                        ts=to_store.get("timestamp"),
+                        record_digest=capsule_id,
+                        segment=record.segment,
+                        byte_offset=offset,
+                        capsule=to_store,
+                    )
+                except sqlite3.DatabaseError:
+                    _LOG.warning(
+                        "lookup index write failed -- treating it as corrupt; lookups fall back "
+                        "to a full scan until `cll index rebuild`"
+                    )
+                    self._lookup = None
 
             if self._rotate_at_checkpoint and fh.tell() >= self._max_segment_bytes:
                 self._rotate_segment()
@@ -766,6 +832,145 @@ class LedgerStore(LedgerAPI):
                 )
             self._conn.row_factory = None
             return gaps
+
+    # -- lookup index ---------------------------------------------------------
+
+    def _resolve_lookup_hit(self, seq: int, segment: str, byte_offset: int) -> LedgerRecord:
+        """Turn one ``index.sqlite`` hit into a full :class:`LedgerRecord`,
+        reading directly from the segment at ``byte_offset`` -- independent
+        of the capsule-schema ``index.sqlite3`` table, so this index stays
+        useful even if that one is the thing that's corrupt. Honors mount
+        state (:meth:`_require_mounted` raises :class:`SegmentUnmounted`
+        exactly as every other read path does).
+
+        ``consequential`` cannot be recovered from a record's own content --
+        it is ledger-side bookkeeping, not part of the stored payload -- so
+        this defaults it to ``True``, the same known limitation
+        :meth:`reindex` already accepts for the same reason.
+        """
+        self._require_mounted(segment)
+        fh = self._get_fh(segment, mode="r")
+        fh.seek(byte_offset)
+        capsule = json.loads(fh.readline())
+        capsule_id = capsule.get("capsule_id") or compute_capsule_id(capsule)
+        authenticity = self._reindex_authenticity(capsule)
+        return LedgerRecord(
+            seq=seq,
+            capsule_id=capsule_id,
+            capsule=capsule,
+            segment=segment,
+            consequential=True,
+            authenticity=authenticity,
+            envelopes=self._bundled_envelopes(capsule, authenticity),
+        )
+
+    def by_time(self, start: str | None = None, end: str | None = None) -> list[LedgerRecord]:
+        """Records with ``timestamp`` in ``[start, end]`` (either bound
+        optional), ordered by ``seq``. Falls back to a full :meth:`scan` if
+        ``index.sqlite`` is absent or corrupt -- never fails a read."""
+        with self._lock:
+            if self._lookup is not None:
+                try:
+                    hits = self._lookup.by_time(start, end)
+                    return [self._resolve_lookup_hit(*hit) for hit in hits]
+                except sqlite3.DatabaseError:
+                    _LOG.warning("lookup index corrupt -- falling back to a full scan for by_time")
+                    self._lookup = None
+            return [
+                r
+                for r in self.scan()
+                if (start is None or (r.capsule.get("timestamp") or "") >= start)
+                and (end is None or (r.capsule.get("timestamp") or "") <= end)
+            ]
+
+    def by_digest(self, record_digest: str) -> LedgerRecord | None:
+        """The record whose content digest (``capsule_id``) is
+        ``record_digest``, or ``None``. Falls back to a full :meth:`scan` if
+        ``index.sqlite`` is absent or corrupt -- never fails a read."""
+        with self._lock:
+            if self._lookup is not None:
+                try:
+                    hit = self._lookup.by_digest(record_digest)
+                    return self._resolve_lookup_hit(*hit) if hit is not None else None
+                except sqlite3.DatabaseError:
+                    _LOG.warning("lookup index corrupt -- falling back to a full scan for by_digest")
+                    self._lookup = None
+            for r in self.scan():
+                if r.capsule_id == record_digest:
+                    return r
+            return None
+
+    def by_correlation(self, correlation_id: str) -> list[LedgerRecord]:
+        """Every record whose declared correlation fields (see
+        ``correlation_fields`` on :meth:`__init__`) carry ``correlation_id``,
+        ordered by ``seq``. Falls back to a full :meth:`scan` if
+        ``index.sqlite`` is absent or corrupt -- never fails a read."""
+        with self._lock:
+            if self._lookup is not None:
+                try:
+                    hits = self._lookup.by_correlation(correlation_id)
+                    return [self._resolve_lookup_hit(*hit) for hit in hits]
+                except sqlite3.DatabaseError:
+                    _LOG.warning("lookup index corrupt -- falling back to a full scan for by_correlation")
+                    self._lookup = None
+            return [
+                r
+                for r in self.scan()
+                if correlation_id in extract_correlation_ids(r.capsule, self._correlation_fields)
+            ]
+
+    def by_seq_range(self, first: int, last: int) -> list[LedgerRecord]:
+        """Records with ``seq`` in ``[first, last]``, ordered by ``seq``.
+        Falls back to a full :meth:`scan` if ``index.sqlite`` is absent or
+        corrupt -- never fails a read."""
+        with self._lock:
+            if self._lookup is not None:
+                try:
+                    hits = self._lookup.by_seq_range(first, last)
+                    return [self._resolve_lookup_hit(*hit) for hit in hits]
+                except sqlite3.DatabaseError:
+                    _LOG.warning("lookup index corrupt -- falling back to a full scan for by_seq_range")
+                    self._lookup = None
+            return [r for r in self.scan() if first <= r.seq <= last]
+
+    def rebuild_lookup_index(self) -> None:
+        """Regenerate ``index.sqlite`` from the JSONL segments on disk --
+        ``cll index rebuild``'s target. Deletes and reopens the index file
+        first, so this also recovers from the corrupt-file case (rather than
+        trying to ``rebuild()`` a connection that can't even run ``CREATE
+        TABLE``). MUST reproduce exactly what incremental per-append updates
+        would have produced for the same segments and the same
+        ``correlation_fields`` (see ``lookup_config.json``, read here via
+        :attr:`_correlation_fields` -- unchanged by this method).
+        """
+        with self._lock:
+            if self._lookup is not None:
+                self._lookup.close()
+            index_path = self._root / "index.sqlite"
+            for suffix in ("", "-wal", "-shm"):
+                candidate = index_path.with_name(index_path.name + suffix)
+                if candidate.exists():
+                    candidate.unlink()
+            self._lookup = LookupIndex(self._root, correlation_fields=self._correlation_fields)
+
+            segments = (
+                [s.name for s in self._manifest.segments]
+                if self._rotate_at_checkpoint
+                else self._existing_segments()
+            )
+            rows: list[tuple[int, str | None, str, str, int, dict]] = []
+            seq = 0
+            for segment in segments:
+                fh = self._get_fh(segment, mode="r")
+                fh.seek(0)
+                offset = 0
+                for raw in fh:
+                    seq += 1
+                    capsule = json.loads(raw)
+                    capsule_id = capsule.get("capsule_id") or compute_capsule_id(capsule)
+                    rows.append((seq, capsule.get("timestamp"), capsule_id, segment, offset, capsule))
+                    offset += len(raw.encode("utf-8"))
+            self._lookup.rebuild(rows)
 
     # -- segment archival ----------------------------------------------------
 
