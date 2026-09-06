@@ -4,8 +4,8 @@
 
 SCITT                                                             S. Mih
 Internet-Draft                                        Action State Group
-Intended status: Standards Track                        1 September 2026
-Expires: 5 March 2027
+Intended status: Standards Track                        5 September 2026
+Expires: 9 March 2027
 
 
                     The Checkpointed Local Log (CLL)
@@ -47,13 +47,13 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 5 March 2027.
+   This Internet-Draft will expire on 9 March 2027.
 
 
 
 
 
-Mih                       Expires 5 March 2027                  [Page 1]
+Mih                       Expires 9 March 2027                  [Page 1]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -77,21 +77,21 @@ Table of Contents
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
      1.1.  Conventions and Definitions . . . . . . . . . . . . . . .   3
    2.  The Log Discipline  . . . . . . . . . . . . . . . . . . . . .   4
-   3.  The Checkpoint  . . . . . . . . . . . . . . . . . . . . . . .   4
-     3.1.  Commitment Representation . . . . . . . . . . . . . . . .   5
-     3.2.  Required constraints — elected once, then binding . . . .   6
-     3.3.  Witnessing  . . . . . . . . . . . . . . . . . . . . . . .   7
-     3.4.  Stub Countersignatures — Future Work  . . . . . . . . . .   8
-   4.  Verification  . . . . . . . . . . . . . . . . . . . . . . . .   8
-   5.  What a CLL Does and Does Not Establish  . . . . . . . . . . .   9
-   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  10
-   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  10
-   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  10
+   3.  The Checkpoint  . . . . . . . . . . . . . . . . . . . . . . .   5
+     3.1.  Commitment Representation . . . . . . . . . . . . . . . .   6
+     3.2.  Required constraints — elected once, then binding . . . .   7
+     3.3.  Witnessing  . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.4.  Stub Countersignatures — Future Work  . . . . . . . . . .   9
+   4.  Verification  . . . . . . . . . . . . . . . . . . . . . . . .   9
+   5.  What a CLL Does and Does Not Establish  . . . . . . . . . . .  10
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .  11
+   7.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  11
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  11
      8.1.  Normative References  . . . . . . . . . . . . . . . . . .  11
      8.2.  Informative References  . . . . . . . . . . . . . . . . .  12
-   Appendix A.  Changes since -00  . . . . . . . . . . . . . . . . .  12
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  13
+   Appendix A.  Changes since -00  . . . . . . . . . . . . . . . . .  13
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  14
 
 1.  Introduction
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Mih                       Expires 5 March 2027                  [Page 2]
+Mih                       Expires 9 March 2027                  [Page 2]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 5 March 2027                  [Page 3]
+Mih                       Expires 9 March 2027                  [Page 3]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -213,18 +213,37 @@ Internet-Draft                     CLL                    September 2026
        checkpoint signed under the new key.  The log identity
        (Section 3.3) is unchanged by rotation.
 
+   *Segmentation and archival (non-normative).* A conforming
+   implementation MAY store the log as a sequence of segments rather
+   than one unbounded file.  This specification imposes no segment
+   format; the only checkpoint-relevant discipline is that any segment
+   boundary a producer defines SHOULD coincide with a checkpoint
+
+
+
+Mih                       Expires 9 March 2027                  [Page 4]
+
+Internet-Draft                     CLL                    September 2026
+
+
+   boundary, never a calendar boundary: closing a segment at the log's
+   state at a checkpoint's declared size means the segment plus that
+   checkpoint is independently verifiable without the rest of the log,
+   using an inclusion or range proof anchored to the checkpoint's
+   committed root.  A store's own manifest of which segments exist, and
+   whether each is presently retrievable ("mounted") or has been
+   archived elsewhere, is local bookkeeping, not itself evidence a
+   verifier trusts — only a checkpoint (and what it commits to) carries
+   that property.  A verifier presented with a reference to an entry
+   whose segment is not presently retrievable receives a distinct,
+   honest refusal (e.g., "retention expired") rather than being told the
+   entry never existed, since the checkpoint chain already proves it
+   did.
+
 3.  The Checkpoint
 
    A checkpoint is a COSE_Sign1 [RFC9052] whose payload is a CBOR map
    [RFC8949] with the following claims:
-
-
-
-
-Mih                       Expires 5 March 2027                  [Page 4]
-
-Internet-Draft                     CLL                    September 2026
-
 
     +=================+======+=======================================+
     | Claim           | Type | Description                           |
@@ -254,6 +273,15 @@ Internet-Draft                     CLL                    September 2026
 
                                  Table 1
 
+
+
+
+
+Mih                       Expires 9 March 2027                  [Page 5]
+
+Internet-Draft                     CLL                    September 2026
+
+
    The protected header carries the algorithm and the key identifier of
    the log's signing identity, and the CWT_Claims of Section 3.3.
    Additional claims MAY be present; verifiers MUST ignore claims they
@@ -275,13 +303,6 @@ Internet-Draft                     CLL                    September 2026
    the folding implementation and is not standardized by any document
    this one depends on).
 
-
-
-Mih                       Expires 5 March 2027                  [Page 5]
-
-Internet-Draft                     CLL                    September 2026
-
-
    commitment and prev_commitment MUST carry the peak-list
    representation, canonical-CBOR-encoded (RFC 8949 [RFC8949] §4.2
    deterministic encoding: a definite-length array of definite-length
@@ -302,6 +323,20 @@ Internet-Draft                     CLL                    September 2026
    — peak-list on the wire, bagged root (if any) kept internal-only —
    and this document records that convergence as a wire requirement
    rather than leaving it to be rediscovered per implementation.
+
+
+
+
+
+
+
+
+
+
+Mih                       Expires 9 March 2027                  [Page 6]
+
+Internet-Draft                     CLL                    September 2026
+
 
    *Cryptographic agility.* This document defines no hash or signature
    algorithm of its own.  The peak-list commitment is a sequence of
@@ -330,14 +365,6 @@ Internet-Draft                     CLL                    September 2026
        [I-D.bryce-cose-receipts-mmr-profile] MUST hold between
        prev_commitment at prev_size and commitment at log_size.  This
        _internal_ relation is checkable offline by any verifier holding
-
-
-
-Mih                       Expires 5 March 2027                  [Page 6]
-
-Internet-Draft                     CLL                    September 2026
-
-
        the two checkpoints and the proof between them; it establishes
        that the presented history was not rewritten between them.  It
        does *not*, by itself, establish that no divergent history
@@ -358,6 +385,14 @@ Internet-Draft                     CLL                    September 2026
        witnessed to a relying party MUST name the witnesses it relies on
        for that representation.  A witness operated by the producer
        confers no witnessed status; it is a replica.
+
+
+
+
+Mih                       Expires 9 March 2027                  [Page 7]
+
+Internet-Draft                     CLL                    September 2026
+
 
    4.  *No claims beyond the last witnessed checkpoint.* Entries
        appended after the most recent witnessed checkpoint are, to a
@@ -384,16 +419,6 @@ Internet-Draft                     CLL                    September 2026
        witness*, and only its Receipts carry the continuity meaning of
        Section 5.
 
-
-
-
-
-
-Mih                       Expires 5 March 2027                  [Page 7]
-
-Internet-Draft                     CLL                    September 2026
-
-
    2.  *Direct countersignature.* A witness that is not a Transparency
        Service returns a COSE countersignature (Countersignature version
        2, [RFC9338]) over the checkpoint COSE_Sign1, conveyed in the
@@ -410,6 +435,20 @@ Internet-Draft                     CLL                    September 2026
    equivocation (presenting different histories to different parties):
    an equivocating producer must partition every witness a verifier
    might consult (Section 6).
+
+
+
+
+
+
+
+
+
+
+Mih                       Expires 9 March 2027                  [Page 8]
+
+Internet-Draft                     CLL                    September 2026
+
 
 3.4.  Stub Countersignatures — Future Work
 
@@ -443,13 +482,6 @@ Internet-Draft                     CLL                    September 2026
    *  *Inclusion:* a given entry is committed at a given position under
       commitment.
 
-
-
-Mih                       Expires 5 March 2027                  [Page 8]
-
-Internet-Draft                     CLL                    September 2026
-
-
    *  *Consistency:* a later checkpoint's log extends an earlier
       checkpoint's log without modification.
 
@@ -461,6 +493,18 @@ Internet-Draft                     CLL                    September 2026
    holds against a party who does not trust the producer, to the extent
    the verifier trusts that the witnesses are independent of the
    producer and would not jointly conceal an inconsistency.
+
+
+
+
+
+
+
+
+Mih                       Expires 9 March 2027                  [Page 9]
+
+Internet-Draft                     CLL                    September 2026
+
 
 5.  What a CLL Does and Does Not Establish
 
@@ -498,20 +542,25 @@ Internet-Draft                     CLL                    September 2026
    document's scope.  Producers and tools MUST NOT present witnessed
    status as evidence of content accuracy.
 
-
-
-
-Mih                       Expires 5 March 2027                  [Page 9]
-
-Internet-Draft                     CLL                    September 2026
-
-
    A CLL likewise does not establish that the log is the producer's
    _only_ log, nor that all records the producer created were appended.
    It bounds omission _within_ the committed history; it cannot prove a
    parallel uncommitted history does not exist.  Deployments for which
    that distinction matters bind the log identity to an accountable
    party by mechanisms outside this document.
+
+
+
+
+
+
+
+
+
+Mih                       Expires 9 March 2027                 [Page 10]
+
+Internet-Draft                     CLL                    September 2026
+
 
 6.  Security Considerations
 
@@ -554,14 +603,6 @@ Internet-Draft                     CLL                    September 2026
 
 8.  References
 
-
-
-
-Mih                       Expires 5 March 2027                 [Page 10]
-
-Internet-Draft                     CLL                    September 2026
-
-
 8.1.  Normative References
 
    [I-D.bryce-cose-receipts-mmr-profile]
@@ -569,6 +610,13 @@ Internet-Draft                     CLL                    September 2026
               Internet-Draft, draft-bryce-cose-receipts-mmr-profile-02,
               14 June 2026, <https://datatracker.ietf.org/doc/html/
               draft-bryce-cose-receipts-mmr-profile-02>.
+
+
+
+Mih                       Expires 9 March 2027                 [Page 11]
+
+Internet-Draft                     CLL                    September 2026
+
 
    [I-D.ietf-scitt-architecture]
               Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
@@ -611,14 +659,20 @@ Internet-Draft                     CLL                    September 2026
               Receipts", RFC 9942, DOI 10.17487/RFC9942, June 2026,
               <https://www.rfc-editor.org/rfc/rfc9942>.
 
+8.2.  Informative References
 
 
-Mih                       Expires 5 March 2027                 [Page 11]
+
+
+
+
+
+
+
+Mih                       Expires 9 March 2027                 [Page 12]
 
 Internet-Draft                     CLL                    September 2026
 
-
-8.2.  Informative References
 
    [I-D.mih-sokolov-scitt-payload-binding]
               Mih, S. and A. Sokolov, "Canonical Payload Binding: A
@@ -669,7 +723,9 @@ Appendix A.  Changes since -00
 
 
 
-Mih                       Expires 5 March 2027                 [Page 12]
+
+
+Mih                       Expires 9 March 2027                 [Page 13]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -725,4 +781,4 @@ Author's Address
 
 
 
-Mih                       Expires 5 March 2027                 [Page 13]
+Mih                       Expires 9 March 2027                 [Page 14]
