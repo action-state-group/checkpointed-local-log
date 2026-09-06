@@ -142,6 +142,22 @@ document are per log identity.
    identifier — appended before the first checkpoint signed under the new
    key. The log identity ({{witnessing}}) is unchanged by rotation.
 
+**Segmentation and archival (non-normative).** A conforming implementation MAY
+store the log as a sequence of segments rather than one unbounded file. This
+specification imposes no segment format; the only checkpoint-relevant
+discipline is that any segment boundary a producer defines SHOULD coincide
+with a checkpoint boundary, never a calendar boundary: closing a segment at
+the log's state at a checkpoint's declared size means the segment plus that
+checkpoint is independently verifiable without the rest of the log, using an
+inclusion or range proof anchored to the checkpoint's committed root. A
+store's own manifest of which segments exist, and whether each is presently
+retrievable ("mounted") or has been archived elsewhere, is local bookkeeping,
+not itself evidence a verifier trusts — only a checkpoint (and what it
+commits to) carries that property. A verifier presented with a reference to
+an entry whose segment is not presently retrievable receives a distinct,
+honest refusal (e.g., "retention expired") rather than being told the entry
+never existed, since the checkpoint chain already proves it did.
+
 # The Checkpoint {#checkpoint}
 
 A checkpoint is a COSE_Sign1 {{RFC9052}} whose payload is a CBOR map
