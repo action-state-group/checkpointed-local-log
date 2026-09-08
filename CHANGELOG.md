@@ -7,6 +7,8 @@ are documented here. The format follows
 
 ## Unreleased
 
+## 0.3.0 — 2026-09-08
+
 ### Changed — `agent-action-capsule` floor raised to `>=0.3.0`
 
 `LedgerStore.verify()` delegates Capsule validation to
