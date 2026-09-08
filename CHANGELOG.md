@@ -7,6 +7,17 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Changed — `agent-action-capsule` floor raised to `>=0.3.0`
+
+`LedgerStore.verify()` delegates Capsule validation to
+`agent_action_capsule.verify` wholesale, so raising the floor to 0.3.0 (the
+release carrying draft-04 `references[]` structural checks) guarantees those
+checks run for every store without any code change here. No MMR/checkpoint
+algorithm change. New append→fetch→verify integration tests cover a valid
+reference, a reference duplicating `chain.parent_capsule_id`, a malformed
+(non-hex64) reference digest, and a reference digest edited directly in a
+stored JSONL segment (bypassing `append()`).
+
 ### Added — segment rotation at checkpoint boundaries
 
 `cll.ledger.store.LedgerStore` gains opt-in (`rotate_at_checkpoint=False` by
