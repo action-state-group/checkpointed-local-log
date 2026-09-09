@@ -248,8 +248,9 @@ gaps supports none of the claims in {{claims}}:
    last checkpoint *it itself accepted* for this log identity, and on failure
    MUST refuse to register or countersign and MUST treat the failure as
    evidence of log mutation, never as an error to be retried. A witness that
-   only registers or timestamps the checkpoint without this check confers
-   existence and time, not continuity ({{witnessing}}).
+   only registers the checkpoint without this check confers inclusion under the
+   service's key — and signed time if and only if the resulting Receipt carries
+   a signed time claim — but not continuity ({{witnessing}}).
 3. **Named, independent witnesses.** A producer representing a log as
    witnessed to a relying party MUST name the witnesses it relies on for
    that representation. A witness operated by the producer confers no
@@ -269,8 +270,9 @@ continuity checks key on). A witness's confirmation takes one of two forms:
 1. **SCITT registration.** The checkpoint COSE_Sign1 is registered as a
    Signed Statement per {{I-D.ietf-scitt-architecture}}, and the {{RFC9942}}
    Receipt returned by the Transparency Service is the witness's confirmation
-   — third-party evidence of the checkpoint's existence and time of
-   registration. A Transparency Service unaware of this document can accept
+   — third-party evidence of the checkpoint's inclusion under the service's
+   key, and of the time of registration if and only if the Receipt carries a
+   signed time claim. A Transparency Service unaware of this document can accept
    the checkpoint as an ordinary Signed Statement; one that additionally
    performs the {{constraints}} continuity check before registration is a
    **checkpoint-aware witness**, and only its Receipts carry the continuity
@@ -281,7 +283,9 @@ continuity checks key on). A witness's confirmation takes one of two forms:
    header or alongside it. Such a witness MUST perform the {{constraints}}
    continuity check before countersigning.
 
-Either confirmation attests existence and time. The continuity attestation —
+Either confirmation attests inclusion under the confirming party's key; if and
+only if the confirmation carries a signed time claim does it additionally attest
+the time of that inclusion. The continuity attestation —
 that this checkpoint extends the last one this witness accepted — is exactly
 what {{constraints}} adds, and a verifier weighing a witnessed checkpoint
 SHOULD know which kind of witness produced it.
