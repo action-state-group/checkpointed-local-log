@@ -4,8 +4,8 @@
 
 SCITT                                                             S. Mih
 Internet-Draft                                        Action State Group
-Intended status: Standards Track                        5 September 2026
-Expires: 9 March 2027
+Intended status: Standards Track                        8 September 2026
+Expires: 12 March 2027
 
 
                     The Checkpointed Local Log (CLL)
@@ -47,13 +47,13 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 9 March 2027.
+   This Internet-Draft will expire on 12 March 2027.
 
 
 
 
 
-Mih                       Expires 9 March 2027                  [Page 1]
+Mih                       Expires 12 March 2027                 [Page 1]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Mih                       Expires 9 March 2027                  [Page 2]
+Mih                       Expires 12 March 2027                 [Page 2]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -165,7 +165,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                  [Page 3]
+Mih                       Expires 12 March 2027                 [Page 3]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -221,7 +221,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                  [Page 4]
+Mih                       Expires 12 March 2027                 [Page 4]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -277,7 +277,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                  [Page 5]
+Mih                       Expires 12 March 2027                 [Page 5]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -333,7 +333,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                  [Page 6]
+Mih                       Expires 12 March 2027                 [Page 6]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -377,22 +377,27 @@ Internet-Draft                     CLL                    September 2026
        of the last checkpoint _it itself accepted_ for this log
        identity, and on failure MUST refuse to register or countersign
        and MUST treat the failure as evidence of log mutation, never as
-       an error to be retried.  A witness that only registers or
-       timestamps the checkpoint without this check confers existence
-       and time, not continuity (Section 3.3).
+       an error to be retried.  A witness that only registers the
+       checkpoint without this check confers inclusion under the
+       service's key — and signed time if and only if the resulting
+       Receipt carries a signed time claim — but not continuity
+       (Section 3.3).
+
+
+
+
+
+
+
+Mih                       Expires 12 March 2027                 [Page 7]
+
+Internet-Draft                     CLL                    September 2026
+
 
    3.  *Named, independent witnesses.* A producer representing a log as
        witnessed to a relying party MUST name the witnesses it relies on
        for that representation.  A witness operated by the producer
        confers no witnessed status; it is a replica.
-
-
-
-
-Mih                       Expires 9 March 2027                  [Page 7]
-
-Internet-Draft                     CLL                    September 2026
-
 
    4.  *No claims beyond the last witnessed checkpoint.* Entries
        appended after the most recent witnessed checkpoint are, to a
@@ -412,12 +417,13 @@ Internet-Draft                     CLL                    September 2026
        a Signed Statement per [I-D.ietf-scitt-architecture], and the
        [RFC9942] Receipt returned by the Transparency Service is the
        witness's confirmation — third-party evidence of the checkpoint's
-       existence and time of registration.  A Transparency Service
-       unaware of this document can accept the checkpoint as an ordinary
-       Signed Statement; one that additionally performs the Section 3.2
-       continuity check before registration is a *checkpoint-aware
-       witness*, and only its Receipts carry the continuity meaning of
-       Section 5.
+       inclusion under the service's key, and of the time of
+       registration if and only if the Receipt carries a signed time
+       claim.  A Transparency Service unaware of this document can
+       accept the checkpoint as an ordinary Signed Statement; one that
+       additionally performs the Section 3.2 continuity check before
+       registration is a *checkpoint-aware witness*, and only its
+       Receipts carry the continuity meaning of Section 5.
 
    2.  *Direct countersignature.* A witness that is not a Transparency
        Service returns a COSE countersignature (Countersignature version
@@ -426,29 +432,28 @@ Internet-Draft                     CLL                    September 2026
        MUST perform the Section 3.2 continuity check before
        countersigning.
 
-   Either confirmation attests existence and time.  The continuity
+   Either confirmation attests inclusion under the confirming party's
+   key; if and only if the confirmation carries a signed time claim does
+   it additionally attest the time of that inclusion.  The continuity
    attestation — that this checkpoint extends the last one this witness
    accepted — is exactly what Section 3.2 adds, and a verifier weighing
    a witnessed checkpoint SHOULD know which kind of witness produced it.
+
+
+
+
+
+
+
+Mih                       Expires 12 March 2027                 [Page 8]
+
+Internet-Draft                     CLL                    September 2026
+
 
    Multiple independent witnesses strengthen the log against
    equivocation (presenting different histories to different parties):
    an equivocating producer must partition every witness a verifier
    might consult (Section 6).
-
-
-
-
-
-
-
-
-
-
-Mih                       Expires 9 March 2027                  [Page 8]
-
-Internet-Draft                     CLL                    September 2026
-
 
 3.4.  Stub Countersignatures — Future Work
 
@@ -496,12 +501,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-
-
-
-
-
-Mih                       Expires 9 March 2027                  [Page 9]
+Mih                       Expires 12 March 2027                 [Page 9]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -557,7 +557,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                 [Page 10]
+Mih                       Expires 12 March 2027                [Page 10]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -613,7 +613,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                 [Page 11]
+Mih                       Expires 12 March 2027                [Page 11]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -669,7 +669,7 @@ Internet-Draft                     CLL                    September 2026
 
 
 
-Mih                       Expires 9 March 2027                 [Page 12]
+Mih                       Expires 12 March 2027                [Page 12]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -725,7 +725,7 @@ Appendix A.  Changes since -00
 
 
 
-Mih                       Expires 9 March 2027                 [Page 13]
+Mih                       Expires 12 March 2027                [Page 13]
 
 Internet-Draft                     CLL                    September 2026
 
@@ -781,4 +781,4 @@ Author's Address
 
 
 
-Mih                       Expires 9 March 2027                 [Page 14]
+Mih                       Expires 12 March 2027                [Page 14]
