@@ -157,6 +157,18 @@ def test_range_proof_first_leaf(log_source):
     assert verify_range(root, 1, 3, _body_digests(mmr, 1, 3), proof)
 
 
+def test_range_proof_three_leaves(log_source):
+    """A range strictly wider than the two boundaries and narrower than the
+    whole log -- the middle-sized case between single-leaf and cross-peak."""
+    mmr = MmrLedger(log_source)
+    for i in range(8):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    proof = mmr.range_proof(3, 5)
+    root = mmr.root_at(proof.size)
+    assert verify_range(root, 3, 5, _body_digests(mmr, 3, 5), proof)
+
+
 def test_range_proof_crosses_multiple_peaks(log_source):
     """size=11 (n=7 leaves) has peaks at heights [2,1,0] (positions 6, 9,
     10) -- a range spanning leaf indices 2..6 (seq 3..7) crosses all three
