@@ -1,0 +1,202 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check formatting and module files
+        run: |
+          test -z "$(gofmt -l .)"
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Vet
+        run: go vet ./...
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test
+        run: go test ./...
+
+  race:
+    name: Race tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Race test
+        run: go test -race ./...
+
+  checkpoint-interop:
+    name: Checkpoint interoperability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out cll-go
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cll-go
+      - name: Check out cll-ts main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: action-state-group/cll-ts
+          ref: main
+          path: cll-ts
+      - name: Check out Python CLL main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: action-state-group/checkpointed-local-log
+          ref: main
+          path: checkpointed-local-log
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: cll-go/go.mod
+          cache-dependency-path: cll-go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cll-ts/package-lock.json
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Build cll-ts main
+        run: npm ci && npm run build
+        working-directory: cll-ts
+      - name: Install Python CLL main
+        run: python -m pip install ./checkpointed-local-log
+      - name: Verify Go, TypeScript, and Python checkpoint bytes
+        shell: bash
+        run: |
+          interop_dir=$(mktemp -d)
+          trap 'rm -rf "$interop_dir"' EXIT
+          node cll-ts/test/interop/checkpoint.mjs write "$interop_dir/ts.cose"
+          go -C cll-go run ./test/interop/checkpoint verify "$interop_dir/ts.cose"
+          go -C cll-go run ./test/interop/checkpoint write "$interop_dir/go.cose"
+          node cll-ts/test/interop/checkpoint.mjs verify "$interop_dir/go.cose"
+          python cll-ts/test/interop/verify_checkpoint.py "$interop_dir/ts.cose"
+          python cll-ts/test/interop/verify_checkpoint.py "$interop_dir/go.cose"
+          cmp "$interop_dir/ts.cose" "$interop_dir/go.cose"
+
+  storage-interop:
+    name: Storage interoperability (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [jsonl, sqlite]
+    steps:
+      - name: Check out cll-go
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cll-go
+      - name: Check out cll-ts main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: action-state-group/cll-ts
+          ref: main
+          path: cll-ts
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: cll-go/go.mod
+          cache-dependency-path: cll-go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cll-ts/package-lock.json
+      - name: Build cll-ts main
+        run: npm ci && npm run build
+        working-directory: cll-ts
+      - name: Verify bidirectional continuation
+        run: bash cll-go/scripts/check-storage-interop.sh "${{ matrix.backend }}"
+
+  mysql-interop:
+    name: Storage interoperability (mysql)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: interop
+          MYSQL_DATABASE: cll
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pinterop --silent"
+          --health-interval=2s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - name: Check out cll-go
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: cll-go
+      - name: Check out cll-ts main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: action-state-group/cll-ts
+          ref: main
+          path: cll-ts
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: cll-go/go.mod
+          cache-dependency-path: cll-go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: cll-ts/package-lock.json
+      - name: Build cll-ts main
+        run: npm ci && npm run build
+        working-directory: cll-ts
+      - name: Verify bidirectional continuation
+        env:
+          CLL_MYSQL_DSN: root:interop@tcp(127.0.0.1:3306)/cll
+          CLL_MYSQL_URL: mysql://root:interop@127.0.0.1:3306/cll
+        run: bash cll-go/scripts/check-storage-interop.sh mysql
