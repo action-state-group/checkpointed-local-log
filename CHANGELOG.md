@@ -7,6 +7,37 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Changed — range proofs bind every leaf, not just the two boundaries
+
+`cll.checkpoint.core`/`cll.checkpoint.index`'s `RangeProof`/`range_proof`/
+`verify_range` no longer compose a pair of `InclusionProof`s for
+`from_seq`/`to_seq` only. That shape proved the two boundary leaves were
+genuine and the MMR structurally complete at `size`, but never touched any
+leaf strictly between them — a deleted or replaced interior record still
+verified. The proof now carries a leaf-independent sibling set
+(`from_index`/`to_index`/`witness`): the caller supplies every leaf's own
+body digest in the range, and `verify_range` rebuilds every peak the range
+touches from those digests plus the witness hashes, so a deleted or
+replaced interior leaf changes the peak it falls under and is caught.
+`cll.ledger.segments.verify_segment` now passes every record's body digest
+through, not just the first/last. **Breaking, wire-incompatible with the
+old proof shape.**
+
+Vectors: round-trip, single-leaf, first-leaf (index 0), three-leaf,
+cross-peak, tampered-boundary, replaced-interior, deleted-interior, sparse
+selection, mismatched checkpoint, and stability-across-appends
+(`tests/checkpoint/test_mmr_index.py`) — including an explicit red→green
+demonstration (reverting `verify_range` to the old endpoint-only rebuild
+and confirming the deleted-/replaced-interior mutants pass it) that pins
+down the exact bug class this change closes.
+
+Ported byte-identically into `scitt-cose`'s `scitt_cose.cll` and the hosted
+bundle viewer's `MMR_JS`/`BUNDLE_JS` (a separate repo/PR): the viewer's
+"Completeness" ritual stage is renamed "Range membership", and its pass
+copy now reads "records *from*–*to* are present, unaltered, and bound to
+checkpoint *C* — this does not show that no other records exist" in place
+of the old "N of N claimed records" phrasing.
+
 ## 0.3.0 — 2026-09-08
 
 ### Changed — `agent-action-capsule` floor raised to `>=0.3.0`

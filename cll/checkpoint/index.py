@@ -61,17 +61,25 @@ class LogSource(Protocol):
 
 @dataclass(frozen=True)
 class RangeProof:
-    """Proves a contiguous leaf range ``[from_seq, to_seq]`` (inclusive,
-    1-indexed log seq) belongs to the MMR of the given ``size``.
+    """Proves per-record membership of a contiguous leaf range ``[from_seq,
+    to_seq]`` (inclusive, 1-indexed log seq) in the MMR of the given
+    ``size``: records ``from_seq``–``to_seq`` are present, unaltered, and
+    bound to the checkpoint at ``size`` -- this does not show that no other
+    records exist.
 
-    Composed from inclusion proofs of the two range boundaries rather than one
-    proof per leaf in the range: a valid MMR size is only ever a *complete*
-    accounting of exactly ``leaf_count(size)`` leaves (``core.peaks`` rejects
-    any size that would represent a partial/sparse tree), so proving both
-    boundary leaves are genuinely bound to their claimed digests under one
-    common, peaks()-validated root also certifies every leaf strictly between
-    them is structurally present -- there is no MMR-valid way for a size to
-    "skip" an interior leaf position. ``size`` is fixed to
+    Flat, seq-indexed view of ``core.RangeProof`` (0-indexed leaf positions;
+    ``from_index``/``to_index`` here are always ``from_seq - 1``/
+    ``to_seq - 1``) -- kept flat rather than nesting the core object so the
+    wire shape matches every other consumer of this proof (e.g. scitt-cose's
+    byte-identical port and its viewer JS). See ``core.RangeProof``'s
+    docstring for the mechanism: every leaf in the range participates in the
+    hash chain that rebuilds the root, via the caller's own body digests plus
+    this proof's O(log size) sibling witnesses, so a deleted or replaced
+    interior leaf changes the peak it falls under and is caught. This
+    replaces the earlier two-boundary-inclusion shape (a pair of
+    ``core.InclusionProof``s for the endpoints only), which never touched
+    any leaf strictly between them -- an interior leaf could be deleted or
+    replaced there without the proof failing. ``size`` is fixed to
     ``node_count(to_seq)``, i.e. the MMR exactly as it stood right after
     ``to_seq`` was appended, so the range proof is meaningful even when the
     log has since grown further (see ``MmrLedger.consistency_proof`` for
@@ -81,19 +89,25 @@ class RangeProof:
     from_seq: int
     to_seq: int
     size: int
-    inclusion_from: core.InclusionProof
-    inclusion_to: core.InclusionProof
+    from_index: int
+    to_index: int
+    witness: tuple[str, ...]
 
 
 def verify_range(
     root: bytes,
     from_seq: int,
     to_seq: int,
-    from_digest: bytes,
-    to_digest: bytes,
+    body_digests: list[bytes],
     proof: RangeProof,
 ) -> bool:
-    """Pure range verification. No reader, never raises."""
+    """Pure range verification. No reader, never raises.
+
+    ``body_digests`` must hold every record's body digest in the range,
+    ordered ``body_digests[i]`` == the digest for seq ``from_seq + i`` --
+    per-record membership means every one of them participates in
+    rebuilding the root, not just the two boundaries.
+    """
     try:
         if proof is None or proof.from_seq != from_seq or proof.to_seq != to_seq:
             return False
@@ -101,11 +115,8 @@ def verify_range(
             return False
         if core.leaf_count(proof.size) != to_seq:
             return False
-        if not core.verify_inclusion(root, proof.size, from_seq - 1, from_digest, proof.inclusion_from):
-            return False
-        if not core.verify_inclusion(root, proof.size, to_seq - 1, to_digest, proof.inclusion_to):
-            return False
-        return True
+        core_proof = core.RangeProof(1, "range", proof.size, proof.from_index, proof.to_index, proof.witness)
+        return core.verify_range(root, proof.size, from_seq - 1, to_seq - 1, body_digests, core_proof)
     except Exception:
         return False
 
@@ -215,9 +226,8 @@ class MmrLedger:
         if from_seq < 1 or to_seq < from_seq:
             raise core.InvalidArgumentError(f"invalid range [{from_seq}, {to_seq}]")
         size = core.node_count(to_seq)
-        inclusion_from = core.inclusion_proof(self._nodes, from_seq - 1, size)
-        inclusion_to = core.inclusion_proof(self._nodes, to_seq - 1, size)
-        return RangeProof(from_seq, to_seq, size, inclusion_from, inclusion_to)
+        proof = core.range_proof(self._nodes, from_seq - 1, to_seq - 1, size)
+        return RangeProof(from_seq, to_seq, size, proof.from_index, proof.to_index, proof.witness)
 
     def consistency_proof(self, size_a: int, size_b: int | None = None) -> core.ConsistencyProof:
         """Proof that the MMR at `size_b` (defaults to current size) extends
