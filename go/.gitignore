@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.idea/
+.vscode/
+bin/
+coverage.out
+*.test
+*.tmp
+.planning/
+task_plan.md
+findings.md
+progress.md

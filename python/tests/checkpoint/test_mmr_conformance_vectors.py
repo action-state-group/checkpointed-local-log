@@ -10,7 +10,7 @@ from cll.checkpoint import core
 from cll.checkpoint.store import MemoryNodeStore
 
 
-VECTORS = Path(__file__).parents[2] / "mmr-conformance-vectors" / "vectors.json"
+VECTORS = Path(__file__).parents[3] / "mmr-conformance-vectors" / "vectors.json"
 
 
 def _fixture(vectors: dict) -> MemoryNodeStore:

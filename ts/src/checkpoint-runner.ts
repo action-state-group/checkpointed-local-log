@@ -1,0 +1,247 @@
+import {
+  checkpointMetadata,
+  signCheckpoint,
+  type ConsistencyProof,
+  type SignedCheckpoint,
+} from "./checkpoint.js";
+import { leafCount, MmrTree } from "./mmr-node.js";
+import { WakeSignal } from "./run-loop.js";
+import {
+  CllError,
+  limits,
+  validateIdentifier,
+  type CllState,
+  type CheckpointSigningIdentity,
+  type CheckpointStore,
+  type WitnessState,
+} from "./types.js";
+
+export interface CheckpointRunnerOptions {
+  readonly logId: string;
+  readonly identity: CheckpointSigningIdentity;
+  readonly witnessIds?: readonly string[];
+  readonly entryCadence?: number;
+  readonly ageCadenceMs?: number;
+  readonly pollIntervalMs?: number;
+  readonly scanLimit?: number;
+  readonly clock?: () => Date;
+}
+export class CheckpointRunner {
+  private readonly witnessIds: readonly string[];
+  private readonly entryCadence: number;
+  private readonly ageCadenceMs: number;
+  private readonly pollIntervalMs: number;
+  private readonly scanLimit: number;
+  private readonly clock: () => Date;
+  private readonly wake = new WakeSignal();
+  private running = false;
+  public constructor(
+    private readonly store: CheckpointStore,
+    private readonly options: CheckpointRunnerOptions,
+  ) {
+    validateIdentifier(options.logId);
+    this.witnessIds = [...(options.witnessIds ?? [])];
+    if (this.witnessIds.length > limits.witnesses)
+      throw new TypeError("too many witnesses");
+    this.witnessIds.forEach(validateIdentifier);
+    this.entryCadence = options.entryCadence ?? 100;
+    this.ageCadenceMs = options.ageCadenceMs ?? 15 * 60_000;
+    this.pollIntervalMs = options.pollIntervalMs ?? 60_000;
+    this.scanLimit = options.scanLimit ?? limits.scanDefault;
+    if (
+      !Number.isSafeInteger(this.entryCadence) ||
+      this.entryCadence < 1 ||
+      !Number.isSafeInteger(this.ageCadenceMs) ||
+      this.ageCadenceMs < 1 ||
+      !Number.isSafeInteger(this.pollIntervalMs) ||
+      this.pollIntervalMs < 1 ||
+      !Number.isSafeInteger(this.scanLimit) ||
+      this.scanLimit < 1 ||
+      this.scanLimit > limits.scanMax
+    )
+      throw new TypeError(
+        "runner cadence, poll interval, and scan limit are invalid",
+      );
+    this.clock = options.clock ?? (() => new Date());
+  }
+
+  /** Wake a running checkpoint loop without blocking the caller. */
+  public notify(): void {
+    this.wake.notify();
+  }
+
+  /** Run the host-controlled polling lifecycle until its signal is aborted. */
+  public async run(signal: AbortSignal): Promise<void> {
+    if (this.running)
+      throw new CllError("invalid", "checkpoint runner is already running");
+    if (signal.aborted) return;
+    this.running = true;
+    try {
+      while (!signal.aborted) {
+        try {
+          await this.runOnce();
+        } catch (error) {
+          if (!(error instanceof CllError) || error.code !== "contention")
+            throw error;
+        }
+        await this.wake.wait(signal, this.pollIntervalMs);
+      }
+    } finally {
+      this.running = false;
+    }
+  }
+  /**
+   * Perform one checkpoint pass. There is no in-process serialization gate:
+   * concurrent `runOnce()` calls are safe for data integrity because the
+   * backend CAS in `commitCll` admits exactly one writer, but a losing
+   * concurrent call may REJECT with a `contention` error. Callers driving this
+   * through `run()` have that error swallowed by its loop.
+   */
+  public async runOnce(): Promise<SignedCheckpoint | undefined> {
+    const now = this.clock();
+    const current = await this.store.loadCll();
+    if (
+      current.size !== BigInt(current.nodes.length) ||
+      leafCount(current.size) !== current.indexedSeq
+    )
+      throw new CllError("corrupt", "stored CLL size/index is inconsistent");
+    let tree: MmrTree;
+    try {
+      tree = new MmrTree(current.nodes);
+    } catch (error) {
+      throw new CllError("corrupt", "stored CLL nodes are invalid", {
+        cause: error,
+      });
+    }
+    const checkpointFields = [
+      current.checkpoint,
+      current.checkpointSize,
+      current.checkpointIndexedSeq,
+      current.checkpointPeaks,
+    ];
+    const checkpointFieldCount = checkpointFields.filter(
+      (value) => value !== undefined,
+    ).length;
+    if (checkpointFieldCount !== 0 && checkpointFieldCount !== 4)
+      throw new CllError("corrupt", "stored checkpoint state is incomplete");
+    if (
+      current.checkpoint !== undefined &&
+      current.checkpointSize !== undefined &&
+      current.checkpointIndexedSeq !== undefined &&
+      current.checkpointPeaks !== undefined
+    ) {
+      const metadata = await checkpointMetadata(current.checkpoint);
+      if (
+        current.checkpointSize > current.size ||
+        leafCount(current.checkpointSize) !== current.checkpointIndexedSeq
+      )
+        throw new CllError(
+          "corrupt",
+          "stored checkpoint does not match durable CLL state",
+        );
+      let expectedPeaks: readonly Uint8Array[];
+      try {
+        expectedPeaks = await tree.peakHashesAt(current.checkpointSize);
+      } catch (error) {
+        throw new CllError("corrupt", "stored checkpoint size is invalid", {
+          cause: error,
+        });
+      }
+      const samePeaks = (
+        left: readonly Uint8Array[],
+        right: readonly Uint8Array[],
+      ): boolean =>
+        left.length === right.length &&
+        left.every((value, index) =>
+          Buffer.from(value).equals(Buffer.from(right[index]!)),
+        );
+      if (
+        metadata === undefined ||
+        metadata.logId !== this.options.logId ||
+        metadata.size !== current.checkpointSize ||
+        !samePeaks(metadata.peaks, current.checkpointPeaks) ||
+        !samePeaks(expectedPeaks, current.checkpointPeaks)
+      )
+        throw new CllError(
+          "corrupt",
+          "stored checkpoint does not match durable CLL state",
+        );
+    }
+    let cursor = current.indexedSeq;
+    let firstPendingAt = current.firstPendingAt;
+    while (true) {
+      const entries = await this.store.scanEntries(cursor, this.scanLimit);
+      if (entries.length === 0) break;
+      for (const entry of entries) {
+        if (entry.seq !== cursor + 1n)
+          throw new CllError("corrupt", "CLL sequence is not contiguous");
+        if (!Number.isFinite(entry.appendedAt.getTime()))
+          throw new CllError("corrupt", "CLL entry append time is invalid");
+        await tree.append(entry.value);
+        cursor = entry.seq;
+        firstPendingAt ??= entry.appendedAt;
+      }
+      if (entries.length < this.scanLimit) break;
+    }
+    const checkpointIndexedSeq = current.checkpointIndexedSeq ?? 0n;
+    const pendingEntries = cursor - checkpointIndexedSeq;
+    const due =
+      pendingEntries > 0n &&
+      (pendingEntries >= BigInt(this.entryCadence) ||
+        (firstPendingAt !== undefined &&
+          now.valueOf() - firstPendingAt.valueOf() >= this.ageCadenceMs));
+    let signed: SignedCheckpoint | undefined;
+    let next: CllState = {
+      ...current,
+      size: tree.size,
+      nodes: tree.nodes(),
+      indexedSeq: cursor,
+      ...(firstPendingAt === undefined ? {} : { firstPendingAt }),
+    };
+    if (due) {
+      const previousSize = current.checkpointSize ?? 0n;
+      const previousPeaks = current.checkpointPeaks ?? [];
+      let consistencyProof: ConsistencyProof | undefined;
+      if (previousSize > 0n) {
+        const proof = await tree.consistencyProof(previousSize);
+        consistencyProof = {
+          sizeA: proof.oldSize,
+          sizeB: proof.newSize,
+          oldPeaks: proof.oldPeaks,
+          witness: proof.witness,
+          newPeaks: proof.newPeaks,
+        };
+      }
+      signed = await signCheckpoint({
+        logId: this.options.logId,
+        mmrSize: tree.size,
+        peaks: tree.peakHashes(),
+        previousSize,
+        previousPeaks,
+        timestamp: now,
+        identity: this.options.identity,
+        ...(consistencyProof === undefined ? {} : { consistencyProof }),
+      });
+      const pending: WitnessState[] = this.witnessIds.map((witnessId) => ({
+        witnessId,
+        checkpointSize: tree.size,
+        checkpoint: signed!.cose,
+        attempts: 0,
+        nextAttemptAt: now,
+        permanent: false,
+      }));
+      const { firstPendingAt: _cleared, ...withoutPendingAge } = next;
+      next = {
+        ...withoutPendingAge,
+        checkpoint: signed.cose,
+        checkpointSize: tree.size,
+        checkpointIndexedSeq: cursor,
+        checkpointPeaks: tree.peakHashes(),
+        witnesses: [...current.witnesses, ...pending],
+      };
+    }
+    if (cursor !== current.indexedSeq || signed !== undefined)
+      await this.store.commitCll(current.size, current.checkpoint, next);
+    return signed;
+  }
+}

@@ -1,0 +1,684 @@
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  CheckpointRunner,
+  CllError,
+  checkpointEntryHash,
+  checkpointMetadata,
+  createCheckpointIdentity,
+  MemoryStore,
+  MmrTree,
+  WitnessDeliveryRunner,
+  signCheckpoint,
+  verifyCheckpoint,
+  verifyInclusionValue,
+  type CllEntry,
+  type WitnessClient,
+} from "../src/index.js";
+
+class GenericMemoryStore extends MemoryStore {
+  public constructor(private readonly genericEntries: readonly CllEntry[]) {
+    super();
+  }
+
+  public override async scanEntries(after: bigint, limit: number) {
+    return this.genericEntries
+      .filter((entry) => entry.seq > after)
+      .slice(0, limit)
+      .map((entry) => ({
+        ...entry,
+        value: Uint8Array.from(entry.value),
+        appendedAt: new Date(entry.appendedAt),
+      }));
+  }
+}
+
+describe("checkpoint COSE", () => {
+  it("indexes an application-neutral CLL source", async () => {
+    const appendedAt = new Date("2026-09-02T12:00:00Z");
+    const store = new GenericMemoryStore([
+      {
+        seq: 1n,
+        value: Uint8Array.from({ length: 32 }, () => 0x42),
+        appendedAt,
+      },
+    ]);
+    const identity = createCheckpointIdentity(
+      Buffer.from(
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "hex",
+      ),
+    );
+    const runner = new CheckpointRunner(store, {
+      logId: "generic-log",
+      identity,
+      entryCadence: 1,
+      scanLimit: 1,
+      clock: () => appendedAt,
+    });
+
+    const scan = vi.spyOn(store, "scanEntries");
+    const checkpoint = await runner.runOnce();
+    expect(checkpoint).toBeDefined();
+    expect(scan.mock.calls.every(([, limit]) => limit === 1)).toBe(true);
+    expect((await store.loadCll()).indexedSeq).toBe(1n);
+  });
+
+  it("rejects a generic CLL entry without a valid append time", async () => {
+    const store = new GenericMemoryStore([
+      {
+        seq: 1n,
+        value: Uint8Array.from({ length: 32 }, () => 0x42),
+        appendedAt: new Date(Number.NaN),
+      },
+    ]);
+    const identity = createCheckpointIdentity(Buffer.alloc(32));
+    const runner = new CheckpointRunner(store, {
+      logId: "invalid-time-log",
+      identity,
+    });
+
+    await expect(runner.runOnce()).rejects.toMatchObject({ code: "corrupt" });
+  });
+
+  it("signs a self-verifying first checkpoint", async () => {
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const identity = createCheckpointIdentity(
+      Buffer.from(
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "hex",
+      ),
+    );
+    const checkpoint = await signCheckpoint({
+      logId: "test-log",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:34:56.836Z",
+      identity,
+    });
+    expect(await verifyCheckpoint(checkpoint.cose)).toBe(true);
+    expect(await checkpointMetadata(checkpoint.cose)).toMatchObject({
+      logId: "test-log",
+      size: tree.size,
+      root: checkpoint.root,
+      previousSize: 0n,
+      previousRoot: "",
+      keyId: checkpoint.keyId,
+      timestamp: checkpoint.timestamp,
+    });
+    expect(await checkpointEntryHash(checkpoint.cose)).toHaveLength(32);
+    expect(checkpoint.previousRoot).toBe("");
+    expect(checkpoint.json.length).toBeGreaterThan(0);
+    const tampered = Uint8Array.from(checkpoint.cose);
+    const last = tampered.length - 1;
+    tampered[last] = (tampered[last] ?? 0) ^ 1;
+    expect(await verifyCheckpoint(tampered)).toBe(false);
+  });
+  it("rejects an invalid checkpoint cadence before signing", async () => {
+    const tree = new MmrTree();
+    await tree.append(new Uint8Array(32));
+    const identity = createCheckpointIdentity(new Uint8Array(32));
+    const input = {
+      logId: "cadence-log",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: new Date(0),
+      identity,
+    };
+    await expect(signCheckpoint({ ...input, cadence: 0 })).rejects.toThrow(
+      "positive portable integer",
+    );
+    await expect(
+      signCheckpoint({ ...input, cadence: Number.MAX_SAFE_INTEGER + 1 }),
+    ).rejects.toThrow("positive portable integer");
+  });
+
+  it("persists checkpoint and lets permanent witness failure coexist with success", async () => {
+    const store = new MemoryStore();
+    await store.append({
+      value: Uint8Array.from({ length: 32 }, () => 0x11),
+      appendedAt: new Date("2026-09-01T12:34:56Z"),
+    });
+    const identity = createCheckpointIdentity(
+      Buffer.from(
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "hex",
+      ),
+    );
+    const runner = new CheckpointRunner(store, {
+      logId: "test-log",
+      identity,
+      witnessIds: ["good", "bad"],
+      entryCadence: 1,
+      clock: () => new Date("2026-09-01T12:34:56Z"),
+    });
+    // Concurrent runOnce() is guarded only by the backend CAS in commitCll:
+    // exactly one call produces the checkpoint; the other either observes no
+    // pending work or loses the CAS with a contention error (which run()'s loop
+    // swallows). There is no in-process serialization gate.
+    const concurrent = await Promise.allSettled([
+      runner.runOnce(),
+      runner.runOnce(),
+    ]);
+    expect(
+      concurrent.filter(
+        (result) => result.status === "fulfilled" && result.value !== undefined,
+      ),
+    ).toHaveLength(1);
+    for (const result of concurrent)
+      if (result.status === "rejected")
+        expect(result.reason).toMatchObject({ code: "contention" });
+    const good: WitnessClient = {
+      id: "good",
+      submit: async () => ({
+        bytes: Uint8Array.of(1, 2, 3),
+      }),
+    };
+    const bad: WitnessClient = {
+      id: "bad",
+      submit: async () => {
+        throw new CllError("rejected", "rejected");
+      },
+    };
+    const delivery = new WitnessDeliveryRunner(
+      store,
+      new Map([
+        [good.id, good],
+        [bad.id, bad],
+      ]),
+      {
+        verifiers: new Map([
+          [good.id, { verify: () => true }],
+          [bad.id, { verify: () => true }],
+        ]),
+        now: () => new Date("2026-09-01T12:35:00Z"),
+      },
+    );
+    expect(await delivery.runOnce()).toBe(1);
+    expect((await store.getWitness("good", 1n))?.receipt).toEqual(
+      Uint8Array.of(1, 2, 3),
+    );
+    expect((await store.getWitness("good", 1n))?.entryHash).toBeUndefined();
+    expect((await store.getWitness("bad", 1n))?.permanent).toBe(true);
+    await store.close();
+  });
+  it("does not let a slow witness starve an independent witness", async () => {
+    const store = new MemoryStore();
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const signed = await signCheckpoint({
+      logId: "parallel-witnesses",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:00:00Z",
+      identity: createCheckpointIdentity(new Uint8Array(32)),
+    });
+    const witness = (witnessId: string) => ({
+      witnessId,
+      checkpointSize: 1n,
+      checkpoint: signed.cose,
+      attempts: 0,
+      nextAttemptAt: new Date(0),
+      permanent: false,
+    });
+    await store.commitCll(0n, undefined, {
+      size: 0n,
+      nodes: [],
+      indexedSeq: 0n,
+      witnesses: [witness("slow"), witness("fast")],
+    });
+    let releaseSlow!: () => void;
+    const slowGate = new Promise<void>((resolve) => {
+      releaseSlow = resolve;
+    });
+    const receipt = {
+      bytes: Uint8Array.of(1),
+      entryHash: "11".repeat(32),
+      entryHashScheme: "legacy" as const,
+      leafIndex: 0,
+      treeSize: 1,
+    };
+    const fastSubmit = vi.fn(async () => receipt);
+    const delivery = new WitnessDeliveryRunner(
+      store,
+      new Map([
+        [
+          "slow",
+          {
+            id: "slow",
+            submit: async () => {
+              await slowGate;
+              return receipt;
+            },
+          },
+        ],
+        ["fast", { id: "fast", submit: fastSubmit }],
+      ]),
+      {
+        verifiers: new Map([
+          ["slow", { verify: () => true }],
+          ["fast", { verify: () => true }],
+        ]),
+        now: () => new Date("2026-09-01T12:00:01Z"),
+      },
+    );
+    const running = delivery.runOnce();
+    try {
+      await vi.waitFor(() => expect(fastSubmit).toHaveBeenCalledOnce());
+    } finally {
+      releaseSlow();
+    }
+    await expect(running).resolves.toBe(2);
+    await store.close();
+  });
+
+  it("fails closed and retries when a verifier is not configured", async () => {
+    const store = new MemoryStore();
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const signed = await signCheckpoint({
+      logId: "unverified",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:00:00Z",
+      identity: createCheckpointIdentity(new Uint8Array(32)),
+    });
+    await store.commitCll(0n, undefined, {
+      size: 0n,
+      nodes: [],
+      indexedSeq: 0n,
+      witnesses: [
+        {
+          witnessId: "unverified",
+          checkpointSize: 1n,
+          checkpoint: signed.cose,
+          attempts: 0,
+          nextAttemptAt: new Date(0),
+          permanent: false,
+        },
+      ],
+    });
+    const delivery = new WitnessDeliveryRunner(
+      store,
+      new Map([
+        [
+          "unverified",
+          {
+            id: "unverified",
+            submit: async () => ({
+              bytes: Uint8Array.of(1),
+              entryHash: "11".repeat(32),
+              entryHashScheme: "legacy" as const,
+              leafIndex: 0,
+              treeSize: 1,
+            }),
+          },
+        ],
+      ]),
+      { verifiers: new Map(), now: () => new Date(0) },
+    );
+    expect(await delivery.runOnce()).toBe(0);
+    const state = await store.getWitness("unverified", 1n);
+    expect(state?.permanent).toBe(false);
+    expect(state?.attempts).toBe(1);
+    expect(state?.receipt).toBeUndefined();
+    await store.close();
+  });
+  it("backs retryable witness failures off without marking them permanent", async () => {
+    const store = new MemoryStore();
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const identity = createCheckpointIdentity(new Uint8Array(32));
+    const signed = await signCheckpoint({
+      logId: "retryable",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:00:00Z",
+      identity,
+    });
+    const now = new Date("2026-09-01T12:00:00Z");
+    await store.commitCll(0n, undefined, {
+      size: 0n,
+      nodes: [],
+      indexedSeq: 0n,
+      witnesses: [
+        {
+          witnessId: "retryable",
+          checkpointSize: 1n,
+          checkpoint: signed.cose,
+          attempts: 2,
+          nextAttemptAt: now,
+          permanent: false,
+        },
+      ],
+    });
+    const delivery = new WitnessDeliveryRunner(
+      store,
+      new Map([
+        [
+          "retryable",
+          {
+            id: "retryable",
+            submit: async () => {
+              throw new CllError("contention", "retry later");
+            },
+          },
+        ],
+      ]),
+      {
+        verifiers: new Map([["retryable", { verify: () => true }]]),
+        now: () => now,
+        baseBackoffMs: 1_000,
+        maxBackoffMs: 2_500,
+      },
+    );
+    expect(await delivery.runOnce()).toBe(0);
+    const state = await store.getWitness("retryable", 1n);
+    expect(state?.attempts).toBe(3);
+    expect(state?.permanent).toBe(false);
+    expect(state?.nextAttemptAt.valueOf()).toBe(now.valueOf() + 2_500);
+    await store.close();
+  });
+
+  it("wakes both polling lifecycles when notified", async () => {
+    const store = new MemoryStore();
+    const checkpoint = new CheckpointRunner(store, {
+      logId: "notify",
+      identity: createCheckpointIdentity(new Uint8Array(32)),
+      pollIntervalMs: 60_000,
+    });
+    const load = vi.spyOn(store, "loadCll");
+    const checkpointAbort = new AbortController();
+    const checkpointRun = checkpoint.run(checkpointAbort.signal);
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    checkpoint.notify();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+    checkpointAbort.abort();
+    await checkpointRun;
+
+    const delivery = new WitnessDeliveryRunner(store, new Map(), {
+      verifiers: new Map(),
+      pollIntervalMs: 60_000,
+    });
+    const pending = vi.spyOn(store, "pendingWitnesses");
+    const deliveryAbort = new AbortController();
+    const deliveryRun = delivery.run(deliveryAbort.signal);
+    await vi.waitFor(() => expect(pending).toHaveBeenCalledTimes(1));
+    delivery.notify();
+    await vi.waitFor(() => expect(pending).toHaveBeenCalledTimes(2));
+    deliveryAbort.abort();
+    await deliveryRun;
+    await store.close();
+  });
+  it("runs and stops both polling lifecycles without duplicate starts", async () => {
+    const store = new MemoryStore();
+    const identity = createCheckpointIdentity(new Uint8Array(32));
+    const checkpoint = new CheckpointRunner(store, {
+      logId: "lifecycle",
+      identity,
+      pollIntervalMs: 5,
+    });
+    const checkpointAbort = new AbortController();
+    const checkpointRun = checkpoint.run(checkpointAbort.signal);
+    await expect(
+      checkpoint.run(new AbortController().signal),
+    ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+    checkpointAbort.abort();
+    await checkpointRun;
+
+    const delivery = new WitnessDeliveryRunner(store, new Map(), {
+      verifiers: new Map(),
+      pollIntervalMs: 5,
+    });
+    const deliveryAbort = new AbortController();
+    const deliveryRun = delivery.run(deliveryAbort.signal);
+    await expect(
+      delivery.run(new AbortController().signal),
+    ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+    deliveryAbort.abort();
+    await deliveryRun;
+
+    const alreadyAborted = new AbortController();
+    alreadyAborted.abort();
+    await expect(
+      checkpoint.run(alreadyAborted.signal),
+    ).resolves.toBeUndefined();
+    await expect(delivery.run(alreadyAborted.signal)).resolves.toBeUndefined();
+    await store.close();
+  });
+  it("aborts an in-flight witness request without recording a failed attempt", async () => {
+    const store = new MemoryStore();
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const signed = await signCheckpoint({
+      logId: "abort-request",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:00:00Z",
+      identity: createCheckpointIdentity(new Uint8Array(32)),
+    });
+    await store.commitCll(0n, undefined, {
+      size: 0n,
+      nodes: [],
+      indexedSeq: 0n,
+      witnesses: [
+        {
+          witnessId: "abort-request",
+          checkpointSize: 1n,
+          checkpoint: signed.cose,
+          attempts: 0,
+          nextAttemptAt: new Date(0),
+          permanent: false,
+        },
+      ],
+    });
+    let markSubmitted!: () => void;
+    const submitted = new Promise<void>((resolve) => {
+      markSubmitted = resolve;
+    });
+    const delivery = new WitnessDeliveryRunner(
+      store,
+      new Map([
+        [
+          "abort-request",
+          {
+            id: "abort-request",
+            submit: async (_checkpoint: Uint8Array, signal?: AbortSignal) => {
+              markSubmitted();
+              return new Promise((_resolve, reject) => {
+                signal?.addEventListener("abort", () => reject(signal.reason), {
+                  once: true,
+                });
+              });
+            },
+          },
+        ],
+      ]),
+      {
+        verifiers: new Map([["abort-request", { verify: () => true }]]),
+        pollIntervalMs: 5,
+      },
+    );
+    const abort = new AbortController();
+    const running = delivery.run(abort.signal);
+    await submitted;
+    abort.abort();
+    await running;
+    expect((await store.getWitness("abort-request", 1n))?.attempts).toBe(0);
+    await store.close();
+  });
+  it("chains a second checkpoint with a round-trip consistency and inclusion proof", async () => {
+    // Coverage note (interop C1): the cross-impl interop driver only exercises a
+    // FIRST checkpoint (previousSize 0, no consistency proof). This self-test
+    // covers the CheckpointRunner's consistency-proof generation branch and the
+    // MMR inclusion-proof wire, which remain TS self-tested. A true cross-impl
+    // vector for a >=2-checkpoint chain and inclusion proofs would need the Go
+    // and Python drivers extended in their own repositories and is not added
+    // here.
+    const store = new MemoryStore();
+    const identity = createCheckpointIdentity(
+      Buffer.from(
+        "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+        "hex",
+      ),
+    );
+    const runner = new CheckpointRunner(store, {
+      logId: "chain-log",
+      identity,
+      entryCadence: 1,
+      clock: () => new Date("2026-09-02T12:00:00Z"),
+    });
+    const valueA = Uint8Array.from({ length: 32 }, () => 0x11);
+    const valueB = Uint8Array.from({ length: 32 }, () => 0x22);
+
+    await store.append({
+      value: valueA,
+      appendedAt: new Date("2026-09-02T11:00:00Z"),
+    });
+    const first = await runner.runOnce();
+    expect(first).toBeDefined();
+    expect(await verifyCheckpoint(first!.cose)).toBe(true);
+    expect((await checkpointMetadata(first!.cose))?.previousSize).toBe(0n);
+
+    await store.append({
+      value: valueB,
+      appendedAt: new Date("2026-09-02T11:30:00Z"),
+    });
+    const second = await runner.runOnce();
+    expect(second).toBeDefined();
+    // The second checkpoint carries an auto-generated consistency proof that
+    // verifyCheckpoint validates against the first checkpoint's size/root.
+    expect(await verifyCheckpoint(second!.cose)).toBe(true);
+    const secondMetadata = await checkpointMetadata(second!.cose);
+    expect(secondMetadata?.size).toBe(second!.mmrSize);
+    expect(secondMetadata?.previousSize).toBe(first!.mmrSize);
+    expect(secondMetadata?.previousRoot).toBe(first!.root);
+
+    // Inclusion-proof round-trip against the durable MMR state.
+    const state = await store.loadCll();
+    const tree = new MmrTree(state.nodes);
+    const root = await tree.root();
+    for (const [leafIndex, value] of [valueA, valueB].entries()) {
+      const proof = await tree.inclusionProof(BigInt(leafIndex));
+      expect(
+        await verifyInclusionValue(
+          root,
+          tree.size,
+          BigInt(leafIndex),
+          value,
+          proof,
+        ),
+      ).toBe(true);
+    }
+    await store.close();
+  });
+
+  it("rejects a checkpoint size beyond stored CLL state", async () => {
+    const store = new MemoryStore();
+    const tree = new MmrTree();
+    await tree.append(Buffer.from("11".repeat(32), "hex"));
+    const identity = createCheckpointIdentity(new Uint8Array(32));
+    const signed = await signCheckpoint({
+      logId: "corrupt-size",
+      mmrSize: tree.size,
+      peaks: tree.peakHashes(),
+      previousSize: 0n,
+      previousPeaks: [],
+      timestamp: "2026-09-01T12:00:00Z",
+      identity,
+    });
+    await expect(
+      store.commitCll(0n, undefined, {
+        size: tree.size,
+        nodes: tree.nodes(),
+        indexedSeq: 1n,
+        checkpoint: signed.cose,
+        checkpointSize: 2n,
+        checkpointIndexedSeq: 1n,
+        checkpointPeaks: tree.peakHashes(),
+        witnesses: [],
+      }),
+    ).rejects.toMatchObject({
+      code: "invalid",
+    } satisfies Partial<CllError>);
+    await store.close();
+  });
+
+  it("rejects competing checkpoints at the same MMR size", async () => {
+    const store = new MemoryStore();
+    const appendClock = () => new Date("2026-09-01T12:00:00Z");
+    for (const byte of [1, 2, 3])
+      await store.append({
+        value: Uint8Array.from({ length: 32 }, () => byte),
+        appendedAt: appendClock(),
+      });
+    const identity = createCheckpointIdentity(new Uint8Array(32));
+    const indexing = new CheckpointRunner(store, {
+      logId: "checkpoint-race",
+      identity,
+      entryCadence: 100,
+      ageCadenceMs: 60 * 60_000,
+      clock: appendClock,
+    });
+    expect(await indexing.runOnce()).toBeUndefined();
+    const staleBeforeCheckpoint = await store.loadCll();
+
+    const first = new CheckpointRunner(store, {
+      logId: "checkpoint-race",
+      identity,
+      witnessIds: ["anchor"],
+      entryCadence: 100,
+      ageCadenceMs: 1,
+      clock: () => new Date("2026-09-01T13:00:00Z"),
+    });
+    const second = new CheckpointRunner(store, {
+      logId: "checkpoint-race",
+      identity,
+      witnessIds: ["anchor"],
+      entryCadence: 100,
+      ageCadenceMs: 1,
+      clock: () => new Date("2026-09-01T13:00:01Z"),
+    });
+    const results = await Promise.allSettled([
+      first.runOnce(),
+      second.runOnce(),
+    ]);
+    expect(
+      results.filter((result) => result.status === "fulfilled"),
+    ).toHaveLength(1);
+    const rejected = results.find((result) => result.status === "rejected");
+    expect(rejected).toMatchObject({
+      reason: { code: "contention" },
+    });
+    const state = await store.loadCll();
+    const witness = await store.getWitness("anchor", state.size);
+    expect(witness?.checkpoint).toEqual(state.checkpoint);
+    await expect(
+      store.commitCll(
+        staleBeforeCheckpoint.size,
+        staleBeforeCheckpoint.checkpoint,
+        {
+          ...state,
+          checkpoint: Uint8Array.of(9),
+          checkpointSize: 7n,
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "contention",
+    } satisfies Partial<CllError>);
+    await store.close();
+  });
+});
