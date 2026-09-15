@@ -41,34 +41,58 @@ def _consistency_proof(data: dict) -> core.ConsistencyProof:
     return core.ConsistencyProof(**data)
 
 
+def _range_proof(data: dict) -> core.RangeProof:
+    data = dict(data)
+    data["witness"] = tuple(data["witness"])
+    return core.RangeProof(**data)
+
+
 def test_mmr_conformance_vectors_match_reference_and_verify():
     vectors = json.loads(VECTORS.read_text())
     store = _fixture(vectors)
     assert vectors["count"] == len(vectors["cases"])
 
     for case in vectors["cases"]:
+        # Positives (default) must regenerate exactly and verify true; a tamper
+        # case (expect == false) carries a mutated proof/leaf and MUST be rejected.
+        expect = case.get("expect", True)
         if case["kind"] == "root":
             assert case["leaf_identity_inputs"]["seq_range"] == [1, case["leaf_count"]]
-            assert _root(store, case["size"]).hex() == case["root_hex"], case["name"]
+            assert (_root(store, case["size"]).hex() == case["root_hex"]) == expect, case["name"]
         elif case["kind"] == "inclusion":
             assert case["leaf_identity_inputs"]["seq_range"] == [1, case["leaf_count"]]
-            body = hashlib.sha256(
-                vectors["leaf_identity"]["template"].format(seq=case["leaf_index"] + 1).encode("utf-8")
-            ).digest()
-            assert body.hex() == case["body_digest_hex"], case["name"]
             proof = _inclusion_proof(case["proof"])
-            assert core.inclusion_proof(store, case["leaf_index"], case["size"]) == proof, case["name"]
-            assert core.verify_inclusion(
+            verified = core.verify_inclusion(
                 bytes.fromhex(case["root_hex"]), case["size"], case["leaf_index"],
                 bytes.fromhex(case["body_digest_hex"]), proof,
-            ), case["name"]
+            )
+            assert verified == expect, case["name"]
+            if expect:
+                body = hashlib.sha256(
+                    vectors["leaf_identity"]["template"].format(seq=case["leaf_index"] + 1).encode("utf-8")
+                ).digest()
+                assert body.hex() == case["body_digest_hex"], case["name"]
+                assert core.inclusion_proof(store, case["leaf_index"], case["size"]) == proof, case["name"]
         elif case["kind"] == "consistency":
             assert case["leaf_identity_inputs"]["seq_range"] == [1, case["leaf_count_b"]]
             proof = _consistency_proof(case["proof"])
-            assert core.consistency_proof(store, case["size_a"], case["size_b"]) == proof, case["name"]
-            assert core.verify_consistency(
+            verified = core.verify_consistency(
                 bytes.fromhex(case["root_a_hex"]), case["size_a"],
                 bytes.fromhex(case["root_b_hex"]), case["size_b"], proof,
-            ), case["name"]
+            )
+            assert verified == expect, case["name"]
+            if expect:
+                assert core.consistency_proof(store, case["size_a"], case["size_b"]) == proof, case["name"]
+        elif case["kind"] == "range":
+            assert case["leaf_identity_inputs"]["seq_range"] == [1, case["leaf_count"]]
+            proof = _range_proof(case["proof"])
+            body_digests = [bytes.fromhex(digest) for digest in case["body_digests"]]
+            verified = core.verify_range(
+                bytes.fromhex(case["root_hex"]), case["size"],
+                case["from_index"], case["to_index"], body_digests, proof,
+            )
+            assert verified == expect, case["name"]
+            if expect:
+                assert core.range_proof(store, case["from_index"], case["to_index"], case["size"]) == proof, case["name"]
         else:
             raise AssertionError(f"{case['name']}: unknown kind {case['kind']!r}")

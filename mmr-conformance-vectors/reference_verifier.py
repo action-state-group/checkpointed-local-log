@@ -42,39 +42,57 @@ def _consistency_proof(data: dict) -> core.ConsistencyProof:
     return core.ConsistencyProof(**data)
 
 
+def _range_proof(data: dict) -> core.RangeProof:
+    data = dict(data)
+    data["witness"] = tuple(data["witness"])
+    return core.RangeProof(**data)
+
+
 def main() -> int:
     vectors = json.loads((Path(__file__).parent / "vectors.json").read_text())
     store = _fixture(vectors)
     failures = []
     for case in vectors["cases"]:
         kind = case["kind"]
+        # A case is a positive by default; expect==false is a tamper case that
+        # MUST be rejected. A positive is also required to regenerate exactly.
+        expect = case.get("expect", True)
         if kind == "root":
-            actual = _root(store, case["size"]).hex()
-            expected = case["root_hex"]
-            ok = actual == expected
+            verified = _root(store, case["size"]).hex() == case["root_hex"]
+            ok = verified == expect
         elif kind == "inclusion":
             proof = _inclusion_proof(case["proof"])
-            regenerated = core.inclusion_proof(store, case["leaf_index"], case["size"])
-            expected = proof
-            actual = regenerated
-            ok = actual == expected and core.verify_inclusion(
+            verified = core.verify_inclusion(
                 bytes.fromhex(case["root_hex"]), case["size"], case["leaf_index"],
                 bytes.fromhex(case["body_digest_hex"]), proof,
             )
+            ok = verified == expect
+            if expect:
+                ok = ok and core.inclusion_proof(store, case["leaf_index"], case["size"]) == proof
         elif kind == "consistency":
             proof = _consistency_proof(case["proof"])
-            regenerated = core.consistency_proof(store, case["size_a"], case["size_b"])
-            expected = proof
-            actual = regenerated
-            ok = actual == expected and core.verify_consistency(
+            verified = core.verify_consistency(
                 bytes.fromhex(case["root_a_hex"]), case["size_a"],
                 bytes.fromhex(case["root_b_hex"]), case["size_b"], proof,
             )
+            ok = verified == expect
+            if expect:
+                ok = ok and core.consistency_proof(store, case["size_a"], case["size_b"]) == proof
+        elif kind == "range":
+            proof = _range_proof(case["proof"])
+            body_digests = [bytes.fromhex(digest) for digest in case["body_digests"]]
+            verified = core.verify_range(
+                bytes.fromhex(case["root_hex"]), case["size"],
+                case["from_index"], case["to_index"], body_digests, proof,
+            )
+            ok = verified == expect
+            if expect:
+                ok = ok and core.range_proof(store, case["from_index"], case["to_index"], case["size"]) == proof
         else:
             failures.append(f"{case['name']}: unknown kind {kind!r}")
             continue
         if not ok:
-            failures.append(f"{case['name']}: expected {expected!r}, got {actual!r}")
+            failures.append(f"{case['name']}: verify={verified!r}, expected verify=={expect!r}")
     if failures:
         print("FAIL:\n" + "\n".join(failures))
         return 1

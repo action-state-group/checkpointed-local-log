@@ -1,9 +1,16 @@
 # CLL MMR conformance vectors
 
-Shared, byte-pinned MMR roots plus inclusion and consistency proofs for Go and
-TypeScript implementations to consume. The Python `cll.checkpoint.core`
+Shared, byte-pinned MMR roots plus inclusion, consistency, and range proofs for
+Go and TypeScript implementations to consume. The Python `cll.checkpoint.core`
 implementation is the reference that generated the expected values; the test
 suite regenerates and verifies every vector against it.
+
+The set includes both positive cases (`expect` absent or `true`: the proof must
+regenerate byte-for-byte and verify) and interior-tamper negatives (`expect:
+false`: a mutated leaf or witness that verification MUST reject). A consumer whose
+`verify_inclusion`/`verify_consistency`/`verify_range` silently accepts a tampered
+proof, or whose range check only binds the two endpoints, fails these negatives —
+so the shared set now covers negative-path parity, not just positive byte-parity.
 
 ## Fixture and conventions
 
@@ -50,7 +57,11 @@ bytes.
 
 ## Files and use
 
-- `vectors.json` contains 7 root, 7 inclusion, and 5 consistency cases.
+- `vectors.json` contains 26 cases: 7 root, 8 inclusion, 6 consistency, and 5
+  range. Four are interior-tamper negatives (`expect: false`) across inclusion,
+  consistency, and range. `range` cases carry `from_seq`/`to_seq`,
+  `from_index`/`to_index`, the ordered `body_digests`, and a flat CLL range
+  `witness`; every leaf in the interval participates in rebuilding the root.
 - `reference_verifier.py` regenerates the fixture and checks exact proof
   structures and verification results with Python CLL.
 
