@@ -58,10 +58,13 @@ bytes.
 ## Files and use
 
 - `vectors.json` contains 26 cases: 7 root, 8 inclusion, 6 consistency, and 5
-  range. Four are interior-tamper negatives (`expect: false`) across inclusion,
-  consistency, and range. `range` cases carry `from_seq`/`to_seq`,
-  `from_index`/`to_index`, the ordered `body_digests`, and a flat CLL range
-  `witness`; every leaf in the interval participates in rebuilding the root.
+  range. Four are negatives (`expect: false`): a flipped witness sibling for each
+  of inclusion, consistency, and range, plus one **interior-leaf** tamper
+  (`neg-range-interior-leaf-altered`) — a replaced interior body digest that only
+  the every-leaf range binding rejects (a two-endpoint check would miss it).
+  `range` cases carry `from_seq`/`to_seq`, `from_index`/`to_index`, the ordered
+  `body_digests`, and a flat CLL range `witness`; every leaf in the interval
+  participates in rebuilding the root.
 - `reference_verifier.py` regenerates the fixture and checks exact proof
   structures and verification results with Python CLL.
 
