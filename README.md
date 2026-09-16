@@ -47,6 +47,28 @@ What it ships:
 See [`docs/module-map.md`](docs/module-map.md) for the section-by-section map
 from this spec to the package's modules.
 
+### Cross-language scope: the ledger layer is Python-only, by decision
+
+The Go (`cll-go`) and TypeScript (`@action-state-group/cll`) implementations are
+the **checkpoint + MMR + storage substrate only**: the append-only log, the
+Merkle Mountain Range with inclusion/consistency proofs, signed COSE
+checkpoints, witness delivery, and the storage backends. They are deliberately
+application-neutral and do not interpret record bodies.
+
+The **ledger layer** — `cll.ledger` (three-state admission control, segment
+closing and manifests, the rebuildable lookup index, the append-only capsule
+store) and `cll.revocation` (the key-validity timeline) — is **not ported to Go
+or TypeScript, and this is a decision rather than a gap.** That layer is the
+business logic of *who may write and how records are admitted, archived,
+queried, and key-checked*; it was folded into this Python package by the W3
+"one neutral library per spec" extraction of `capsule-ledger`
+(2026-09-01), and nothing downstream in the AAC ecosystem requires it in Go or
+TypeScript. Cross-language byte-parity is therefore required for the substrate
+(MMR proofs, checkpoints) and is explicitly **not** claimed for the ledger
+layer. Should a Go or TS consumer ever need admission or revocation semantics,
+adding them is a new, separately-scoped decision, not a matter of "catching up"
+to the reference.
+
 ## Building the draft
 
 The build toolchain is [`kramdown-rfc`](https://github.com/cabo/kramdown-rfc)
