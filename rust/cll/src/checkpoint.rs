@@ -22,7 +22,10 @@
 
 use crate::mmr::{commitment_object, root_from_peaks, ConsistencyProof, Hash, DIGEST_LEN};
 use coset::cbor::value::Value as CborValue;
-use coset::{iana, CoseSign1, CoseSign1Builder, HeaderBuilder, Label, RegisteredLabel, TaggedCborSerializable};
+use coset::{
+    iana, CoseSign1, CoseSign1Builder, HeaderBuilder, Label, RegisteredLabel,
+    TaggedCborSerializable,
+};
 use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
@@ -205,7 +208,11 @@ impl CheckpointRecord {
             let verifying_key = VerifyingKey::from_bytes(&key_bytes).ok()?;
             let sig_bytes: [u8; 64] = hex::decode(&self.signature).ok()?.try_into().ok()?;
             let signature = ed25519_dalek::Signature::from_bytes(&sig_bytes);
-            Some(verifying_key.verify(self.digest().as_bytes(), &signature).is_ok())
+            Some(
+                verifying_key
+                    .verify(self.digest().as_bytes(), &signature)
+                    .is_ok(),
+            )
         })()
         .unwrap_or(false)
     }
@@ -272,18 +279,33 @@ fn consistency_proof_to_cbor(p: &ConsistencyProof) -> Result<CborValue, Checkpoi
 }
 
 fn consistency_proof_from_cbor(v: &CborValue) -> Result<ConsistencyProof, CheckpointError> {
-    let map = v.as_map().ok_or_else(|| invalid("consistency_proof claim is not a map"))?;
+    let map = v
+        .as_map()
+        .ok_or_else(|| invalid("consistency_proof claim is not a map"))?;
     let get = |key: &str| -> Option<&CborValue> {
-        map.iter().find_map(|(k, v)| (k.as_text() == Some(key)).then_some(v))
+        map.iter()
+            .find_map(|(k, v)| (k.as_text() == Some(key)).then_some(v))
     };
-    let size_a = get("size_a").and_then(CborValue::as_integer).ok_or_else(|| invalid("consistency_proof missing size_a"))?;
-    let size_b = get("size_b").and_then(CborValue::as_integer).ok_or_else(|| invalid("consistency_proof missing size_b"))?;
-    let old_peaks_v = get("old_peaks").and_then(CborValue::as_array).ok_or_else(|| invalid("consistency_proof missing old_peaks"))?;
-    let witness_v = get("witness").and_then(CborValue::as_array).ok_or_else(|| invalid("consistency_proof missing witness"))?;
-    let new_peaks_v = get("new_peaks").and_then(CborValue::as_array).ok_or_else(|| invalid("consistency_proof missing new_peaks"))?;
+    let size_a = get("size_a")
+        .and_then(CborValue::as_integer)
+        .ok_or_else(|| invalid("consistency_proof missing size_a"))?;
+    let size_b = get("size_b")
+        .and_then(CborValue::as_integer)
+        .ok_or_else(|| invalid("consistency_proof missing size_b"))?;
+    let old_peaks_v = get("old_peaks")
+        .and_then(CborValue::as_array)
+        .ok_or_else(|| invalid("consistency_proof missing old_peaks"))?;
+    let witness_v = get("witness")
+        .and_then(CborValue::as_array)
+        .ok_or_else(|| invalid("consistency_proof missing witness"))?;
+    let new_peaks_v = get("new_peaks")
+        .and_then(CborValue::as_array)
+        .ok_or_else(|| invalid("consistency_proof missing new_peaks"))?;
 
     let to_hex = |v: &CborValue| -> Result<String, CheckpointError> {
-        v.as_bytes().map(hex::encode).ok_or_else(|| invalid("expected a byte string"))
+        v.as_bytes()
+            .map(hex::encode)
+            .ok_or_else(|| invalid("expected a byte string"))
     };
 
     let old_peaks: Vec<String> = old_peaks_v.iter().map(to_hex).collect::<Result<_, _>>()?;
@@ -371,16 +393,28 @@ pub fn encode_checkpoint_claims(
     let mut claims: Vec<(CborValue, CborValue)> = vec![
         (CborValue::from("kind"), CborValue::from(WIRE_KIND)),
         (CborValue::from("log_size"), CborValue::from(cp.mmr_size)),
-        (CborValue::from("commitment"), CborValue::from(commitment_object(new_peak_hashes))),
+        (
+            CborValue::from("commitment"),
+            CborValue::from(commitment_object(new_peak_hashes)),
+        ),
         (CborValue::from("prev_size"), CborValue::from(cp.prev_size)),
-        (CborValue::from("prev_commitment"), CborValue::from(prev_commitment)),
-        (CborValue::from("issued_at"), CborValue::from(cp.timestamp.clone())),
+        (
+            CborValue::from("prev_commitment"),
+            CborValue::from(prev_commitment),
+        ),
+        (
+            CborValue::from("issued_at"),
+            CborValue::from(cp.timestamp.clone()),
+        ),
     ];
     if let Some(c) = cadence_seconds {
         claims.push((CborValue::from("cadence"), CborValue::from(c)));
     }
     if let Some(p) = consistency_proof {
-        claims.push((CborValue::from("consistency_proof"), consistency_proof_to_cbor(p)?));
+        claims.push((
+            CborValue::from("consistency_proof"),
+            consistency_proof_to_cbor(p)?,
+        ));
     }
 
     let mut out = Vec::new();
@@ -411,10 +445,18 @@ pub fn checkpoint_to_cose(
         )));
     }
     if consistency_proof.is_some() && cp.prev_size == 0 {
-        return Err(invalid("checkpoint has no prior (prev_size == 0) but a consistency_proof was supplied"));
+        return Err(invalid(
+            "checkpoint has no prior (prev_size == 0) but a consistency_proof was supplied",
+        ));
     }
 
-    let payload = encode_checkpoint_claims(cp, new_peak_hashes, prev_peak_hashes, consistency_proof, cadence_seconds)?;
+    let payload = encode_checkpoint_claims(
+        cp,
+        new_peak_hashes,
+        prev_peak_hashes,
+        consistency_proof,
+        cadence_seconds,
+    )?;
 
     let subject = format!("{}#{}", cp.log_id, cp.mmr_size);
     let claims_hdr = CborValue::Map(vec![
@@ -435,7 +477,9 @@ pub fn checkpoint_to_cose(
         .create_signature(b"", |tbs| signing_key.sign(tbs).to_bytes().to_vec())
         .build();
 
-    sign1.to_tagged_vec().map_err(|e| CheckpointError::Cbor(format!("{e:?}")))
+    sign1
+        .to_tagged_vec()
+        .map_err(|e| CheckpointError::Cbor(format!("{e:?}")))
 }
 
 #[derive(Debug, Clone)]
@@ -484,14 +528,19 @@ pub struct CoseCheckpointVerification {
 }
 
 fn decode_commitment(raw: &[u8], what: &str) -> Result<Vec<Hash>, CheckpointError> {
-    let value: CborValue = coset::cbor::de::from_reader(raw).map_err(|e| invalid(format!("{what} is not valid CBOR: {e:?}")))?;
-    let arr = value.as_array().ok_or_else(|| invalid(format!("{what} is not a CBOR array of peak hashes")))?;
+    let value: CborValue = coset::cbor::de::from_reader(raw)
+        .map_err(|e| invalid(format!("{what} is not valid CBOR: {e:?}")))?;
+    let arr = value
+        .as_array()
+        .ok_or_else(|| invalid(format!("{what} is not a CBOR array of peak hashes")))?;
     arr.iter()
         .map(|v| {
             v.as_bytes()
                 .filter(|b| b.len() == DIGEST_LEN)
                 .and_then(|b| <[u8; DIGEST_LEN]>::try_from(b.as_slice()).ok())
-                .ok_or_else(|| invalid(format!("{what} is not a CBOR array of 32-byte peak hashes")))
+                .ok_or_else(|| {
+                    invalid(format!("{what} is not a CBOR array of 32-byte peak hashes"))
+                })
         })
         .collect()
 }
@@ -516,7 +565,9 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let sign1 = match CoseSign1::from_tagged_slice(cose_bytes) {
         Ok(s) => s,
         Err(e) => {
-            result.errors.push(format!("malformed COSE checkpoint statement: {e:?}"));
+            result
+                .errors
+                .push(format!("malformed COSE checkpoint statement: {e:?}"));
             return result;
         }
     };
@@ -530,7 +581,9 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let verifying_key = match VerifyingKey::from_bytes(&key_bytes) {
         Ok(k) => k,
         Err(e) => {
-            result.errors.push(format!("kid is not a valid Ed25519 public key: {e}"));
+            result
+                .errors
+                .push(format!("kid is not a valid Ed25519 public key: {e}"));
             return result;
         }
     };
@@ -541,7 +594,9 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
         verifying_key.verify(tbs, &signature).map_err(|_| ())
     });
     if verify_result.is_err() {
-        result.errors.push("COSE checkpoint signature does not verify under its own kid".to_string());
+        result
+            .errors
+            .push("COSE checkpoint signature does not verify under its own kid".to_string());
         return result;
     }
 
@@ -550,7 +605,9 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
         _ => String::new(),
     };
     if content_type != CLL_CHECKPOINT_CONTENT_TYPE {
-        result.errors.push(format!("unexpected content_type {content_type:?}"));
+        result
+            .errors
+            .push(format!("unexpected content_type {content_type:?}"));
         return result;
     }
 
@@ -564,10 +621,12 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let (issuer, subject) = match claims_hdr.as_ref().and_then(CborValue::as_map) {
         Some(entries) => {
             let get = |want: i64| {
-                entries.iter().find_map(|(k, v)| match (k.as_integer(), v.as_text()) {
-                    (Some(i), Some(s)) if i128::from(i) == want as i128 => Some(s.to_string()),
-                    _ => None,
-                })
+                entries
+                    .iter()
+                    .find_map(|(k, v)| match (k.as_integer(), v.as_text()) {
+                        (Some(i), Some(s)) if i128::from(i) == want as i128 => Some(s.to_string()),
+                        _ => None,
+                    })
             };
             (get(CWT_ISS), get(CWT_SUB))
         }
@@ -576,7 +635,9 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let issuer = match issuer {
         Some(i) if !i.is_empty() => i,
         _ => {
-            result.errors.push("statement carries no CWT issuer (log identity)".to_string());
+            result
+                .errors
+                .push("statement carries no CWT issuer (log identity)".to_string());
             return result;
         }
     };
@@ -584,51 +645,74 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let payload = match &sign1.payload {
         Some(p) => p.clone(),
         None => {
-            result.errors.push("statement has no attached payload".to_string());
+            result
+                .errors
+                .push("statement has no attached payload".to_string());
             return result;
         }
     };
     let claims: CborValue = match coset::cbor::de::from_reader(payload.as_slice()) {
         Ok(c) => c,
         Err(e) => {
-            result.errors.push(format!("payload is not valid CBOR: {e:?}"));
+            result
+                .errors
+                .push(format!("payload is not valid CBOR: {e:?}"));
             return result;
         }
     };
     let claims_map = match claims.as_map() {
         Some(m) => m,
         None => {
-            result.errors.push("claims payload is not a map".to_string());
+            result
+                .errors
+                .push("claims payload is not a map".to_string());
             return result;
         }
     };
     let get = |key: &str| -> Option<&CborValue> {
-        claims_map.iter().find_map(|(k, v)| (k.as_text() == Some(key)).then_some(v))
+        claims_map
+            .iter()
+            .find_map(|(k, v)| (k.as_text() == Some(key)).then_some(v))
     };
 
     if get("kind").and_then(CborValue::as_text) != Some(WIRE_KIND) {
-        result.errors.push(format!("claims 'kind' is {:?}, expected {WIRE_KIND:?}", get("kind")));
+        result.errors.push(format!(
+            "claims 'kind' is {:?}, expected {WIRE_KIND:?}",
+            get("kind")
+        ));
         return result;
     }
 
-    let mmr_size = match get("log_size").and_then(CborValue::as_integer).map(|i| i128::from(i)) {
+    let mmr_size = match get("log_size")
+        .and_then(CborValue::as_integer)
+        .map(i128::from)
+    {
         Some(n) if n >= 0 => n as u64,
         _ => {
-            result.errors.push("log_size must be a non-negative integer".to_string());
+            result
+                .errors
+                .push("log_size must be a non-negative integer".to_string());
             return result;
         }
     };
-    let prev_size = match get("prev_size").and_then(CborValue::as_integer).map(|i| i128::from(i)) {
+    let prev_size = match get("prev_size")
+        .and_then(CborValue::as_integer)
+        .map(i128::from)
+    {
         Some(n) if n >= 0 => n as u64,
         _ => {
-            result.errors.push("prev_size must be a non-negative integer".to_string());
+            result
+                .errors
+                .push("prev_size must be a non-negative integer".to_string());
             return result;
         }
     };
     let commitment = match get("commitment").and_then(CborValue::as_bytes) {
         Some(b) => b,
         None => {
-            result.errors.push("commitment must be a CBOR byte string".to_string());
+            result
+                .errors
+                .push("commitment must be a CBOR byte string".to_string());
             return result;
         }
     };
@@ -659,33 +743,41 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     let issued_at = match get("issued_at").and_then(CborValue::as_text) {
         Some(s) => s.to_string(),
         None => {
-            result.errors.push("issued_at must be a string (ISO 8601)".to_string());
+            result
+                .errors
+                .push("issued_at must be a string (ISO 8601)".to_string());
             return result;
         }
     };
 
     let expected_subject = format!("{issuer}#{mmr_size}");
     if subject.as_deref() != Some(expected_subject.as_str()) {
-        result.errors.push(format!("CWT subject {subject:?} does not match expected {expected_subject:?}"));
+        result.errors.push(format!(
+            "CWT subject {subject:?} does not match expected {expected_subject:?}"
+        ));
         return result;
     }
 
-    let cadence_seconds = get("cadence").and_then(CborValue::as_integer).map(|i| i128::from(i) as i64);
+    let cadence_seconds = get("cadence")
+        .and_then(CborValue::as_integer)
+        .map(|i| i128::from(i) as i64);
 
     let consistency_proof = match get("consistency_proof") {
-        Some(raw) => match consistency_proof_from_cbor(raw) {
-            Ok(p) => {
-                if p.size_a != prev_size || p.size_b != mmr_size {
-                    result.errors.push("consistency_proof does not span this checkpoint's own prev_size/log_size".to_string());
+        Some(raw) => {
+            match consistency_proof_from_cbor(raw) {
+                Ok(p) => {
+                    if p.size_a != prev_size || p.size_b != mmr_size {
+                        result.errors.push("consistency_proof does not span this checkpoint's own prev_size/log_size".to_string());
+                        return result;
+                    }
+                    Some(p)
+                }
+                Err(e) => {
+                    result.errors.push(e.to_string());
                     return result;
                 }
-                Some(p)
             }
-            Err(e) => {
-                result.errors.push(e.to_string());
-                return result;
-            }
-        },
+        }
         None => None,
     };
 
@@ -719,7 +811,13 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
                     return result;
                 }
             };
-            if !crate::mmr::verify_consistency(&root_a, decoded.prev_size, &root_b, decoded.mmr_size, p) {
+            if !crate::mmr::verify_consistency(
+                &root_a,
+                decoded.prev_size,
+                &root_b,
+                decoded.mmr_size,
+                p,
+            ) {
                 result.errors.push(format!(
                     "consistency proof does not bridge prev_size={} to log_size={} -- checkpoint \
                      claims continuity it cannot cryptographically back",

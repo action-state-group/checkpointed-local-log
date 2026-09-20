@@ -47,13 +47,40 @@ What it ships:
 See [`docs/module-map.md`](docs/module-map.md) for the section-by-section map
 from this spec to the package's modules.
 
+### The `cll` Rust crate
+
+`rust/cll/` (crates.io: `cll`) is a Rust sibling of the Python package,
+covering the same substrate scope as the Go and TypeScript ports below: the
+Merkle Mountain Range (leaf/interior hashing, peaks, root, inclusion and
+consistency proofs), the MMRIVER-conformant peak-list commitment, per-record
+range-membership proofs, signed COSE_Sign1 checkpoints (byte-for-byte port
+of `cll.checkpoint.emit`/`.cose_wire`), a `checkpoints.jsonl` reader/writer
+matching the on-disk shape a Python checkpointer already writes, and a
+witness-registration client. Rust and Python are two implementations of one
+spec; the vectors in `mmr-conformance-vectors/`, `commitment-conformance-
+vectors/`, and `checkpoint-conformance-vectors/` are the contract — both
+languages regenerate and verify the same pinned bytes (roots, proofs,
+checkpoint digests, and Ed25519 signatures, which are deterministic per
+RFC 8032), so a change only one side's tests catch is a real divergence, not
+a passing build.
+
+```sh
+cd rust/cll && cargo test
+```
+
+See [`checkpoint-conformance-vectors/README.md`](checkpoint-conformance-vectors/README.md)
+for how the checkpoint-record vectors pin cross-language digest/signature
+parity, and `rust/cll/tests/` for this crate's own pass over all three
+vector sets.
+
 ### Cross-language scope: the ledger layer is Python-only, by decision
 
-The Go (`cll-go`) and TypeScript (`@action-state-group/cll`) implementations are
-the **checkpoint + MMR + storage substrate only**: the append-only log, the
-Merkle Mountain Range with inclusion/consistency proofs, signed COSE
-checkpoints, witness delivery, and the storage backends. They are deliberately
-application-neutral and do not interpret record bodies.
+The Go (`cll-go`), TypeScript (`@action-state-group/cll`), and Rust (`cll`,
+above) implementations are the **checkpoint + MMR + storage substrate
+only**: the append-only log, the Merkle Mountain Range with
+inclusion/consistency proofs, signed COSE checkpoints, witness delivery, and
+the storage backends. They are deliberately application-neutral and do not
+interpret record bodies.
 
 The **ledger layer** — `cll.ledger` (three-state admission control, segment
 closing and manifests, the rebuildable lookup index, the append-only capsule

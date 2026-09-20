@@ -14,12 +14,20 @@
 //! peak the range touches.
 
 use crate::mmr::{
-    height_at, integrity, interior_hash, invalid, leaf_count, leaf_hash, parse_digest_hex, peaks, root_from_peaks,
-    Hash, MmrError, NodeReader, MAX_MMR_SIZE,
+    height_at, integrity, interior_hash, invalid, leaf_count, leaf_hash, parse_digest_hex, peaks,
+    root_from_peaks, Hash, MmrError, NodeReader, MAX_MMR_SIZE,
 };
 use std::collections::HashMap;
 
-fn range_witnesses(reader: &impl NodeReader, pos: u64, height: u32, leaf_start: u64, lo: u64, hi: u64, out: &mut Vec<Hash>) {
+fn range_witnesses(
+    reader: &impl NodeReader,
+    pos: u64,
+    height: u32,
+    leaf_start: u64,
+    lo: u64,
+    hi: u64,
+    out: &mut Vec<Hash>,
+) {
     let leaf_end = leaf_start + (1u64 << height) - 1;
     if leaf_end < lo || leaf_start > hi {
         out.push(reader.node(pos));
@@ -29,7 +37,15 @@ fn range_witnesses(reader: &impl NodeReader, pos: u64, height: u32, leaf_start: 
         return;
     }
     let half = 1u64 << (height - 1);
-    range_witnesses(reader, pos - (1u64 << height), height - 1, leaf_start, lo, hi, out);
+    range_witnesses(
+        reader,
+        pos - (1u64 << height),
+        height - 1,
+        leaf_start,
+        lo,
+        hi,
+        out,
+    );
     range_witnesses(reader, pos - 1, height - 1, leaf_start + half, lo, hi, out);
 }
 
@@ -45,13 +61,20 @@ pub struct RangeProof {
 
 /// Range proof for leaf indices [from_index, to_index] (0-indexed,
 /// inclusive) against the MMR of `size` nodes.
-pub fn range_proof(reader: &impl NodeReader, from_index: u64, to_index: u64, size: u64) -> Result<RangeProof, MmrError> {
+pub fn range_proof(
+    reader: &impl NodeReader,
+    from_index: u64,
+    to_index: u64,
+    size: u64,
+) -> Result<RangeProof, MmrError> {
     if to_index < from_index {
         return Err(invalid(format!("invalid range [{from_index}, {to_index}]")));
     }
     let lc = leaf_count(size)?;
     if to_index >= lc {
-        return Err(invalid(format!("to_index {to_index} out of range for size {size} ({lc} leaves)")));
+        return Err(invalid(format!(
+            "to_index {to_index} out of range for size {size} ({lc} leaves)"
+        )));
     }
     let reader_size = reader.size();
     if reader_size < size {
@@ -103,8 +126,26 @@ fn reconstruct_range_subtree(
         return body_digests.get(&leaf_start).map(leaf_hash).ok_or(());
     }
     let half = 1u64 << (height - 1);
-    let left = reconstruct_range_subtree(pos - (1u64 << height), height - 1, leaf_start, lo, hi, body_digests, witness_bytes, cursor)?;
-    let right = reconstruct_range_subtree(pos - 1, height - 1, leaf_start + half, lo, hi, body_digests, witness_bytes, cursor)?;
+    let left = reconstruct_range_subtree(
+        pos - (1u64 << height),
+        height - 1,
+        leaf_start,
+        lo,
+        hi,
+        body_digests,
+        witness_bytes,
+        cursor,
+    )?;
+    let right = reconstruct_range_subtree(
+        pos - 1,
+        height - 1,
+        leaf_start + half,
+        lo,
+        hi,
+        body_digests,
+        witness_bytes,
+        cursor,
+    )?;
     Ok(interior_hash(&left, &right, pos))
 }
 
@@ -114,7 +155,14 @@ fn reconstruct_range_subtree(
 /// deleted, or replaced interior leaf changes the peak it falls under and
 /// is caught here, unlike a two-boundary inclusion check that never looks
 /// at any leaf strictly between the two endpoints.
-pub fn verify_range(root: &Hash, size: u64, from_index: u64, to_index: u64, body_digests: &[Hash], proof: &RangeProof) -> bool {
+pub fn verify_range(
+    root: &Hash,
+    size: u64,
+    from_index: u64,
+    to_index: u64,
+    body_digests: &[Hash],
+    proof: &RangeProof,
+) -> bool {
     (|| -> Result<bool, ()> {
         if proof.v != 1 || proof.kind != "range" {
             return Ok(false);
@@ -134,10 +182,17 @@ pub fn verify_range(root: &Hash, size: u64, from_index: u64, to_index: u64, body
             return Ok(false);
         }
 
-        let digest_by_index: HashMap<u64, Hash> =
-            body_digests.iter().enumerate().map(|(i, d)| (from_index + i as u64, *d)).collect();
+        let digest_by_index: HashMap<u64, Hash> = body_digests
+            .iter()
+            .enumerate()
+            .map(|(i, d)| (from_index + i as u64, *d))
+            .collect();
 
-        let witness_bytes: Vec<Hash> = proof.witness.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
+        let witness_bytes: Vec<Hash> = proof
+            .witness
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
 
         let pks = peaks(size).map_err(|_| ())?;
         let mut cursor = 0usize;

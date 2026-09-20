@@ -4,8 +4,9 @@
 //! and now this crate all pass the same fixtures unchanged).
 
 use cll::mmr::{
-    add_leaf, commitment_object, consistency_proof, inclusion_proof, leaf_hash, root_from_peaks, verify_consistency,
-    verify_inclusion, ConsistencyProof, Hash, InclusionProof, MemoryNodeStore, NodeReader,
+    add_leaf, commitment_object, consistency_proof, inclusion_proof, leaf_hash, root_from_peaks,
+    verify_consistency, verify_inclusion, ConsistencyProof, Hash, InclusionProof, MemoryNodeStore,
+    NodeReader,
 };
 use cll::range_proof::{range_proof, verify_range, RangeProof};
 use serde_json::Value;
@@ -36,7 +37,8 @@ fn load_vectors(repo_relative: &str) -> Value {
     // two levels up.
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = manifest_dir.join("../..").join(repo_relative);
-    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));
+    let text =
+        std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));
     serde_json::from_str(&text).unwrap()
 }
 
@@ -59,7 +61,12 @@ fn consistency_proof_from_json(p: &Value) -> ConsistencyProof {
         size_a: p["size_a"].as_u64().unwrap(),
         size_b: p["size_b"].as_u64().unwrap(),
         old_peaks: str_array(&p["old_peaks"]),
-        witness: p["witness"].as_array().unwrap().iter().map(str_array).collect(),
+        witness: p["witness"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(str_array)
+            .collect(),
         new_peaks: str_array(&p["new_peaks"]),
     }
 }
@@ -76,7 +83,11 @@ fn range_proof_from_json(p: &Value) -> RangeProof {
 }
 
 fn str_array(v: &Value) -> Vec<String> {
-    v.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect()
+    v.as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_str().unwrap().to_string())
+        .collect()
 }
 
 #[test]
@@ -116,7 +127,10 @@ fn mmr_conformance_vectors_pass() {
                 if expect {
                     // Self-consistency: our own producer reproduces the pinned proof.
                     let produced = inclusion_proof(&store, leaf_index, size).unwrap();
-                    assert_eq!(produced, proof, "case {name}: inclusion_proof producer mismatch");
+                    assert_eq!(
+                        produced, proof,
+                        "case {name}: inclusion_proof producer mismatch"
+                    );
                 }
             }
             "consistency" => {
@@ -133,7 +147,10 @@ fn mmr_conformance_vectors_pass() {
 
                 if expect {
                     let produced = consistency_proof(&store, size_a, size_b).unwrap();
-                    assert_eq!(produced, proof, "case {name}: consistency_proof producer mismatch");
+                    assert_eq!(
+                        produced, proof,
+                        "case {name}: consistency_proof producer mismatch"
+                    );
                 }
             }
             "range" => {
@@ -143,7 +160,12 @@ fn mmr_conformance_vectors_pass() {
                 let to_index = case["to_index"].as_u64().unwrap();
                 let store = build_fixture(leaf_count);
                 let root = hex32(case["root_hex"].as_str().unwrap());
-                let body_digests: Vec<Hash> = case["body_digests"].as_array().unwrap().iter().map(|v| hex32(v.as_str().unwrap())).collect();
+                let body_digests: Vec<Hash> = case["body_digests"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|v| hex32(v.as_str().unwrap()))
+                    .collect();
                 let proof = range_proof_from_json(&case["proof"]);
 
                 let ok = verify_range(&root, size, from_index, to_index, &body_digests, &proof);
@@ -151,7 +173,10 @@ fn mmr_conformance_vectors_pass() {
 
                 if expect {
                     let produced = range_proof(&store, from_index, to_index, size).unwrap();
-                    assert_eq!(produced, proof, "case {name}: range_proof producer mismatch");
+                    assert_eq!(
+                        produced, proof,
+                        "case {name}: range_proof producer mismatch"
+                    );
                 }
             }
             other => panic!("unknown vector kind {other:?} in case {name}"),
@@ -160,7 +185,10 @@ fn mmr_conformance_vectors_pass() {
     }
 
     let declared = doc["count"].as_u64().unwrap() as usize;
-    assert_eq!(checked, declared, "vector count mismatch -- some cases were not dispatched");
+    assert_eq!(
+        checked, declared,
+        "vector count mismatch -- some cases were not dispatched"
+    );
 }
 
 #[test]
@@ -171,12 +199,20 @@ fn commitment_conformance_vectors_pass() {
     for case in cases {
         let name = case["name"].as_str().unwrap();
         let kind = case["kind"].as_str().unwrap();
-        let peak_hashes: Vec<Hash> = case["peak_hashes"].as_array().unwrap().iter().map(|v| hex32(v.as_str().unwrap())).collect();
+        let peak_hashes: Vec<Hash> = case["peak_hashes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| hex32(v.as_str().unwrap()))
+            .collect();
         let expected_hex = case["commitment_hex"].as_str().unwrap();
         let encoded = hex::encode(commitment_object(&peak_hashes));
 
         match kind {
-            "positive" => assert_eq!(encoded, expected_hex, "case {name}: commitment_object mismatch"),
+            "positive" => assert_eq!(
+                encoded, expected_hex,
+                "case {name}: commitment_object mismatch"
+            ),
             "must-fail" => {
                 // These vectors pin a byte string that a conformant
                 // encoder must NEVER produce (reversed/dropped/duplicated
@@ -185,7 +221,10 @@ fn commitment_conformance_vectors_pass() {
                 // encoding of whatever peak list it is given, so the
                 // must-fail bar here is: our own encoder never happens to
                 // reproduce the malformed bytes for the SAME peak list.
-                assert_ne!(encoded, expected_hex, "case {name}: encoder must never reproduce a must-fail encoding");
+                assert_ne!(
+                    encoded, expected_hex,
+                    "case {name}: encoder must never reproduce a must-fail encoding"
+                );
             }
             other => panic!("unknown commitment vector kind {other:?} in case {name}"),
         }

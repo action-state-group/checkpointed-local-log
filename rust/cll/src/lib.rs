@@ -12,9 +12,11 @@
 //! Scope is deliberately narrow, matching this repo's Go/TypeScript ports:
 //! the checkpoint + MMR + storage substrate only -- append-only log
 //! indexing, the MMR with inclusion/consistency/range proofs, signed COSE
-//! checkpoints, and witness delivery. No capsule semantics, no
-//! EvidenceBook/record-header semantics, no ledger admission/revocation
-//! layer (that stays Python-only, by decision -- see the repo README).
+//! checkpoints, and witness delivery. This crate carries no payload
+//! semantics of any kind and no ledger admission/revocation layer (that
+//! stays Python-only, by decision -- see the repo README); it defines
+//! nothing about how the entries it indexes are produced, interpreted, or
+//! governed.
 
 pub mod checkpoint;
 pub mod mmr;

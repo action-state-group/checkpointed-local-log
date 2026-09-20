@@ -158,7 +158,9 @@ pub fn peaks(size: u64) -> Result<Vec<u64>, MmrError> {
             h += 1;
         }
         if h as i64 >= prev_height {
-            return Err(invalid(format!("invalid MMR size (not a valid node count): {size}")));
+            return Err(invalid(format!(
+                "invalid MMR size (not a valid node count): {size}"
+            )));
         }
         let m_size = (1u64 << (h + 1)) - 1;
         offset += m_size;
@@ -334,7 +336,11 @@ pub struct InclusionProof {
 
 impl fmt::Display for InclusionProof {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "InclusionProof(size={}, leaf_index={})", self.size, self.leaf_index)
+        write!(
+            f,
+            "InclusionProof(size={}, leaf_index={})",
+            self.size, self.leaf_index
+        )
     }
 }
 
@@ -362,9 +368,18 @@ pub fn inclusion_proof(
     let peak_height = height_at(peak_pos);
     let path = locate_path(peak_pos, peak_height, leaf_pos);
 
-    let witness = path.iter().map(|s| hex::encode(reader.node(s.sibling_pos))).collect();
-    let peaks_left = pks[..peak_idx].iter().map(|&p| hex::encode(reader.node(p))).collect();
-    let peaks_right = pks[peak_idx + 1..].iter().map(|&p| hex::encode(reader.node(p))).collect();
+    let witness = path
+        .iter()
+        .map(|s| hex::encode(reader.node(s.sibling_pos)))
+        .collect();
+    let peaks_left = pks[..peak_idx]
+        .iter()
+        .map(|&p| hex::encode(reader.node(p)))
+        .collect();
+    let peaks_right = pks[peak_idx + 1..]
+        .iter()
+        .map(|&p| hex::encode(reader.node(p)))
+        .collect();
 
     Ok(InclusionProof {
         v: 1,
@@ -378,7 +393,13 @@ pub fn inclusion_proof(
 }
 
 /// Pure, total inclusion verification. Never panics on malformed proof data.
-pub fn verify_inclusion(root: &Hash, size: u64, leaf_index: u64, body_digest: &Hash, proof: &InclusionProof) -> bool {
+pub fn verify_inclusion(
+    root: &Hash,
+    size: u64,
+    leaf_index: u64,
+    body_digest: &Hash,
+    proof: &InclusionProof,
+) -> bool {
     (|| -> Result<bool, ()> {
         if proof.v != 1 || proof.kind != "inclusion" {
             return Ok(false);
@@ -415,11 +436,21 @@ pub fn verify_inclusion(root: &Hash, size: u64, leaf_index: u64, body_digest: &H
             return Ok(false);
         }
 
-        let witness_bytes: Vec<Hash> = proof.witness.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
-        let peaks_left_bytes: Vec<Hash> =
-            proof.peaks_left.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
-        let peaks_right_bytes: Vec<Hash> =
-            proof.peaks_right.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
+        let witness_bytes: Vec<Hash> = proof
+            .witness
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
+        let peaks_left_bytes: Vec<Hash> = proof
+            .peaks_left
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
+        let peaks_right_bytes: Vec<Hash> = proof
+            .peaks_right
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
 
         let mut acc = leaf_hash(body_digest);
         for (step, sib) in path.iter().zip(witness_bytes.iter()) {
@@ -452,9 +483,15 @@ pub struct ConsistencyProof {
     pub new_peaks: Vec<String>,
 }
 
-pub fn consistency_proof(reader: &impl NodeReader, size_a: u64, size_b: u64) -> Result<ConsistencyProof, MmrError> {
+pub fn consistency_proof(
+    reader: &impl NodeReader,
+    size_a: u64,
+    size_b: u64,
+) -> Result<ConsistencyProof, MmrError> {
     if size_b < size_a {
-        return Err(invalid(format!("invalid size_b: {size_b} (must be >= size_a={size_a})")));
+        return Err(invalid(format!(
+            "invalid size_b: {size_b} (must be >= size_a={size_a})"
+        )));
     }
     let reader_size = reader.size();
     if reader_size < size_b {
@@ -473,17 +510,26 @@ pub fn consistency_proof(reader: &impl NodeReader, size_a: u64, size_b: u64) -> 
         let h = reader.node(p);
         old_peaks.push(hex::encode(h));
 
-        let containing_idx = find_containing_peak(p, &new_peak_positions)
-            .ok_or_else(|| integrity(format!("old peak at position {p} not found in new MMR of size {size_b}")))?;
+        let containing_idx = find_containing_peak(p, &new_peak_positions).ok_or_else(|| {
+            integrity(format!(
+                "old peak at position {p} not found in new MMR of size {size_b}"
+            ))
+        })?;
         let new_peak_pos = new_peak_positions[containing_idx];
         let new_peak_height = height_at(new_peak_pos);
         let path = locate_path(new_peak_pos, new_peak_height, p);
 
-        let w: Vec<String> = path.iter().map(|s| hex::encode(reader.node(s.sibling_pos))).collect();
+        let w: Vec<String> = path
+            .iter()
+            .map(|s| hex::encode(reader.node(s.sibling_pos)))
+            .collect();
         witness.push(w);
     }
 
-    let new_peaks: Vec<String> = new_peak_positions.iter().map(|&p| hex::encode(reader.node(p))).collect();
+    let new_peaks: Vec<String> = new_peak_positions
+        .iter()
+        .map(|&p| hex::encode(reader.node(p)))
+        .collect();
 
     Ok(ConsistencyProof {
         v: 1,
@@ -497,7 +543,13 @@ pub fn consistency_proof(reader: &impl NodeReader, size_a: u64, size_b: u64) -> 
 }
 
 /// Pure, total consistency verification. Never panics on malformed proof data.
-pub fn verify_consistency(root_a: &Hash, size_a: u64, root_b: &Hash, size_b: u64, proof: &ConsistencyProof) -> bool {
+pub fn verify_consistency(
+    root_a: &Hash,
+    size_a: u64,
+    root_b: &Hash,
+    size_b: u64,
+    proof: &ConsistencyProof,
+) -> bool {
     (|| -> Result<bool, ()> {
         if proof.v != 1 || proof.kind != "consistency" {
             return Ok(false);
@@ -522,8 +574,16 @@ pub fn verify_consistency(root_a: &Hash, size_a: u64, root_b: &Hash, size_b: u64
             return Ok(false);
         }
 
-        let old_peaks_bytes: Vec<Hash> = proof.old_peaks.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
-        let new_peaks_bytes: Vec<Hash> = proof.new_peaks.iter().map(|w| parse_digest_hex(w)).collect::<Result<_, _>>()?;
+        let old_peaks_bytes: Vec<Hash> = proof
+            .old_peaks
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
+        let new_peaks_bytes: Vec<Hash> = proof
+            .new_peaks
+            .iter()
+            .map(|w| parse_digest_hex(w))
+            .collect::<Result<_, _>>()?;
 
         let computed_root_a = root_from_peaks(&old_peaks_bytes);
         if &computed_root_a != root_a {
@@ -547,7 +607,10 @@ pub fn verify_consistency(root_a: &Hash, size_a: u64, root_b: &Hash, size_b: u64
             if w.len() != path.len() {
                 return Ok(false);
             }
-            let w_bytes: Vec<Hash> = w.iter().map(|x| parse_digest_hex(x)).collect::<Result<_, _>>()?;
+            let w_bytes: Vec<Hash> = w
+                .iter()
+                .map(|x| parse_digest_hex(x))
+                .collect::<Result<_, _>>()?;
 
             let mut acc = old_peaks_bytes[i];
             for (step, sib) in path.iter().zip(w_bytes.iter()) {

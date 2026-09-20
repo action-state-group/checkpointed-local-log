@@ -68,7 +68,9 @@ impl WitnessClient {
     pub fn new(base_url: impl Into<String>) -> Self {
         Self {
             base_url: base_url.into(),
-            agent: ureq::AgentBuilder::new().timeout(Duration::from_secs(30)).build(),
+            agent: ureq::AgentBuilder::new()
+                .timeout(Duration::from_secs(30))
+                .build(),
         }
     }
 
@@ -77,8 +79,14 @@ impl WitnessClient {
     /// callers may retry freely.
     pub fn post_digest(&self, digest_hex: &str) -> Result<WitnessRecord, WitnessError> {
         let url = format!("{}/v1/digest", self.base_url.trim_end_matches('/'));
-        match self.agent.post(&url).send_json(ureq::json!({ "capsule_id": digest_hex })) {
-            Ok(resp) => resp.into_json().map_err(|e| WitnessError::Decode(e.to_string())),
+        match self
+            .agent
+            .post(&url)
+            .send_json(ureq::json!({ "capsule_id": digest_hex }))
+        {
+            Ok(resp) => resp
+                .into_json()
+                .map_err(|e| WitnessError::Decode(e.to_string())),
             Err(ureq::Error::Status(status, resp)) => Err(WitnessError::Status {
                 status,
                 body: resp.into_string().unwrap_or_default(),
@@ -90,10 +98,20 @@ impl WitnessClient {
     /// `GET /v1/inclusion/{capsule_id}` -- `Ok(None)` on a 404 (not yet
     /// durable, or never submitted); never registers as a side effect,
     /// unlike `post_digest`.
-    pub fn check_inclusion(&self, digest_hex: &str) -> Result<Option<InclusionProof>, WitnessError> {
-        let url = format!("{}/v1/inclusion/{}", self.base_url.trim_end_matches('/'), digest_hex);
+    pub fn check_inclusion(
+        &self,
+        digest_hex: &str,
+    ) -> Result<Option<InclusionProof>, WitnessError> {
+        let url = format!(
+            "{}/v1/inclusion/{}",
+            self.base_url.trim_end_matches('/'),
+            digest_hex
+        );
         match self.agent.get(&url).call() {
-            Ok(resp) => resp.into_json().map(Some).map_err(|e| WitnessError::Decode(e.to_string())),
+            Ok(resp) => resp
+                .into_json()
+                .map(Some)
+                .map_err(|e| WitnessError::Decode(e.to_string())),
             Err(ureq::Error::Status(404, _)) => Ok(None),
             Err(ureq::Error::Status(status, resp)) => Err(WitnessError::Status {
                 status,
@@ -107,9 +125,14 @@ impl WitnessClient {
     /// public key (hex) + its `key_id`, for out-of-band pinning and for
     /// verifying receipts offline via `scitt_cose.verify_receipt`.
     pub fn authority_pubkey(&self) -> Result<AuthorityPubkey, WitnessError> {
-        let url = format!("{}/anchor/authority-pubkey", self.base_url.trim_end_matches('/'));
+        let url = format!(
+            "{}/anchor/authority-pubkey",
+            self.base_url.trim_end_matches('/')
+        );
         match self.agent.get(&url).call() {
-            Ok(resp) => resp.into_json().map_err(|e| WitnessError::Decode(e.to_string())),
+            Ok(resp) => resp
+                .into_json()
+                .map_err(|e| WitnessError::Decode(e.to_string())),
             Err(ureq::Error::Status(status, resp)) => Err(WitnessError::Status {
                 status,
                 body: resp.into_string().unwrap_or_default(),
@@ -160,7 +183,12 @@ mod tests {
                     let headers = String::from_utf8_lossy(&buf[..header_end]);
                     let content_length: usize = headers
                         .lines()
-                        .find_map(|l| l.to_ascii_lowercase().starts_with("content-length:").then(|| l["content-length:".len()..].trim().parse().ok()).flatten())
+                        .find_map(|l| {
+                            l.to_ascii_lowercase()
+                                .starts_with("content-length:")
+                                .then(|| l["content-length:".len()..].trim().parse().ok())
+                                .flatten()
+                        })
                         .unwrap_or(0);
                     while buf.len() < header_end + content_length {
                         let n = stream.read(&mut chunk).unwrap_or(0);

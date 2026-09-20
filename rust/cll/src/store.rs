@@ -24,7 +24,10 @@ pub enum StoreError {
     #[error("io error: {0}")]
     Io(#[from] io::Error),
     #[error("malformed checkpoints.jsonl line {line}: {source}")]
-    Parse { line: usize, source: serde_json::Error },
+    Parse {
+        line: usize,
+        source: serde_json::Error,
+    },
 }
 
 /// One line of `checkpoints.jsonl`: the checkpoint record plus the
@@ -80,14 +83,23 @@ pub fn read_checkpoints(path: impl AsRef<Path>) -> Result<Vec<CheckpointLine>, S
             continue;
         }
         let mut value: serde_json::Value =
-            serde_json::from_str(&line).map_err(|source| StoreError::Parse { line: i + 1, source })?;
+            serde_json::from_str(&line).map_err(|source| StoreError::Parse {
+                line: i + 1,
+                source,
+            })?;
         let checkpoint_cose_hex = value
             .as_object_mut()
             .and_then(|obj| obj.remove("checkpoint_cose"))
             .and_then(|v| v.as_str().map(str::to_string));
         let record: CheckpointRecord =
-            serde_json::from_value(value).map_err(|source| StoreError::Parse { line: i + 1, source })?;
-        out.push(CheckpointLine { record, checkpoint_cose_hex });
+            serde_json::from_value(value).map_err(|source| StoreError::Parse {
+                line: i + 1,
+                source,
+            })?;
+        out.push(CheckpointLine {
+            record,
+            checkpoint_cose_hex,
+        });
     }
     Ok(out)
 }

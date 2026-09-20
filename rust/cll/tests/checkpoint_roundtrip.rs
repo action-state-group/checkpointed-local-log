@@ -2,7 +2,9 @@
 //! and the COSE_Sign1 wire form, including a two-checkpoint chain bridged
 //! by an MMR consistency proof.
 
-use cll::checkpoint::{checkpoint_to_cose, sign_checkpoint_digest, verify_checkpoint_cose_offline, CheckpointRecord};
+use cll::checkpoint::{
+    checkpoint_to_cose, sign_checkpoint_digest, verify_checkpoint_cose_offline, CheckpointRecord,
+};
 use cll::mmr::{add_leaf, consistency_proof, leaf_hash, peaks, MemoryNodeStore, NodeReader};
 use ed25519_dalek::SigningKey;
 use sha2::{Digest, Sha256};
@@ -13,7 +15,11 @@ fn body_digest_for_seq(seq: u64) -> [u8; 32] {
 }
 
 fn peak_hashes_at(store: &MemoryNodeStore, size: u64) -> Vec<[u8; 32]> {
-    peaks(size).unwrap().iter().map(|&p| store.node(p)).collect()
+    peaks(size)
+        .unwrap()
+        .iter()
+        .map(|&p| store.node(p))
+        .collect()
 }
 
 fn test_key() -> SigningKey {
@@ -145,9 +151,14 @@ fn cose_wire_chained_checkpoint_with_consistency_proof() {
         signature: String::new(),
         witnesses: Vec::new(),
     };
-    let cose_b = checkpoint_to_cose(&cp_b, &key, &peaks_b, Some(&peaks_a), Some(&proof), None).unwrap();
+    let cose_b =
+        checkpoint_to_cose(&cp_b, &key, &peaks_b, Some(&peaks_a), Some(&proof), None).unwrap();
     let result = verify_checkpoint_cose_offline(&cose_b);
-    assert!(result.ok, "chained verification failed: {:?}", result.errors);
+    assert!(
+        result.ok,
+        "chained verification failed: {:?}",
+        result.errors
+    );
     let decoded = result.decoded.unwrap();
     assert_eq!(decoded.prev_size, size_a);
     assert_eq!(decoded.prev_root, hex::encode(root_a));
