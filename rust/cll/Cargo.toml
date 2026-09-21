@@ -1,0 +1,29 @@
+[package]
+name = "cll"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Checkpointed Local Log (CLL): Merkle Mountain Range, signed COSE checkpoints, per-record range proofs, and witness registration -- a Rust sibling of the checkpointed-local-log Python reference, sharing its conformance vectors."
+repository = "https://github.com/action-state-group/checkpointed-local-log"
+keywords = ["scitt", "mmr", "merkle-mountain-range", "merkle", "checkpoint"]
+categories = ["cryptography"]
+publish = false
+
+[lib]
+name = "cll"
+path = "src/lib.rs"
+
+[dependencies]
+sha2 = "0.10"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+coset = "0.4"
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+thiserror = "1"
+ureq = { version = "2", features = ["json"] }
+base64 = "0.22"
+
+[dev-dependencies]
+rand = "0.8"
+tempfile = "3"
