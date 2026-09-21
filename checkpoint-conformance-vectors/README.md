@@ -47,11 +47,18 @@ encoding, and the signed checkpoint record that wraps a root.
   `checkpoint-chained-2-to-7-leaves` (a second checkpoint chained from the
   first via the MMR consistency proof bridging `size_a=3` to `size_b=11`).
 - `reference_verifier.py` regenerates every case from `CheckpointRecord`
-  plus the pinned seed and checks exact digest/signature match.
+  plus the pinned seed and checks exact digest/signature match, and also
+  checks the witness-receipt boundary: each case's `digest_hex` round-trips
+  through scitt-cose's own `cll`-agnostic COSE Receipt build/verify path
+  (`check_scitt_cose_receipt_interop`).
 
 Run `python3 checkpoint-conformance-vectors/reference_verifier.py` in an
 installed development environment. Rust, Go, and TypeScript consumers
 should parse the JSON, reconstruct the record fields, and reproduce
 `digest_hex`/`entry_digest_hex`/`signature` exactly -- see `rust/cll/tests/
 checkpoint_conformance_vectors.rs` for this crate's own pass over the same
-file, including offline COSE-wire verification of the chained case.
+file, including offline COSE-wire verification of the chained case, and
+`rust/cll/tests/scitt_cose_receipt_interop.rs` (`cargo test --features
+python-interop-tests`) for the witness-receipt boundary check -- no Rust
+scitt-cose verifier exists yet, so it drives that check by invoking this
+same `reference_verifier.py` as a subprocess.

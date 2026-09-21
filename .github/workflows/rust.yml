@@ -5,6 +5,11 @@
 # runs the Python reference_verifier.py scripts for those same vector sets,
 # so a divergence between the Python reference and the Rust port is caught
 # by CI on either side, not just locally.
+#
+# rust-test installs the Python dev environment too: `cargo test
+# --all-features` enables `scitt_cose_receipt_interop.rs`, which shells out
+# to `checkpoint-conformance-vectors/reference_verifier.py` (no Rust
+# scitt-cose verifier exists yet) to check the witness-receipt boundary.
 name: rust
 
 on:
@@ -37,6 +42,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: install checkpointed-local-log (dev)
+        run: python -m pip install -e ".[dev]"
 
       - name: cargo fmt --check
         working-directory: rust/cll

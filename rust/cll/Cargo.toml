@@ -22,8 +22,18 @@ coset = "0.4"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
 thiserror = "1"
 ureq = { version = "2", features = ["json"] }
-base64 = "0.22"
 
 [dev-dependencies]
-rand = "0.8"
 tempfile = "3"
+
+[features]
+# Gates `tests/scitt_cose_receipt_interop.rs`, which shells out to the
+# Python reference's `reference_verifier.py` (no Rust scitt-cose verifier
+# exists yet). Off by default so a plain `cargo test` doesn't require a
+# Python environment; CI's rust-test job sets one up and runs with
+# `--all-features`.
+python-interop-tests = []
+
+[[test]]
+name = "scitt_cose_receipt_interop"
+required-features = ["python-interop-tests"]
