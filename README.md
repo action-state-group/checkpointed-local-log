@@ -71,7 +71,13 @@ cd rust/cll && cargo test
 See [`checkpoint-conformance-vectors/README.md`](checkpoint-conformance-vectors/README.md)
 for how the checkpoint-record vectors pin cross-language digest/signature
 parity, and `rust/cll/tests/` for this crate's own pass over all three
-vector sets.
+vector sets. The witness-receipt boundary -- a checkpoint `digest_hex`
+round-tripping through scitt-cose's own `cll`-agnostic COSE Receipt
+build/verify path -- is verified in both languages: `rust/cll/tests/
+scitt_cose_receipt_interop.rs` (opt in with `cargo test --features
+python-interop-tests`; no Rust scitt-cose verifier exists yet, so it
+drives the check by invoking the Python reference's `reference_verifier.py`
+as a subprocess) alongside that same script's own direct check.
 
 ### Cross-language scope: the ledger layer is Python-only, by decision
 

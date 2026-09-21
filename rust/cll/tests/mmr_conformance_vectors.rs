@@ -5,8 +5,8 @@
 
 use cll::mmr::{
     add_leaf, commitment_object, consistency_proof, inclusion_proof, leaf_hash, root_from_peaks,
-    verify_consistency, verify_inclusion, ConsistencyProof, Hash, InclusionProof, MemoryNodeStore,
-    NodeReader,
+    verify_commitment_object, verify_consistency, verify_inclusion, ConsistencyProof, Hash,
+    InclusionProof, MemoryNodeStore, NodeReader,
 };
 use cll::range_proof::{range_proof, verify_range, RangeProof};
 use serde_json::Value;
@@ -209,24 +209,67 @@ fn commitment_conformance_vectors_pass() {
         let encoded = hex::encode(commitment_object(&peak_hashes));
 
         match kind {
-            "positive" => assert_eq!(
-                encoded, expected_hex,
-                "case {name}: commitment_object mismatch"
-            ),
-            "must-fail" => {
-                // These vectors pin a byte string that a conformant
-                // encoder must NEVER produce (reversed/dropped/duplicated
-                // peaks, a bit-flip, or an indefinite-length encoding).
-                // `commitment_object` only ever emits the canonical
-                // encoding of whatever peak list it is given, so the
-                // must-fail bar here is: our own encoder never happens to
-                // reproduce the malformed bytes for the SAME peak list.
-                assert_ne!(
+            "positive" => {
+                assert_eq!(
                     encoded, expected_hex,
-                    "case {name}: encoder must never reproduce a must-fail encoding"
+                    "case {name}: commitment_object mismatch"
+                );
+                let candidate = hex::decode(expected_hex).unwrap();
+                verify_commitment_object(&candidate, &peak_hashes).unwrap_or_else(|e| {
+                    panic!("case {name}: verifier rejected a positive vector: {e}")
+                });
+            }
+            "must-fail" => {
+                // These vectors pin a byte string a conformant encoder
+                // must never produce (reversed/dropped/duplicated peaks,
+                // a bit-flip, or an indefinite-length encoding), paired
+                // with the SAME true peak list. The must-fail bar is that
+                // the VERIFIER actively rejects the pinned bytes against
+                // that true peak list with a typed error -- not merely
+                // that our own encoder doesn't happen to reproduce the
+                // corrupted bytes (that would only prove the encoder is
+                // deterministic, not that a decoder catches tampering).
+                let candidate = hex::decode(expected_hex).unwrap();
+                let result = verify_commitment_object(&candidate, &peak_hashes);
+                assert!(
+                    result.is_err(),
+                    "case {name}: verifier accepted a must-fail commitment encoding"
                 );
             }
             other => panic!("unknown commitment vector kind {other:?} in case {name}"),
         }
     }
+}
+
+#[test]
+fn commitment_object_verifier_rejects_a_tampered_peak_byte() {
+    // R4: this crate's OWN conformant encoding of a real peak list, with a
+    // single bit flipped in one peak hash, must be REJECTED by
+    // `verify_commitment_object` -- mirrors the tampered-signature pattern
+    // in `checkpoint_roundtrip.rs`. Mutant: drop the content comparison in
+    // `verify_commitment_object` (accept on structural decode alone) and
+    // this test goes red.
+    let doc = load_vectors("commitment-conformance-vectors/vectors.json");
+    let case = doc["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["kind"] == "positive" && c["peak_hashes"].as_array().unwrap().len() > 1)
+        .expect("fixture must contain a multi-peak positive case");
+    let peak_hashes: Vec<Hash> = case["peak_hashes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| hex32(v.as_str().unwrap()))
+        .collect();
+
+    let mut bytes = commitment_object(&peak_hashes);
+    verify_commitment_object(&bytes, &peak_hashes).expect("untampered encoding must verify");
+
+    *bytes.last_mut().unwrap() ^= 0x01;
+    let result = verify_commitment_object(&bytes, &peak_hashes);
+    assert!(
+        result.is_err(),
+        "verifier must reject a commitment object with a tampered peak byte"
+    );
 }

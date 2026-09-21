@@ -113,6 +113,113 @@ pub fn commitment_object(peak_hashes: &[Hash]) -> Vec<u8> {
     body
 }
 
+/// Reads one CBOR header at `bytes[*pos..]`, advances `*pos` past it, and
+/// returns the encoded length/value. Rejects indefinite-length headers
+/// (additional info 31) and any major type other than `expected_major` --
+/// `commitment_object` only ever emits definite-length arrays (major 4) of
+/// definite-length byte strings (major 2), so this is the inverse of that
+/// encoder, not a general CBOR parser.
+fn cbor_read_uint_header(
+    bytes: &[u8],
+    pos: &mut usize,
+    expected_major: u8,
+) -> Result<u64, MmrError> {
+    let byte = *bytes
+        .get(*pos)
+        .ok_or_else(|| invalid("commitment object: truncated CBOR header"))?;
+    let major = byte >> 5;
+    let info = byte & 0x1f;
+    if major != expected_major {
+        return Err(invalid(format!(
+            "commitment object: expected CBOR major type {expected_major}, got {major}"
+        )));
+    }
+    *pos += 1;
+    match info {
+        0..=23 => Ok(info as u64),
+        24 => {
+            let b = *bytes
+                .get(*pos)
+                .ok_or_else(|| invalid("commitment object: truncated 1-byte length"))?;
+            *pos += 1;
+            Ok(b as u64)
+        }
+        25 => {
+            let s = bytes
+                .get(*pos..*pos + 2)
+                .ok_or_else(|| invalid("commitment object: truncated 2-byte length"))?;
+            *pos += 2;
+            Ok(u16::from_be_bytes(s.try_into().unwrap()) as u64)
+        }
+        26 => {
+            let s = bytes
+                .get(*pos..*pos + 4)
+                .ok_or_else(|| invalid("commitment object: truncated 4-byte length"))?;
+            *pos += 4;
+            Ok(u32::from_be_bytes(s.try_into().unwrap()) as u64)
+        }
+        27 => {
+            let s = bytes
+                .get(*pos..*pos + 8)
+                .ok_or_else(|| invalid("commitment object: truncated 8-byte length"))?;
+            *pos += 8;
+            Ok(u64::from_be_bytes(s.try_into().unwrap()))
+        }
+        31 => Err(invalid(
+            "commitment object: indefinite-length CBOR encoding is not conformant",
+        )),
+        _ => Err(invalid(format!(
+            "commitment object: reserved CBOR additional info {info}"
+        ))),
+    }
+}
+
+/// Decodes a `commitment_object` byte string back into its peak hashes.
+/// Rejects (typed error, never panics) any encoding that is not exactly
+/// this module's own canonical form: a definite-length CBOR array (major
+/// 4) of definite-length 32-byte strings (major 2), with no trailing
+/// bytes.
+pub fn decode_commitment_object(bytes: &[u8]) -> Result<Vec<Hash>, MmrError> {
+    let mut pos = 0usize;
+    let count = cbor_read_uint_header(bytes, &mut pos, 4)?;
+    let mut peak_hashes = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        let len = cbor_read_uint_header(bytes, &mut pos, 2)?;
+        if len != DIGEST_LEN as u64 {
+            return Err(invalid(format!(
+                "commitment object: peak byte string length {len} != {DIGEST_LEN}"
+            )));
+        }
+        let end = pos + DIGEST_LEN;
+        let slice = bytes
+            .get(pos..end)
+            .ok_or_else(|| invalid("commitment object: truncated peak bytes"))?;
+        peak_hashes.push(slice.try_into().unwrap());
+        pos = end;
+    }
+    if pos != bytes.len() {
+        return Err(invalid(
+            "commitment object: trailing bytes after decoding the peak array",
+        ));
+    }
+    Ok(peak_hashes)
+}
+
+/// Decodes `bytes` as a commitment object and checks it against the true
+/// accumulator's peak hashes. Rejects (typed error) any encoding that
+/// fails to decode at all, or that decodes to a different peak list --
+/// wrong order, a dropped/duplicated peak, or a single tampered byte all
+/// reject here, not just a malformed CBOR structure.
+pub fn verify_commitment_object(bytes: &[u8], expected_peaks: &[Hash]) -> Result<(), MmrError> {
+    let decoded = decode_commitment_object(bytes)?;
+    if decoded != expected_peaks {
+        return Err(integrity(
+            "commitment object: decoded peaks do not match the true accumulator",
+        ));
+    }
+    Ok(())
+}
+
 // -- position math ---------------------------------------------------------
 
 /// Height of the node at 0-indexed position `pos` (0 = leaf level).
