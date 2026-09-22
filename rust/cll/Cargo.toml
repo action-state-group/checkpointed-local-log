@@ -1,5 +1,5 @@
 [package]
-name = "cll"
+name = "checkpointed-local-log"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -7,7 +7,8 @@ description = "Checkpointed Local Log (CLL): Merkle Mountain Range, signed COSE 
 repository = "https://github.com/action-state-group/checkpointed-local-log"
 keywords = ["scitt", "mmr", "merkle-mountain-range", "merkle", "checkpoint"]
 categories = ["cryptography"]
-publish = false
+# crates.io package name is `checkpointed-local-log` (the short `cll` is taken);
+# the lib name stays `cll` so dependents use `cll = { package = "checkpointed-local-log", version = "0.1.0" }`.
 
 [lib]
 name = "cll"
