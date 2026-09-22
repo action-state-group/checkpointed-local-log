@@ -26,7 +26,7 @@ use coset::{
     iana, CoseSign1, CoseSign1Builder, HeaderBuilder, Label, RegisteredLabel,
     TaggedCborSerializable,
 };
-use ed25519_dalek::{Signer, SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{SigningKey, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
 
@@ -36,6 +36,58 @@ pub enum CheckpointError {
     Invalid(String),
     #[error("cbor error: {0}")]
     Cbor(String),
+    #[error("signer error: {0}")]
+    Signer(#[from] SignerError),
+}
+
+// -- signer SPI -----------------------------------------------------------
+//
+// The mesh V3 host-native-principals decision (2026-09-22): a checkpoint
+// producer never has to hand this crate a private key it holds directly --
+// it hands over a `&dyn CheckpointSigner`, which may be backed by an
+// in-process `ed25519_dalek::SigningKey` (the default impl below) or by
+// whatever the host exposes (a Nostr extension, a COSE/KMS-backed key, a
+// peer's remote signing endpoint). Algorithm is fixed to EdDSA for now --
+// `CheckpointRecord.key_id` and the COSE `kid` header both stay "hex of the
+// raw 32-byte Ed25519 public key" regardless of where the private half
+// lives.
+
+#[derive(Debug, thiserror::Error)]
+pub enum SignerError {
+    #[error("signing failed: {0}")]
+    Failed(String),
+}
+
+/// A fixed-size EdDSA signature -- the one value `CheckpointSigner::sign`
+/// produces. Not `ed25519_dalek::Signature` directly so a signer backed by
+/// a different library never needs that crate as a dependency to implement
+/// this trait.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Signature(pub [u8; 64]);
+
+/// Host-native signing SPI: the one thing a checkpoint producer needs from
+/// whatever holds its private key. `key_id` is the signer's own public-key
+/// identifier (hex-encoded raw Ed25519 public key, matching
+/// `CheckpointRecord.key_id`'s existing convention) -- returned by value
+/// since a remote/KMS-backed signer has no `&str` to lend out.
+pub trait CheckpointSigner {
+    fn sign(&self, digest: &[u8]) -> Result<Signature, SignerError>;
+    fn key_id(&self) -> String;
+}
+
+/// The default impl: a local `ed25519_dalek::SigningKey`, which never fails
+/// to sign. `&SigningKey` coerces to `&dyn CheckpointSigner`, so every
+/// existing caller of `sign_checkpoint_digest`/`checkpoint_to_cose` keeps
+/// compiling unchanged.
+impl CheckpointSigner for SigningKey {
+    fn sign(&self, digest: &[u8]) -> Result<Signature, SignerError> {
+        let sig = ed25519_dalek::Signer::sign(self, digest);
+        Ok(Signature(sig.to_bytes()))
+    }
+
+    fn key_id(&self) -> String {
+        hex::encode(self.verifying_key().to_bytes())
+    }
 }
 
 fn invalid(msg: impl Into<String>) -> CheckpointError {
@@ -218,11 +270,24 @@ impl CheckpointRecord {
     }
 }
 
-/// Sign `cp`'s digest with `signing_key` (Ed25519) and return the hex
-/// signature to store in `CheckpointRecord.signature` -- the producer-side
-/// counterpart to `verify_signature_offline`.
-pub fn sign_checkpoint_digest(cp: &CheckpointRecord, signing_key: &SigningKey) -> String {
-    hex::encode(signing_key.sign(cp.digest().as_bytes()).to_bytes())
+/// Sign `cp`'s digest with `signer` and return the hex signature to store
+/// in `CheckpointRecord.signature` -- the producer-side counterpart to
+/// `verify_signature_offline`. Fallible: a host-backed signer (KMS, a
+/// remote Nostr extension) can refuse or fail to reach the key.
+pub fn try_sign_checkpoint_digest(
+    cp: &CheckpointRecord,
+    signer: &dyn CheckpointSigner,
+) -> Result<String, SignerError> {
+    let sig = signer.sign(cp.digest().as_bytes())?;
+    Ok(hex::encode(sig.0))
+}
+
+/// Back-compat convenience over `try_sign_checkpoint_digest` for the common
+/// case -- a local `ed25519_dalek::SigningKey`, which never fails to sign.
+/// Panics if `signer` does fail; callers of a fallible signer should use
+/// `try_sign_checkpoint_digest` directly instead.
+pub fn sign_checkpoint_digest(cp: &CheckpointRecord, signer: &dyn CheckpointSigner) -> String {
+    try_sign_checkpoint_digest(cp, signer).expect("checkpoint signing failed")
 }
 
 // -- COSE wire form -----------------------------------------------------
@@ -424,15 +489,15 @@ pub fn encode_checkpoint_claims(
 }
 
 /// Serialize `cp` as a COSE_Sign1 statement over the CBOR claims map,
-/// signed by `signing_key` -- the wire form for the two stranger-facing
-/// moments (witness registration, bundle embedding).
+/// signed by `signer` -- the wire form for the two stranger-facing moments
+/// (witness registration, bundle embedding).
 ///
 /// Refuses to serialize a checkpoint that claims a prior (`prev_size > 0`)
 /// without a `consistency_proof`, and symmetrically refuses a
 /// `consistency_proof` on a first checkpoint.
 pub fn checkpoint_to_cose(
     cp: &CheckpointRecord,
-    signing_key: &SigningKey,
+    signer: &dyn CheckpointSigner,
     new_peak_hashes: &[Hash],
     prev_peak_hashes: Option<&[Hash]>,
     consistency_proof: Option<&ConsistencyProof>,
@@ -464,17 +529,20 @@ pub fn checkpoint_to_cose(
         (CborValue::from(CWT_SUB), CborValue::from(subject)),
     ]);
 
+    let kid_bytes = hex::decode(signer.key_id())
+        .map_err(|e| invalid(format!("signer key_id is not valid hex: {e}")))?;
+
     let protected = HeaderBuilder::new()
         .algorithm(iana::Algorithm::EdDSA)
         .content_type(CLL_CHECKPOINT_CONTENT_TYPE.to_string())
         .value(HDR_CWT_CLAIMS, claims_hdr)
-        .key_id(signing_key.verifying_key().to_bytes().to_vec())
+        .key_id(kid_bytes)
         .build();
 
     let sign1 = CoseSign1Builder::new()
         .protected(protected)
         .payload(payload)
-        .create_signature(b"", |tbs| signing_key.sign(tbs).to_bytes().to_vec())
+        .try_create_signature(b"", |tbs| signer.sign(tbs).map(|s| s.0.to_vec()))?
         .build();
 
     sign1

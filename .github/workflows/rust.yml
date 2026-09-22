@@ -55,6 +55,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: dtolnay/rust-toolchain@stable
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -67,3 +69,9 @@ jobs:
           python3 mmr-conformance-vectors/reference_verifier.py
           python3 commitment-conformance-vectors/reference_verifier.py
           python3 checkpoint-conformance-vectors/reference_verifier.py
+
+      - name: trait-signed checkpoint verifies under the Python reference
+        working-directory: rust/cll
+        run: |
+          cargo run --quiet --example trait_signed_checkpoint | \
+            python3 ../../checkpoint-conformance-vectors/verify_trait_signed_cose.py
