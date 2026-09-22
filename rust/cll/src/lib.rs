@@ -20,6 +20,7 @@
 
 pub mod checkpoint;
 pub mod mmr;
+pub mod node_store;
 pub mod range_proof;
 pub mod store;
 pub mod witness;
