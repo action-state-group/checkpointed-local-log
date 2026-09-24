@@ -120,7 +120,7 @@ DEFAULT_TS_URL = "https://witness.agentactioncapsule.org"
 #: with no caller-supplied ``ts_pubkey_pem``) can tell "a stamp this exact
 #: witness actually signed" apart from "a receipt shape that merely
 #: reconstructs a root, from any key at all" -- closing the sophisticated
-#: file-forger the naive [stamp-authenticity-on-read-not-presence] fix left
+#: file-forger the naive presence-only fix left
 #: open (a forger with the *public* ``scitt_cose.build_receipt`` mints a
 #: well-formed single-leaf receipt over the correct ``entry_hash``, signed
 #: with a key of their own choosing; without a pin, structural root
@@ -277,7 +277,7 @@ class Grade(str, Enum):
 
 
 class StampVerdict(str, Enum):
-    """Three-state per-stamp verdict [verify-threestate-trustanchor] --
+    """Three-state per-stamp verdict --
     finer-grained than :func:`verify_witness_stamp_offline`'s ``bool``,
     which two-rung callers (``grade()``) still use unchanged. Callers that
     must tell "no trust anchor for this witness" apart from "this witness's
@@ -426,9 +426,9 @@ class CheckpointRecord:
         list, and not a stub. A file-level forger who hand-appends a
         fabricated ``WitnessRecord`` (no real Transparency Service ever
         contacted) grades ``SELF_ATTESTED``: presence in ``witnesses`` alone
-        no longer counts as "valid stamp" (closes
-        [stamp-authenticity-on-read-not-presence] -- presence-equals-success
-        is a produce-side invariant that does not bind a file-level reader).
+        no longer counts as "valid stamp" (closes the gap where
+        presence-equals-success is a produce-side invariant that does not
+        bind a file-level reader).
         Any-of semantics are unchanged (§2a.3): the first VALID, non-stub
         stamp flips the grade; additional stamps, valid or not, never gate
         it.
@@ -673,8 +673,8 @@ def register_checkpoint(
     ``checkpoint_cose`` is the COSE_Sign1 (CBOR tag 18) bytes produced by
     ``capsule_emit.checkpoint.cose_wire.checkpoint_to_cose`` -- the ONLY
     shape this route accepts (single-host witness ruling, 2026-08-27,
-    aligned to the [cll-checkpoint-cose-wire] wire form, superseding the
-    earlier plain-JSON ``CheckpointRecord`` body). The witness-host route
+    aligned to the COSE wire form, superseding the earlier plain-JSON
+    ``CheckpointRecord`` body). The witness-host route
     independently decodes and verifies this envelope (via scitt-cose) before
     ever counter-signing it -- never ``/register`` (the opt-in, plain-digest
     route; see ``_CHECKPOINT_ROUTE``). The TS returns a COSE Receipt over the
@@ -871,7 +871,7 @@ def verify_witness_stamp_tristate(
     ts_pubkey_pem: bytes | str | None = None,
 ) -> tuple[StampVerdict, list[str]]:
     """Verify one witness stamp against ``cp``, returning the THREE-STATE
-    verdict [verify-threestate-trustanchor] -- never raises. This is the
+    verdict -- never raises. This is the
     finer-grained sibling of :func:`verify_witness_stamp_offline` (which
     collapses to a ``bool`` for ``grade()``'s two-rung ladder, correctly --
     see ``CheckpointRecord.grade``'s docstring). Callers that must decide
@@ -899,9 +899,8 @@ def verify_witness_stamp_tristate(
     can mint a well-formed receipt over the correct ``entry_hash`` signed
     with a key of their own choosing (no producer or TS key needed), one
     level up from the garbage-bytes forger above. Three states resolve that,
-    not two [verify-threestate-trustanchor] (supersedes the two-state
-    collapse in [verify-batch-fastfollow] item D, which reported this same
-    case as an unqualified failure -- fatal to a bundle when the ts_url
+    not two (supersedes an earlier two-state collapse that reported this
+    same case as an unqualified failure -- fatal to a bundle when the ts_url
     happened to be unpinned, which false-accused every self-hosted/
     zero-egress TS deployment frozen §1a.2 promises, indistinguishable at
     the wire from this forger):
@@ -987,8 +986,8 @@ def verify_witness_stamp_offline(
     ts_pubkey_pem: bytes | str | None = None,
 ) -> tuple[bool, list[str]]:
     """Verify one witness stamp is a cryptographically authentic TS Receipt
-    bound to ``cp`` -- never raises. This is the read-side check
-    [stamp-authenticity-on-read-not-presence] adds: ``grade()`` calls this
+    bound to ``cp`` -- never raises. This is the read-side check that
+    replaces the presence-only check: ``grade()`` calls this
     (not :func:`verify_witness_stamp_tristate`) because its two-rung ladder
     treats :attr:`StampVerdict.UNVERIFIED` and :attr:`StampVerdict.INVALID`
     identically (both mean SELF_ATTESTED) -- see ``CheckpointRecord.grade``'s

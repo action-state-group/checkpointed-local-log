@@ -1,6 +1,6 @@
 {
   "format_version": "1",
-  "spec": "draft-bryce-cose-receipts-mmr-profile-00 SS6/SS7 accumulator, canonical-CBOR array-of-bstr encoding (capsule-emit [cll-commitment-interop])",
+  "spec": "draft-bryce-cose-receipts-mmr-profile-00 SS6/SS7 accumulator, canonical-CBOR array-of-bstr encoding (capsule-emit commitment-interop encoding)",
   "encoding": "CBOR definite-length array of definite-length 32-byte strings (RFC 8949 SS4.2 deterministic encoding), one element per accumulator peak hash, ordered tallest-to-smallest (descending height).",
   "count": 12,
   "cases": [
