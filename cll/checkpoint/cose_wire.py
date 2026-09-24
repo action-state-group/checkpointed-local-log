@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""COSE_Sign1 + CBOR wire form for CLL checkpoints ([cll-checkpoint-cose-wire],
-Decision 1, 2026-08-24).
+"""COSE_Sign1 + CBOR wire form for CLL checkpoints (Decision 1, 2026-08-24).
 
 Decision 1 scopes COSE to the WIRE boundary only, at the two stranger-facing
 moments a checkpoint leaves the producer's own process: (a) registering a
@@ -15,8 +14,8 @@ hand-rolled COSE, no capsule semantics leak into scitt-cose) -- specifically
 with a CWT-Claims protected header, RFC 9597) and, transitively,
 ``scitt_cose.cose_sign1``.
 
-**Field-mapping (resolves [cll-id-field-mapping-doc], Decision 1's mapping
-ruling -- chosen option: ship this table, do NOT rename the internal
+**Field-mapping (Decision 1's mapping ruling -- chosen option: ship this
+table, do NOT rename the internal
 dataclass fields; ``CheckpointRecord`` stays exactly as it is).** CBOR claim
 keys are the CLL I-D (draft-mih-scitt-checkpointed-local-log-00) §3 spec
 names, plain UTF-8 text keys in the claims map:
@@ -59,7 +58,7 @@ dev / JSON (CheckpointRecord)  wire / CBOR (this module)
 ``CheckpointConfig.cadence_seconds``  ``cadence`` (optional, integer seconds)
 ============================  ================================================
 
-**Commitment shape reconciled with [cll-commitment-interop] (2026-08-27).**
+**Commitment shape reconciled with the commitment-interop requirement (2026-08-27).**
 ``cp.root``/``cp.prev_root`` are this module's OWN internal fold
 (``core.root_from_peaks``) -- convenient for a fast scalar comparison, but a
 bespoke convention no external MMRIVER-family tool can reproduce (see
@@ -86,8 +85,8 @@ make the decode-side consistency check tautological.
 **Beyond Decision 1's literal claim-key list: ``consistency_proof``.** This
 task's own directive requires the checkpoint's MMR consistency (extension)
 proof to travel ON THE WIRE alongside the checkpoint, not just the
-``prev_size``/``prev_commitment`` fields -- ruled for by
-``[capsule-anchor-checkpoint-aware-witness]``'s two-check design: field
+``prev_size``/``prev_commitment`` fields -- ruled for by the
+checkpoint-aware witness's two-check design: field
 equality of ``prev_*`` ALONE accepts a rewritten tree with honest-looking
 ``prev_*`` fields (the signature covers the lie, since ``prev_root`` is just
 a claimed string with nothing forcing it to relate to the actual tree
@@ -199,8 +198,8 @@ def encode_checkpoint_claims(
     ``new_peak_hashes`` is the MMR's own peak-hash list at ``cp.mmr_size``
     (e.g. ``MmrLedger.peak_hashes_at(cp.mmr_size)``) -- the ``commitment``
     claim is ``core.commitment_object(new_peak_hashes)``, NOT ``cp.root``
-    (see the module docstring's "Commitment shape reconciled with
-    [cll-commitment-interop]" note). ``prev_peak_hashes`` is the same for
+    (see the module docstring's "Commitment shape reconciled with the
+    commitment-interop requirement" note). ``prev_peak_hashes`` is the same for
     ``cp.prev_size`` (required exactly when ``cp.prev_size > 0``) and backs
     the ``prev_commitment`` claim the SAME way.
 
@@ -355,7 +354,7 @@ class DecodedCheckpointCose:
     wire's own commitment is the peak list; the bagged root is this
     module's internal-only convenience value computed FROM it, same
     direction as the encode side. ``new_peak_hashes``/``prev_peak_hashes``
-    are the actual [cll-commitment-interop] conformant commitment an
+    are the actual interop-conformant commitment an
     external MMRIVER-profile verifier needs (``prev_peak_hashes`` is empty
     for the first checkpoint)."""
 
@@ -549,7 +548,7 @@ def verify_checkpoint_cose_offline(cose_bytes: bytes) -> CoseCheckpointVerificat
     (a genuinely divergent second history extended from the same true
     prior, each side internally consistent). Detecting that requires an
     online witness that remembers per-log state across checkpoints
-    (``[capsule-anchor-checkpoint-aware-witness]``, deferred stage 2) --
+    (a checkpoint-aware witness, deferred stage 2) --
     out of scope for a single, self-contained COSE statement.
     """
     from scitt_cose.cose_sign1 import CoseError

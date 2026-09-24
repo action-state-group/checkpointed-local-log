@@ -58,7 +58,7 @@ jobs:
           }
           strip_txt() {
             # Normalize ONLY the build-day-derived date locations in RFC .txt output.
-            # Bibliographic reference dates (e.g. "17 August 2026" in [soos-gar-05])
+            # Bibliographic reference dates (e.g. "17 August 2026" in a cited draft)
             # are content-derived — do NOT normalise them so a stale reference goes RED.
             #
             # The "Intended status" rule is this repository's addition and is not in

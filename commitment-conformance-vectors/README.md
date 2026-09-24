@@ -1,6 +1,6 @@
 # CLL commitment-object conformance vectors
 
-`[cll-commitment-interop]` — the interoperable encoding of a CLL checkpoint's
+The interoperable encoding of a CLL checkpoint's
 MMR accumulator, pinned so a second implementation (e.g. Go) produces
 byte-identical commitments.
 
@@ -51,8 +51,8 @@ This is the encoding of the commitment **object** only. It does not change
 on the bagged hash for this codebase's own internal proof checks. It also
 does not touch `CheckpointRecord`'s frozen dev-facing field names or
 signing body; wiring `commitment_object` bytes into the checkpoint's CBOR
-wire form (the `commitment` claim key) is `[cll-checkpoint-cose-wire]`'s
-scope, a sibling item that consumes this encoding.
+wire form (the `commitment` claim key) is the COSE wire module's
+scope, a sibling piece that consumes this encoding.
 
 ## Files
 
