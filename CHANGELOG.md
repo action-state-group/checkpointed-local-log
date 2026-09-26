@@ -38,7 +38,7 @@ copy now reads "records *from*–*to* are present, unaltered, and bound to
 checkpoint *C* — this does not show that no other records exist" in place
 of the old "N of N claimed records" phrasing.
 
-### Docs — dev↔I-D field-mapping doc reconciled ([cll-id-field-mapping-doc])
+### Docs — dev↔I-D field-mapping doc reconciled
 
 `docs/module-map.md`'s checkpoint row and `cll.checkpoint.cose_wire`'s
 module docstring disagreed on whether the dev (`CheckpointRecord`)
