@@ -29,7 +29,7 @@ normative:
   RFC9338:
   RFC9942:
   I-D.bryce-cose-receipts-mmr-profile:
-  I-D.ietf-scitt-architecture:
+  RFC9943:
 
 informative:
   RFC9162:
@@ -94,7 +94,7 @@ document deliberately specifies a thing, not a protocol: the log discipline
 (when entries are appended), the checkpoint structure and its REQUIRED
 constraints, and the verification claims the pair supports. Proof formats come
 from {{I-D.bryce-cose-receipts-mmr-profile}}; checkpoint registration, where
-elected, uses SCITT registration {{I-D.ietf-scitt-architecture}} unchanged.
+elected, uses SCITT registration {{RFC9943}} unchanged.
 
 ## Conventions and Definitions
 
@@ -263,12 +263,12 @@ gaps supports none of the claims in {{claims}}:
 
 A checkpoint is conveyed to a witness by any transport. The checkpoint's
 protected header MUST carry the CWT_Claims required by
-{{I-D.ietf-scitt-architecture}} for Signed Statements: `iss` identifies the
+{{RFC9943}} for Signed Statements: `iss` identifies the
 producer, and `sub` identifies the log (together, the **log identity** all
 continuity checks key on). A witness's confirmation takes one of two forms:
 
 1. **SCITT registration.** The checkpoint COSE_Sign1 is registered as a
-   Signed Statement per {{I-D.ietf-scitt-architecture}}, and the {{RFC9942}}
+   Signed Statement per {{RFC9943}}, and the {{RFC9942}}
    Receipt returned by the Transparency Service is the witness's confirmation
    — third-party evidence of the checkpoint's inclusion under the service's
    key, and of the time of registration if and only if the Receipt carries a
@@ -354,7 +354,7 @@ individual entry still requires the producer, or another holder, to present
 that entry and its inclusion proof — the witness confirms the commitment they
 resolve against, not the entry. A deployment that needs a witness to
 independently serve or attest individual records registers those records with
-a Transparency Service directly ({{I-D.ietf-scitt-architecture}}); that is a
+a Transparency Service directly ({{RFC9943}}); that is a
 different trade — publication and per-record registration cost in exchange for
 independent per-record lookup — and is outside this document, which commits
 only the checkpoint.
