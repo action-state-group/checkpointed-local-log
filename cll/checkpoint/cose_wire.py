@@ -18,8 +18,10 @@ with a CWT-Claims protected header, RFC 9597) and, transitively,
 **Field-mapping (resolves [cll-id-field-mapping-doc], Decision 1's mapping
 ruling -- chosen option: ship this table, do NOT rename the internal
 dataclass fields; ``CheckpointRecord`` stays exactly as it is).** CBOR claim
-keys are the CLL I-D (draft-mih-scitt-checkpointed-local-log-00) §3 spec
-names, plain UTF-8 text keys in the claims map:
+keys are the CLL I-D §3 spec names (draft-mih-scitt-checkpointed-local-log,
+unchanged across -00 and -01 -- the -01 "Changes since -00" section records
+this explicitly: no checkpoint claim name was renamed), plain UTF-8 text
+keys in the claims map:
 
 ============================  ================================================
 dev / JSON (CheckpointRecord)  wire / CBOR (this module)
@@ -38,11 +40,11 @@ dev / JSON (CheckpointRecord)  wire / CBOR (this module)
   the first checkpoint)          encoding at ``prev_size``, empty bstr for
                                 the first checkpoint
 ``timestamp`` (ISO 8601 str)   ``issued_at`` (ISO 8601 str, unchanged --
-                                the I-D's exact CDDL type for this claim
-                                could not be confirmed against the draft
-                                text at implementation time; kept as the
-                                lossless, round-trip-exact string form
-                                rather than guess a numeric epoch encoding)
+                                confirmed against the I-D's CDDL as ``tstr``
+                                per RFC3339 (-00 §3, unchanged in -01); this
+                                table's first draft predated -00 landing and
+                                called the type unconfirmed, which is now
+                                resolved)
 ``log_id``                     CWT ``iss`` (claim 1) -- moves off a plaintext
                                 field onto the SIGNED protected header
 (``log_id``, ``mmr_size``)     CWT ``sub`` (claim 2) = ``"{log_id}#{mmr_size}"``
@@ -58,6 +60,20 @@ dev / JSON (CheckpointRecord)  wire / CBOR (this module)
                                 carried inside the CBOR claims
 ``CheckpointConfig.cadence_seconds``  ``cadence`` (optional, integer seconds)
 ============================  ================================================
+
+**Known deviation from the I-D's stated `iss`/`sub` semantics (flagging, not
+fixing, in this pass).** The spec's Witnessing section says CWT `iss`
+identifies the *producer* and `sub` identifies the *log*. This module
+instead puts ``log_id`` on `iss` and constructs `sub` as the
+per-checkpoint-instance string ``"{log_id}#{mmr_size}"`` -- collapsing
+producer and log into one identity (true for this implementation's
+one-log-one-signing-identity model) and using `sub` to pin the specific
+checkpoint instance rather than the log itself. Round-trips fine against
+this module's own decoder (:func:`_decode_claims` checks the same
+convention), but a stranger cross-checking against the I-D's literal
+iss/sub prose, or against another implementation that follows it literally,
+would see a mismatch. Worth a spec or code reconciliation before this is
+relied on for cross-implementation identity matching.
 
 **Commitment shape reconciled with [cll-commitment-interop] (2026-08-27).**
 ``cp.root``/``cp.prev_root`` are this module's OWN internal fold
