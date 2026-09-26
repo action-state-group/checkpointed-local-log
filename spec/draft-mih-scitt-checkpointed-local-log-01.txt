@@ -90,8 +90,8 @@ Table of Contents
      8.1.  Normative References  . . . . . . . . . . . . . . . . . .  11
      8.2.  Informative References  . . . . . . . . . . . . . . . . .  12
    Appendix A.  Changes since -00  . . . . . . . . . . . . . . . . .  13
-   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  14
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  14
+   Acknowledgments . . . . . . . . . . . . . . . . . . . . . . . . .  13
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  13
 
 1.  Introduction
 
@@ -144,8 +144,7 @@ Internet-Draft                     CLL                    September 2026
    appended), the checkpoint structure and its REQUIRED constraints, and
    the verification claims the pair supports.  Proof formats come from
    [I-D.bryce-cose-receipts-mmr-profile]; checkpoint registration, where
-   elected, uses SCITT registration [I-D.ietf-scitt-architecture]
-   unchanged.
+   elected, uses SCITT registration [RFC9943] unchanged.
 
 1.1.  Conventions and Definitions
 
@@ -162,6 +161,7 @@ Internet-Draft                     CLL                    September 2026
    expressed using a declared digest context (e.g.,
    [I-D.mih-sokolov-scitt-payload-binding]), including contexts that
    commit to already-signed bytes exactly as transmitted.
+
 
 
 
@@ -408,22 +408,21 @@ Internet-Draft                     CLL                    September 2026
 
    A checkpoint is conveyed to a witness by any transport.  The
    checkpoint's protected header MUST carry the CWT_Claims required by
-   [I-D.ietf-scitt-architecture] for Signed Statements: iss identifies
-   the producer, and sub identifies the log (together, the *log
-   identity* all continuity checks key on).  A witness's confirmation
-   takes one of two forms:
+   [RFC9943] for Signed Statements: iss identifies the producer, and sub
+   identifies the log (together, the *log identity* all continuity
+   checks key on).  A witness's confirmation takes one of two forms:
 
    1.  *SCITT registration.* The checkpoint COSE_Sign1 is registered as
-       a Signed Statement per [I-D.ietf-scitt-architecture], and the
-       [RFC9942] Receipt returned by the Transparency Service is the
-       witness's confirmation — third-party evidence of the checkpoint's
-       inclusion under the service's key, and of the time of
-       registration if and only if the Receipt carries a signed time
-       claim.  A Transparency Service unaware of this document can
-       accept the checkpoint as an ordinary Signed Statement; one that
-       additionally performs the Section 3.2 continuity check before
-       registration is a *checkpoint-aware witness*, and only its
-       Receipts carry the continuity meaning of Section 5.
+       a Signed Statement per [RFC9943], and the [RFC9942] Receipt
+       returned by the Transparency Service is the witness's
+       confirmation — third-party evidence of the checkpoint's inclusion
+       under the service's key, and of the time of registration if and
+       only if the Receipt carries a signed time claim.  A Transparency
+       Service unaware of this document can accept the checkpoint as an
+       ordinary Signed Statement; one that additionally performs the
+       Section 3.2 continuity check before registration is a
+       *checkpoint-aware witness*, and only its Receipts carry the
+       continuity meaning of Section 5.
 
    2.  *Direct countersignature.* A witness that is not a Transparency
        Service returns a COSE countersignature (Countersignature version
@@ -439,9 +438,10 @@ Internet-Draft                     CLL                    September 2026
    accepted — is exactly what Section 3.2 adds, and a verifier weighing
    a witnessed checkpoint SHOULD know which kind of witness produced it.
 
-
-
-
+   Multiple independent witnesses strengthen the log against
+   equivocation (presenting different histories to different parties):
+   an equivocating producer must partition every witness a verifier
+   might consult (Section 6).
 
 
 
@@ -449,11 +449,6 @@ Mih                       Expires 30 March 2027                 [Page 8]
 
 Internet-Draft                     CLL                    September 2026
 
-
-   Multiple independent witnesses strengthen the log against
-   equivocation (presenting different histories to different parties):
-   an equivocating producer must partition every witness a verifier
-   might consult (Section 6).
 
 3.4.  Stub Countersignatures — Future Work
 
@@ -501,6 +496,11 @@ Internet-Draft                     CLL                    September 2026
 
 
 
+
+
+
+
+
 Mih                       Expires 30 March 2027                 [Page 9]
 
 Internet-Draft                     CLL                    September 2026
@@ -528,10 +528,10 @@ Internet-Draft                     CLL                    September 2026
    witness confirms the commitment they resolve against, not the entry.
    A deployment that needs a witness to independently serve or attest
    individual records registers those records with a Transparency
-   Service directly ([I-D.ietf-scitt-architecture]); that is a different
-   trade — publication and per-record registration cost in exchange for
-   independent per-record lookup — and is outside this document, which
-   commits only the checkpoint.
+   Service directly ([RFC9943]); that is a different trade — publication
+   and per-record registration cost in exchange for independent per-
+   record lookup — and is outside this document, which commits only the
+   checkpoint.
 
    A CLL establishes *nothing about the truth of any entry's content*. A
    perfectly witnessed log of false records is a perfectly witnessed set
@@ -618,14 +618,6 @@ Mih                       Expires 30 March 2027                [Page 11]
 Internet-Draft                     CLL                    September 2026
 
 
-   [I-D.ietf-scitt-architecture]
-              Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
-              Y., and S. Lasker, "An Architecture for Trustworthy and
-              Transparent Digital Supply Chains", Work in Progress,
-              Internet-Draft, draft-ietf-scitt-architecture-22, 10
-              October 2025, <https://datatracker.ietf.org/doc/html/
-              draft-ietf-scitt-architecture-22>.
-
    [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
               Requirement Levels", BCP 14, RFC 2119,
               DOI 10.17487/RFC2119, March 1997,
@@ -659,20 +651,13 @@ Internet-Draft                     CLL                    September 2026
               Receipts", RFC 9942, DOI 10.17487/RFC9942, June 2026,
               <https://www.rfc-editor.org/rfc/rfc9942>.
 
+   [RFC9943]  Birkholz, H., Delignat-Lavaud, A., Fournet, C., Deshpande,
+              Y., and S. Lasker, "An Architecture for Trustworthy and
+              Transparent Digital Supply Chains", RFC 9943,
+              DOI 10.17487/RFC9943, June 2026,
+              <https://www.rfc-editor.org/rfc/rfc9943>.
+
 8.2.  Informative References
-
-
-
-
-
-
-
-
-
-Mih                       Expires 30 March 2027                [Page 12]
-
-Internet-Draft                     CLL                    September 2026
-
 
    [I-D.mih-sokolov-scitt-payload-binding]
               Mih, S. and A. Sokolov, "Canonical Payload Binding: A
@@ -681,6 +666,13 @@ Internet-Draft                     CLL                    September 2026
               02, 27 August 2026,
               <https://datatracker.ietf.org/doc/html/draft-mih-sokolov-
               scitt-payload-binding-02>.
+
+
+
+Mih                       Expires 30 March 2027                [Page 12]
+
+Internet-Draft                     CLL                    September 2026
+
 
    [RFC9162]  Laurie, B., Messeri, E., and R. Stradling, "Certificate
               Transparency Version 2.0", RFC 9162, DOI 10.17487/RFC9162,
@@ -719,17 +711,6 @@ Appendix A.  Changes since -00
       have put this document out of sync with the format actually in
       use.
 
-
-
-
-
-
-
-Mih                       Expires 30 March 2027                [Page 13]
-
-Internet-Draft                     CLL                    September 2026
-
-
 Acknowledgments
 
    The Merkle Mountain Range structure and its COSE proof formats are
@@ -741,7 +722,26 @@ Author's Address
 
    Steven Mih
    Action State Group
+
+
+
+Mih                       Expires 30 March 2027                [Page 13]
+
+Internet-Draft                     CLL                    September 2026
+
+
    Email: steven@actionstate.ai
+
+
+
+
+
+
+
+
+
+
+
 
 
 
