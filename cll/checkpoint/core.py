@@ -98,6 +98,9 @@ __all__ = [
     "verify_inclusion",
     "consistency_proof",
     "verify_consistency",
+    "RangeProof",
+    "range_proof",
+    "verify_range",
 ]
 
 
@@ -687,5 +690,183 @@ def verify_consistency(
                 return False
 
         return True
+    except Exception:
+        return False
+
+
+# -- range (per-record membership) -------------------------------------------
+#
+# Replaces the earlier two-boundary design (a pair of `InclusionProof`s for
+# `from_index`/`to_index` only): that shape proves the two endpoints are
+# genuine leaves of a structurally-complete MMR, but never touches any leaf
+# strictly between them, so a leaf in the interior of the range that has been
+# deleted or replaced in whatever is handing you the "range" is never
+# checked -- the proof still verifies. This shape makes every leaf in the
+# range participate in the hash chain that produces the root: the caller
+# supplies every leaf's own body digest, `range_proof` supplies only the
+# O(log size) sibling hashes those leaves cannot derive on their own, and
+# `verify_range` rebuilds every peak the range touches (fully from the
+# leaves where the range fully covers a peak, from leaves *and* witnesses
+# at a peak the range only partially covers) plus takes the untouched
+# peaks' hashes as single witnesses apiece -- one hash regardless of how
+# many leaves that peak holds, since none of them are being claimed here.
+
+
+def _range_witnesses(
+    reader: NodeReader, pos: int, height: int, leaf_start: int, lo: int, hi: int, out: list[bytes]
+) -> None:
+    """Depth-first walk of the subtree rooted at `pos` (height `height`,
+    covering leaf indices [leaf_start, leaf_start + 2**height - 1]):
+    appends one witness hash for every maximal subtree wholly outside
+    [lo, hi], recurses into any subtree the range only partially covers, and
+    contributes nothing for a subtree wholly inside [lo, hi] (the verifier
+    rebuilds that part from the leaf hashes it already has)."""
+    leaf_end = leaf_start + (1 << height) - 1
+    if leaf_end < lo or leaf_start > hi:
+        out.append(reader.node(pos))
+        return
+    if leaf_start >= lo and leaf_end <= hi:
+        return
+    half = 1 << (height - 1)
+    _range_witnesses(reader, pos - (1 << height), height - 1, leaf_start, lo, hi, out)
+    _range_witnesses(reader, pos - 1, height - 1, leaf_start + half, lo, hi, out)
+
+
+@dataclass(frozen=True)
+class RangeProof:
+    """The leaf-independent sibling set for leaf indices [from_index,
+    to_index] (0-indexed, inclusive) against the MMR of `size` nodes --
+    see the section docstring above for what this does and does not prove.
+    Hex-encoded so the whole shape is JSON-serializable, matching every
+    other public proof shape in this module."""
+
+    v: int
+    kind: str  # "range"
+    size: int
+    from_index: int
+    to_index: int
+    witness: tuple[str, ...]
+
+
+def range_proof(reader: NodeReader, from_index: int, to_index: int, size: int) -> RangeProof:
+    if not isinstance(from_index, int) or isinstance(from_index, bool):
+        raise InvalidArgumentError(f"from_index must be an int: {from_index}")
+    if not isinstance(to_index, int) or isinstance(to_index, bool) or to_index < from_index:
+        raise InvalidArgumentError(f"invalid range [{from_index}, {to_index}]")
+    if from_index < 0:
+        raise InvalidArgumentError(f"from_index must be >= 0: {from_index}")
+    lc = leaf_count(size)
+    if to_index >= lc:
+        raise InvalidArgumentError(f"to_index {to_index} out of range for size {size} ({lc} leaves)")
+    reader_size = reader.size()
+    if reader_size < size:
+        raise IntegrityError(f"reader size {reader_size} is smaller than requested size {size}")
+
+    pks = peaks(size)
+    out: list[bytes] = []
+    leaf_start = 0
+    for p in pks:
+        h = height_at(p)
+        _range_witnesses(reader, p, h, leaf_start, from_index, to_index, out)
+        leaf_start += 1 << h
+
+    return RangeProof(1, "range", size, from_index, to_index, tuple(w.hex() for w in out))
+
+
+def _reconstruct_range_subtree(
+    pos: int,
+    height: int,
+    leaf_start: int,
+    lo: int,
+    hi: int,
+    body_digests: dict[int, bytes],
+    witness_bytes: list[bytes],
+    cursor: list[int],
+) -> bytes:
+    leaf_end = leaf_start + (1 << height) - 1
+    if leaf_end < lo or leaf_start > hi:
+        if cursor[0] >= len(witness_bytes):
+            raise IntegrityError("range proof witness exhausted")
+        w = witness_bytes[cursor[0]]
+        cursor[0] += 1
+        return w
+    if height == 0:
+        return leaf_hash(body_digests[leaf_start])
+    half = 1 << (height - 1)
+    left = _reconstruct_range_subtree(
+        pos - (1 << height), height - 1, leaf_start, lo, hi, body_digests, witness_bytes, cursor
+    )
+    right = _reconstruct_range_subtree(
+        pos - 1, height - 1, leaf_start + half, lo, hi, body_digests, witness_bytes, cursor
+    )
+    return interior_hash(left, right, pos)
+
+
+def verify_range(
+    root: bytes,
+    size: int,
+    from_index: int,
+    to_index: int,
+    body_digests: list[bytes],
+    proof: RangeProof,
+) -> bool:
+    """Pure range verification. No reader, never raises. Rebuilds every peak
+    the range touches from `body_digests` (one per leaf, `body_digests[i]`
+    for leaf index `from_index + i`) folded with `proof`'s witness hashes --
+    an altered, deleted, or replaced interior leaf changes the peak it falls
+    under and is caught here, unlike a two-boundary inclusion check that
+    never looks at any leaf strictly between the two endpoints."""
+    try:
+        _assert_digest(root, "root")
+        if proof is None or proof.v != 1 or proof.kind != "range":
+            return False
+        if proof.size != size or proof.from_index != from_index or proof.to_index != to_index:
+            return False
+        if not isinstance(size, int) or isinstance(size, bool) or size < 0 or size >= MAX_MMR_SIZE:
+            return False
+        if (
+            not isinstance(from_index, int)
+            or isinstance(from_index, bool)
+            or not isinstance(to_index, int)
+            or isinstance(to_index, bool)
+            or from_index < 0
+            or to_index < from_index
+        ):
+            return False
+        if not isinstance(proof.witness, (list, tuple)):
+            return False
+        if not isinstance(body_digests, (list, tuple)):
+            return False
+        if len(body_digests) != to_index - from_index + 1:
+            return False
+
+        lc = leaf_count(size)
+        if to_index >= lc:
+            return False
+
+        for d in body_digests:
+            _assert_digest(d, "body_digest")
+        digest_by_index = {from_index + i: d for i, d in enumerate(body_digests)}
+
+        witness_bytes = [_parse_digest_hex(w) for w in proof.witness]
+
+        pks = peaks(size)
+        cursor = [0]
+        leaf_start = 0
+        reconstructed_peaks: list[bytes] = []
+        for p in pks:
+            h = height_at(p)
+            reconstructed_peaks.append(
+                _reconstruct_range_subtree(
+                    p, h, leaf_start, from_index, to_index, digest_by_index, witness_bytes, cursor
+                )
+            )
+            leaf_start += 1 << h
+
+        if cursor[0] != len(witness_bytes):
+            return False  # unconsumed witnesses -- malformed/oversized proof
+
+        computed_root = root_from_peaks(reconstructed_peaks)
+        return computed_root == root
     except Exception:
         return False

@@ -47,6 +47,61 @@ What it ships:
 See [`docs/module-map.md`](docs/module-map.md) for the section-by-section map
 from this spec to the package's modules.
 
+### The `cll` Rust crate
+
+`rust/cll/` (crates.io: `cll`) is a Rust sibling of the Python package,
+covering the same substrate scope as the Go and TypeScript ports below: the
+Merkle Mountain Range (leaf/interior hashing, peaks, root, inclusion and
+consistency proofs), the MMRIVER-conformant peak-list commitment, per-record
+range-membership proofs, signed COSE_Sign1 checkpoints (byte-for-byte port
+of `cll.checkpoint.emit`/`.cose_wire`), a `checkpoints.jsonl` reader/writer
+matching the on-disk shape a Python checkpointer already writes, and a
+witness-registration client. Rust and Python are two implementations of one
+spec; the vectors in `mmr-conformance-vectors/`, `commitment-conformance-
+vectors/`, and `checkpoint-conformance-vectors/` are the contract — both
+languages regenerate and verify the same pinned bytes (roots, proofs,
+checkpoint digests, and Ed25519 signatures, which are deterministic per
+RFC 8032), so a change only one side's tests catch is a real divergence, not
+a passing build.
+
+```sh
+cd rust/cll && cargo test
+```
+
+See [`checkpoint-conformance-vectors/README.md`](checkpoint-conformance-vectors/README.md)
+for how the checkpoint-record vectors pin cross-language digest/signature
+parity, and `rust/cll/tests/` for this crate's own pass over all three
+vector sets. The witness-receipt boundary -- a checkpoint `digest_hex`
+round-tripping through scitt-cose's own `cll`-agnostic COSE Receipt
+build/verify path -- is verified in both languages: `rust/cll/tests/
+scitt_cose_receipt_interop.rs` (opt in with `cargo test --features
+python-interop-tests`; no Rust scitt-cose verifier exists yet, so it
+drives the check by invoking the Python reference's `reference_verifier.py`
+as a subprocess) alongside that same script's own direct check.
+
+### Cross-language scope: the ledger layer is Python-only, by decision
+
+The Go (`cll-go`), TypeScript (`@action-state-group/cll`), and Rust (`cll`,
+above) implementations are the **checkpoint + MMR + storage substrate
+only**: the append-only log, the Merkle Mountain Range with
+inclusion/consistency proofs, signed COSE checkpoints, witness delivery, and
+the storage backends. They are deliberately application-neutral and do not
+interpret record bodies.
+
+The **ledger layer** — `cll.ledger` (three-state admission control, segment
+closing and manifests, the rebuildable lookup index, the append-only capsule
+store) and `cll.revocation` (the key-validity timeline) — is **not ported to Go
+or TypeScript, and this is a decision rather than a gap.** That layer is the
+business logic of *who may write and how records are admitted, archived,
+queried, and key-checked*; it was folded into this Python package by the W3
+"one neutral library per spec" extraction of `capsule-ledger`
+(2026-09-01), and nothing downstream in the AAC ecosystem requires it in Go or
+TypeScript. Cross-language byte-parity is therefore required for the substrate
+(MMR proofs, checkpoints) and is explicitly **not** claimed for the ledger
+layer. Should a Go or TS consumer ever need admission or revocation semantics,
+adding them is a new, separately-scoped decision, not a matter of "catching up"
+to the reference.
+
 ## Building the draft
 
 The build toolchain is [`kramdown-rfc`](https://github.com/cabo/kramdown-rfc)

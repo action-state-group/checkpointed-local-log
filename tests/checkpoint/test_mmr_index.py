@@ -114,6 +114,10 @@ def test_inclusion_proof_rejects_tampered_body_digest(log_source):
 # -- range proofs -----------------------------------------------------------
 
 
+def _body_digests(mmr: MmrLedger, from_seq: int, to_seq: int) -> list[bytes]:
+    return [mmr.body_digest(seq) for seq in range(from_seq, to_seq + 1)]
+
+
 def test_range_proof_round_trips(log_source):
     mmr = MmrLedger(log_source)
     n = 8
@@ -127,9 +131,58 @@ def test_range_proof_round_trips(log_source):
     from_seq, to_seq = 2, 5
     proof = mmr.range_proof(from_seq, to_seq)
     root = mmr.root_at(proof.size)
-    from_digest = mmr.body_digest(from_seq)
-    to_digest = mmr.body_digest(to_seq)
-    assert verify_range(root, from_seq, to_seq, from_digest, to_digest, proof)
+    digests = _body_digests(mmr, from_seq, to_seq)
+    assert verify_range(root, from_seq, to_seq, digests, proof)
+
+
+def test_range_proof_single_leaf(log_source):
+    mmr = MmrLedger(log_source)
+    for i in range(5):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    proof = mmr.range_proof(3, 3)
+    root = mmr.root_at(proof.size)
+    assert verify_range(root, 3, 3, _body_digests(mmr, 3, 3), proof)
+
+
+def test_range_proof_first_leaf(log_source):
+    """The from_seq=1 (leaf index 0) edge case -- no leading peaks, no
+    left-of-range witnesses at all."""
+    mmr = MmrLedger(log_source)
+    for i in range(6):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    proof = mmr.range_proof(1, 3)
+    root = mmr.root_at(proof.size)
+    assert verify_range(root, 1, 3, _body_digests(mmr, 1, 3), proof)
+
+
+def test_range_proof_three_leaves(log_source):
+    """A range strictly wider than the two boundaries and narrower than the
+    whole log -- the middle-sized case between single-leaf and cross-peak."""
+    mmr = MmrLedger(log_source)
+    for i in range(8):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    proof = mmr.range_proof(3, 5)
+    root = mmr.root_at(proof.size)
+    assert verify_range(root, 3, 5, _body_digests(mmr, 3, 5), proof)
+
+
+def test_range_proof_crosses_multiple_peaks(log_source):
+    """size=11 (n=7 leaves) has peaks at heights [2,1,0] (positions 6, 9,
+    10) -- a range spanning leaf indices 2..6 (seq 3..7) crosses all three
+    mountains, exercising the fully-covered middle-peak case."""
+    mmr = MmrLedger(log_source)
+    n = 7
+    for i in range(n):
+        mmr.append(synthetic_capsule(i), consequential=False)
+    assert core.peaks(core.node_count(n)) == [6, 9, 10]
+
+    from_seq, to_seq = 3, 7
+    proof = mmr.range_proof(from_seq, to_seq)
+    root = mmr.root_at(proof.size)
+    assert verify_range(root, from_seq, to_seq, _body_digests(mmr, from_seq, to_seq), proof)
 
 
 def test_range_proof_rejects_tampered_boundary_digest(log_source):
@@ -141,13 +194,89 @@ def test_range_proof_rejects_tampered_boundary_digest(log_source):
     from_seq, to_seq = 1, 4
     proof = mmr.range_proof(from_seq, to_seq)
     root = mmr.root_at(proof.size)
-    from_digest = mmr.body_digest(from_seq)
-    to_digest = mmr.body_digest(to_seq)
-    assert verify_range(root, from_seq, to_seq, from_digest, to_digest, proof)
+    digests = _body_digests(mmr, from_seq, to_seq)
+    assert verify_range(root, from_seq, to_seq, digests, proof)
 
-    tampered = bytearray(to_digest)
-    tampered[0] ^= 0xFF
-    assert not verify_range(root, from_seq, to_seq, from_digest, bytes(tampered), proof)
+    tampered = list(digests)
+    last = bytearray(tampered[-1])
+    last[0] ^= 0xFF
+    tampered[-1] = bytes(last)
+    assert not verify_range(root, from_seq, to_seq, tampered, proof)
+
+
+def test_range_proof_rejects_replaced_interior_digest(log_source):
+    """The bug this proof shape exists to close: a record strictly between
+    the two endpoints is swapped for a different (but still well-formed)
+    digest. The old two-boundary-inclusion proof never looked at this leaf
+    at all and would have verified anyway -- see core.RangeProof's
+    docstring."""
+    mmr = MmrLedger(log_source)
+    n = 7
+    for i in range(n):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    from_seq, to_seq = 2, 6
+    proof = mmr.range_proof(from_seq, to_seq)
+    root = mmr.root_at(proof.size)
+    digests = _body_digests(mmr, from_seq, to_seq)
+    assert verify_range(root, from_seq, to_seq, digests, proof)
+
+    interior_offset = 2  # seq 4, strictly between 2 and 6
+    tampered = list(digests)
+    replaced = bytearray(tampered[interior_offset])
+    replaced[0] ^= 0xFF
+    tampered[interior_offset] = bytes(replaced)
+    assert not verify_range(root, from_seq, to_seq, tampered, proof)
+
+
+def test_range_proof_rejects_deleted_interior_leaf(log_source):
+    """Deleting a leaf from the middle of the range (shifting every digest
+    after it up by one position) must not verify -- same bug class as
+    replacement, a different mutation."""
+    mmr = MmrLedger(log_source)
+    n = 7
+    for i in range(n):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    from_seq, to_seq = 2, 6
+    proof = mmr.range_proof(from_seq, to_seq)
+    root = mmr.root_at(proof.size)
+    digests = _body_digests(mmr, from_seq, to_seq)
+    assert verify_range(root, from_seq, to_seq, digests, proof)
+
+    deleted_offset = 2  # drop seq 4
+    with_deletion = digests[:deleted_offset] + digests[deleted_offset + 1 :]
+    assert len(with_deletion) != len(digests)
+    assert not verify_range(root, from_seq, to_seq, with_deletion, proof)
+
+
+def test_range_proof_rejects_sparse_selection():
+    """A witness set built for one range must not verify a different
+    (even same-size) range against the same root -- ruling out an attacker
+    handing back only *some* of the claimed leaves under a mismatched
+    from_index/to_index pairing."""
+    mmr = MmrLedger(FakeLogSource())
+    n = 9
+    for i in range(n):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    proof = mmr.range_proof(2, 6)
+    root = mmr.root_at(proof.size)
+    other_digests = _body_digests(mmr, 3, 7)  # right shape, wrong window
+    assert not verify_range(root, 2, 6, other_digests, proof)
+
+
+def test_range_proof_rejects_mismatched_checkpoint(log_source):
+    mmr = MmrLedger(log_source)
+    for i in range(6):
+        mmr.append(synthetic_capsule(i), consequential=False)
+
+    from_seq, to_seq = 1, 4
+    proof = mmr.range_proof(from_seq, to_seq)
+    digests = _body_digests(mmr, from_seq, to_seq)
+
+    wrong_root = bytes(range(32))
+    assert not verify_range(wrong_root, from_seq, to_seq, digests, proof)
 
 
 # -- stability across appends: the whole point of an MMR ---------------------
@@ -202,10 +331,9 @@ def test_range_proof_stability_across_appends(log_source):
 
     old_range = mmr.range_proof(2, 5)
     old_size = old_range.size
-    from_digest = mmr.body_digest(2)
-    to_digest = mmr.body_digest(5)
+    digests = _body_digests(mmr, 2, 5)
     root_at_old_size = core.root_from_peaks(mmr.peak_hashes_at(old_size))
-    assert verify_range(root_at_old_size, 2, 5, from_digest, to_digest, old_range)
+    assert verify_range(root_at_old_size, 2, 5, digests, old_range)
 
     for i in range(7, 10):
         mmr.append(synthetic_capsule(i), consequential=False)
@@ -213,7 +341,7 @@ def test_range_proof_stability_across_appends(log_source):
     new_size = mmr.size()
     new_root = mmr.root()
 
-    assert verify_range(root_at_old_size, 2, 5, from_digest, to_digest, old_range)
+    assert verify_range(root_at_old_size, 2, 5, digests, old_range)
 
     bridge = mmr.consistency_proof(old_size, new_size)
     assert core.verify_consistency(root_at_old_size, old_size, new_root, new_size, bridge)

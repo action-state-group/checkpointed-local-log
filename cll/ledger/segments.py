@@ -23,7 +23,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
 
-from ..checkpoint.core import InclusionProof
 from ..checkpoint.index import RangeProof, verify_range
 
 __all__ = [
@@ -114,37 +113,14 @@ def manifest_filename(log_id: str, mmr_size: int) -> str:
     return f"{log_id}-{mmr_size}.manifest.json"
 
 
-def _inclusion_to_dict(p: InclusionProof) -> dict:
-    return {
-        "v": p.v,
-        "kind": p.kind,
-        "size": p.size,
-        "leaf_index": p.leaf_index,
-        "witness": list(p.witness),
-        "peaks_left": list(p.peaks_left),
-        "peaks_right": list(p.peaks_right),
-    }
-
-
-def _inclusion_from_dict(d: dict) -> InclusionProof:
-    return InclusionProof(
-        v=int(d["v"]),
-        kind=d["kind"],
-        size=int(d["size"]),
-        leaf_index=int(d["leaf_index"]),
-        witness=tuple(d["witness"]),
-        peaks_left=tuple(d["peaks_left"]),
-        peaks_right=tuple(d["peaks_right"]),
-    )
-
-
 def _range_proof_to_dict(p: RangeProof) -> dict:
     return {
         "from_seq": p.from_seq,
         "to_seq": p.to_seq,
         "size": p.size,
-        "inclusion_from": _inclusion_to_dict(p.inclusion_from),
-        "inclusion_to": _inclusion_to_dict(p.inclusion_to),
+        "from_index": p.from_index,
+        "to_index": p.to_index,
+        "witness": list(p.witness),
     }
 
 
@@ -153,8 +129,9 @@ def _range_proof_from_dict(d: dict) -> RangeProof:
         from_seq=int(d["from_seq"]),
         to_seq=int(d["to_seq"]),
         size=int(d["size"]),
-        inclusion_from=_inclusion_from_dict(d["inclusion_from"]),
-        inclusion_to=_inclusion_from_dict(d["inclusion_to"]),
+        from_index=int(d["from_index"]),
+        to_index=int(d["to_index"]),
+        witness=tuple(d["witness"]),
     )
 
 
@@ -284,17 +261,17 @@ def verify_segment(
 
     Checks, in order: (1) the segment's bytes are exactly what the manifest
     sealed (``sha256_of_segment``); (2) it holds exactly ``record_count``
-    records spanning ``[first_seq, last_seq]``; (3) the boundary records are
-    genuinely leaves of the checkpoint's MMR at ``mmr_size``, under
-    ``checkpoint_root`` (``range_proof`` -- see
-    ``cll.checkpoint.index.RangeProof``'s docstring for exactly what a range
-    proof does and does not establish about interior leaves: MMR structural
-    completeness rules out a *missing* interior leaf, it does not
-    independently re-verify every interior leaf's content). This does NOT
-    re-verify the checkpoint's own signature or witness stamps -- that is a
-    separate, already-existing check
-    (``cll.checkpoint.emit.verify_checkpoint_signature_offline``) a caller
-    layers on top once it also holds the checkpoint record itself.
+    records spanning ``[first_seq, last_seq]``; (3) records ``first_seq``
+    through ``last_seq`` are present, unaltered, and bound to the
+    checkpoint's MMR at ``mmr_size`` under ``checkpoint_root`` (``range_proof``
+    -- see ``cll.checkpoint.index.RangeProof``'s docstring: every record's
+    own digest, not just the two boundary records, participates in
+    rebuilding the root, so a deleted or replaced record anywhere in the
+    range fails this check; it does not show that no other records exist
+    outside the range). This does NOT re-verify the checkpoint's own
+    signature or witness stamps -- that is a separate, already-existing
+    check (``cll.checkpoint.emit.verify_checkpoint_signature_offline``) a
+    caller layers on top once it also holds the checkpoint record itself.
     """
     from agent_action_capsule import compute_capsule_id
 
@@ -323,22 +300,21 @@ def verify_segment(
             return False, errors
 
         records = [json.loads(line) for line in lines]
-        first_record, last_record = records[0], records[-1]
-        first_digest = first_record.get(id_field) or compute_capsule_id(first_record)
-        last_digest = last_record.get(id_field) or compute_capsule_id(last_record)
+        body_digests = [
+            bytes.fromhex(record.get(id_field) or compute_capsule_id(record)) for record in records
+        ]
 
         root = bytes.fromhex(manifest.checkpoint_root)
         ok = verify_range(
             root,
             manifest.first_seq,
             manifest.last_seq,
-            bytes.fromhex(first_digest),
-            bytes.fromhex(last_digest),
+            body_digests,
             manifest.range_proof,
         )
         if not ok:
             errors.append(
-                "range proof does not verify the segment's boundary records against "
+                "range proof does not verify every record in the segment against "
                 f"checkpoint_root={manifest.checkpoint_root} at mmr_size={manifest.mmr_size}"
             )
             return False, errors
