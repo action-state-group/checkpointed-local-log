@@ -4,9 +4,9 @@
 //! and now this crate all pass the same fixtures unchanged).
 
 use cll::mmr::{
-    add_leaf, commitment_object, consistency_proof, inclusion_proof, leaf_hash, root_from_peaks,
-    verify_commitment_object, verify_consistency, verify_inclusion, ConsistencyProof, Hash,
-    InclusionProof, MemoryNodeStore, NodeReader,
+    add_leaf, commitment_object, consistency_proof, decode_commitment_object, inclusion_proof,
+    leaf_hash, root_from_peaks, verify_commitment_object, verify_consistency, verify_inclusion,
+    ConsistencyProof, Hash, InclusionProof, MemoryNodeStore, NodeReader,
 };
 use cll::range_proof::{range_proof, verify_range, RangeProof};
 use serde_json::Value;
@@ -272,4 +272,80 @@ fn commitment_object_verifier_rejects_a_tampered_peak_byte() {
         result.is_err(),
         "verifier must reject a commitment object with a tampered peak byte"
     );
+}
+
+#[test]
+fn commitment_object_decoder_rejects_a_hostile_array_count_without_panicking() {
+    // A count header claiming far more peaks than the input holds must be
+    // a typed error, not an allocation sized by the header. Mutant: drop
+    // the remaining-length bound in `decode_commitment_object` and the
+    // u64::MAX case panics with "capacity overflow" in `Vec::with_capacity`.
+    let mut huge_u64 = vec![0x9b];
+    huge_u64.extend_from_slice(&u64::MAX.to_be_bytes());
+    let huge_u32 = [0x9a, 0xff, 0xff, 0xff, 0xff];
+    // One peak's worth of bytes, but a count of two.
+    let mut one_short = commitment_object(&[[0x11; 32]]);
+    one_short[0] = 0x82;
+    for (label, bytes) in [
+        ("u64::MAX count", huge_u64.as_slice()),
+        ("u32::MAX count", huge_u32.as_slice()),
+        ("count one past the input", one_short.as_slice()),
+    ] {
+        assert!(
+            decode_commitment_object(bytes).is_err(),
+            "{label}: decoder accepted an array count the input cannot hold"
+        );
+    }
+}
+
+#[test]
+fn commitment_object_decoder_rejects_non_minimal_cbor_headers() {
+    // RFC 8949 SS4.2.1: a header must use the shortest argument encoding.
+    // Each case re-encodes a valid single-peak object with one header
+    // widened; the peak list it decodes to is unchanged, so only the
+    // minimality check can reject it. Mutant: drop the `value < min`
+    // check in `cbor_read_uint_header` and this test goes red.
+    let peak: Hash = [0x22; 32];
+    let canonical = commitment_object(&[peak]);
+    assert_eq!(&canonical[..3], &[0x81, 0x58, 0x20]);
+    assert_eq!(decode_commitment_object(&canonical).unwrap(), vec![peak]);
+
+    let with_headers = |array_hdr: &[u8], bstr_hdr: &[u8]| {
+        let mut v = array_hdr.to_vec();
+        v.extend_from_slice(bstr_hdr);
+        v.extend_from_slice(&peak);
+        v
+    };
+    let cases = [
+        (
+            "array count 1 as 0x98 0x01",
+            with_headers(&[0x98, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 2-byte",
+            with_headers(&[0x99, 0x00, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 4-byte",
+            with_headers(&[0x9a, 0x00, 0x00, 0x00, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 8-byte",
+            with_headers(&[0x9b, 0, 0, 0, 0, 0, 0, 0, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "bstr len 32 as 2-byte",
+            with_headers(&[0x81], &[0x59, 0x00, 0x20]),
+        ),
+        (
+            "bstr len 32 as 4-byte",
+            with_headers(&[0x81], &[0x5a, 0x00, 0x00, 0x00, 0x20]),
+        ),
+    ];
+    for (label, bytes) in &cases {
+        assert!(
+            decode_commitment_object(bytes).is_err(),
+            "{label}: decoder accepted a non-minimal CBOR header"
+        );
+    }
 }

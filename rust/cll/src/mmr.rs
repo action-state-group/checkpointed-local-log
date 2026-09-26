@@ -115,10 +115,12 @@ pub fn commitment_object(peak_hashes: &[Hash]) -> Vec<u8> {
 
 /// Reads one CBOR header at `bytes[*pos..]`, advances `*pos` past it, and
 /// returns the encoded length/value. Rejects indefinite-length headers
-/// (additional info 31) and any major type other than `expected_major` --
-/// `commitment_object` only ever emits definite-length arrays (major 4) of
-/// definite-length byte strings (major 2), so this is the inverse of that
-/// encoder, not a general CBOR parser.
+/// (additional info 31), any major type other than `expected_major`, and
+/// any non-minimal argument encoding (RFC 8949 SS4.2.1 preferred
+/// serialization, e.g. `0x18 0x04` for 4) -- `commitment_object` only ever
+/// emits minimal definite-length arrays (major 4) of definite-length byte
+/// strings (major 2), so this is the inverse of that encoder, not a general
+/// CBOR parser.
 fn cbor_read_uint_header(
     bytes: &[u8],
     pos: &mut usize,
@@ -135,43 +137,55 @@ fn cbor_read_uint_header(
         )));
     }
     *pos += 1;
-    match info {
-        0..=23 => Ok(info as u64),
+    // `min` is the smallest value this additional-info width may carry
+    // under RFC 8949 SS4.2.1; anything below it has a shorter encoding.
+    let (value, min) = match info {
+        0..=23 => (info as u64, 0),
         24 => {
             let b = *bytes
                 .get(*pos)
                 .ok_or_else(|| invalid("commitment object: truncated 1-byte length"))?;
             *pos += 1;
-            Ok(b as u64)
+            (b as u64, 24)
         }
         25 => {
             let s = bytes
                 .get(*pos..*pos + 2)
                 .ok_or_else(|| invalid("commitment object: truncated 2-byte length"))?;
             *pos += 2;
-            Ok(u16::from_be_bytes(s.try_into().unwrap()) as u64)
+            (u16::from_be_bytes(s.try_into().unwrap()) as u64, 1 << 8)
         }
         26 => {
             let s = bytes
                 .get(*pos..*pos + 4)
                 .ok_or_else(|| invalid("commitment object: truncated 4-byte length"))?;
             *pos += 4;
-            Ok(u32::from_be_bytes(s.try_into().unwrap()) as u64)
+            (u32::from_be_bytes(s.try_into().unwrap()) as u64, 1 << 16)
         }
         27 => {
             let s = bytes
                 .get(*pos..*pos + 8)
                 .ok_or_else(|| invalid("commitment object: truncated 8-byte length"))?;
             *pos += 8;
-            Ok(u64::from_be_bytes(s.try_into().unwrap()))
+            (u64::from_be_bytes(s.try_into().unwrap()), 1 << 32)
         }
-        31 => Err(invalid(
-            "commitment object: indefinite-length CBOR encoding is not conformant",
-        )),
-        _ => Err(invalid(format!(
-            "commitment object: reserved CBOR additional info {info}"
-        ))),
+        31 => {
+            return Err(invalid(
+                "commitment object: indefinite-length CBOR encoding is not conformant",
+            ))
+        }
+        _ => {
+            return Err(invalid(format!(
+                "commitment object: reserved CBOR additional info {info}"
+            )))
+        }
+    };
+    if value < min {
+        return Err(invalid(format!(
+            "commitment object: non-minimal CBOR encoding of {value} (additional info {info})"
+        )));
     }
+    Ok(value)
 }
 
 /// Decodes a `commitment_object` byte string back into its peak hashes.
@@ -182,6 +196,16 @@ fn cbor_read_uint_header(
 pub fn decode_commitment_object(bytes: &[u8]) -> Result<Vec<Hash>, MmrError> {
     let mut pos = 0usize;
     let count = cbor_read_uint_header(bytes, &mut pos, 4)?;
+    // Each peak is at least a 2-byte bstr header plus 32 bytes, so a count
+    // the remaining input cannot hold is rejected before it sizes an
+    // allocation -- a hostile header must not reserve memory it never fills.
+    const MIN_PEAK_ENCODED_LEN: u64 = 2 + DIGEST_LEN as u64;
+    if count > (bytes.len() - pos) as u64 / MIN_PEAK_ENCODED_LEN {
+        return Err(invalid(format!(
+            "commitment object: array count {count} exceeds what the remaining {} bytes can hold",
+            bytes.len() - pos
+        )));
+    }
     let mut peak_hashes = Vec::with_capacity(count as usize);
     for _ in 0..count {
         let len = cbor_read_uint_header(bytes, &mut pos, 2)?;
