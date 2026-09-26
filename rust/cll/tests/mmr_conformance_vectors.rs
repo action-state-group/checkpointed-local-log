@@ -280,6 +280,8 @@ fn commitment_object_decoder_rejects_a_hostile_array_count_without_panicking() {
     // a typed error, not an allocation sized by the header. Mutant: drop
     // the remaining-length bound in `decode_commitment_object` and the
     // u64::MAX case panics with "capacity overflow" in `Vec::with_capacity`.
+    // The other two cases are boundary sanity only: without the bound they
+    // still reject, later, on truncation.
     let mut huge_u64 = vec![0x9b];
     huge_u64.extend_from_slice(&u64::MAX.to_be_bytes());
     let huge_u32 = [0x9a, 0xff, 0xff, 0xff, 0xff];
@@ -346,6 +348,26 @@ fn commitment_object_decoder_rejects_non_minimal_cbor_headers() {
         assert!(
             decode_commitment_object(bytes).is_err(),
             "{label}: decoder accepted a non-minimal CBOR header"
+        );
+    }
+}
+
+#[test]
+fn commitment_object_decoder_accepts_minimal_headers_at_width_boundaries() {
+    // Positive half of the minimality check: 23 peaks is the last count
+    // in the header byte (0x97), 24 the first needing a 1-byte argument
+    // (0x98 0x18). Both are minimal and must round-trip. Mutant: an
+    // off-by-one minimum (`value <= min`, or 25 for info 24) rejects the
+    // 24-peak object and this test goes red.
+    for n in [23u8, 24] {
+        let peaks: Vec<Hash> = (0..n).map(|i| [i; 32]).collect();
+        let bytes = commitment_object(&peaks);
+        let expected_hdr: &[u8] = if n < 24 { &[0x80 | n] } else { &[0x98, n] };
+        assert_eq!(&bytes[..expected_hdr.len()], expected_hdr);
+        assert_eq!(
+            decode_commitment_object(&bytes).expect("minimal encoding must decode"),
+            peaks,
+            "{n}-peak object did not round-trip"
         );
     }
 }

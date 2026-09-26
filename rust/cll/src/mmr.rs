@@ -116,8 +116,8 @@ pub fn commitment_object(peak_hashes: &[Hash]) -> Vec<u8> {
 /// Reads one CBOR header at `bytes[*pos..]`, advances `*pos` past it, and
 /// returns the encoded length/value. Rejects indefinite-length headers
 /// (additional info 31), any major type other than `expected_major`, and
-/// any non-minimal argument encoding (RFC 8949 SS4.2.1 preferred
-/// serialization, e.g. `0x18 0x04` for 4) -- `commitment_object` only ever
+/// any non-minimal argument encoding (RFC 8949 SS4.2.1 requires SS4.1
+/// preferred serialization, e.g. `0x18 0x04` for 4) -- `commitment_object` only ever
 /// emits minimal definite-length arrays (major 4) of definite-length byte
 /// strings (major 2), so this is the inverse of that encoder, not a general
 /// CBOR parser.
