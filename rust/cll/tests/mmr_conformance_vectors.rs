@@ -4,9 +4,9 @@
 //! and now this crate all pass the same fixtures unchanged).
 
 use cll::mmr::{
-    add_leaf, commitment_object, consistency_proof, inclusion_proof, leaf_hash, root_from_peaks,
-    verify_consistency, verify_inclusion, ConsistencyProof, Hash, InclusionProof, MemoryNodeStore,
-    NodeReader,
+    add_leaf, commitment_object, consistency_proof, decode_commitment_object, inclusion_proof,
+    leaf_hash, root_from_peaks, verify_commitment_object, verify_consistency, verify_inclusion,
+    ConsistencyProof, Hash, InclusionProof, MemoryNodeStore, NodeReader,
 };
 use cll::range_proof::{range_proof, verify_range, RangeProof};
 use serde_json::Value;
@@ -209,24 +209,165 @@ fn commitment_conformance_vectors_pass() {
         let encoded = hex::encode(commitment_object(&peak_hashes));
 
         match kind {
-            "positive" => assert_eq!(
-                encoded, expected_hex,
-                "case {name}: commitment_object mismatch"
-            ),
-            "must-fail" => {
-                // These vectors pin a byte string that a conformant
-                // encoder must NEVER produce (reversed/dropped/duplicated
-                // peaks, a bit-flip, or an indefinite-length encoding).
-                // `commitment_object` only ever emits the canonical
-                // encoding of whatever peak list it is given, so the
-                // must-fail bar here is: our own encoder never happens to
-                // reproduce the malformed bytes for the SAME peak list.
-                assert_ne!(
+            "positive" => {
+                assert_eq!(
                     encoded, expected_hex,
-                    "case {name}: encoder must never reproduce a must-fail encoding"
+                    "case {name}: commitment_object mismatch"
+                );
+                let candidate = hex::decode(expected_hex).unwrap();
+                verify_commitment_object(&candidate, &peak_hashes).unwrap_or_else(|e| {
+                    panic!("case {name}: verifier rejected a positive vector: {e}")
+                });
+            }
+            "must-fail" => {
+                // These vectors pin a byte string a conformant encoder
+                // must never produce (reversed/dropped/duplicated peaks,
+                // a bit-flip, or an indefinite-length encoding), paired
+                // with the SAME true peak list. The must-fail bar is that
+                // the VERIFIER actively rejects the pinned bytes against
+                // that true peak list with a typed error -- not merely
+                // that our own encoder doesn't happen to reproduce the
+                // corrupted bytes (that would only prove the encoder is
+                // deterministic, not that a decoder catches tampering).
+                let candidate = hex::decode(expected_hex).unwrap();
+                let result = verify_commitment_object(&candidate, &peak_hashes);
+                assert!(
+                    result.is_err(),
+                    "case {name}: verifier accepted a must-fail commitment encoding"
                 );
             }
             other => panic!("unknown commitment vector kind {other:?} in case {name}"),
         }
+    }
+}
+
+#[test]
+fn commitment_object_verifier_rejects_a_tampered_peak_byte() {
+    // R4: this crate's OWN conformant encoding of a real peak list, with a
+    // single bit flipped in one peak hash, must be REJECTED by
+    // `verify_commitment_object` -- mirrors the tampered-signature pattern
+    // in `checkpoint_roundtrip.rs`. Mutant: drop the content comparison in
+    // `verify_commitment_object` (accept on structural decode alone) and
+    // this test goes red.
+    let doc = load_vectors("commitment-conformance-vectors/vectors.json");
+    let case = doc["cases"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|c| c["kind"] == "positive" && c["peak_hashes"].as_array().unwrap().len() > 1)
+        .expect("fixture must contain a multi-peak positive case");
+    let peak_hashes: Vec<Hash> = case["peak_hashes"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| hex32(v.as_str().unwrap()))
+        .collect();
+
+    let mut bytes = commitment_object(&peak_hashes);
+    verify_commitment_object(&bytes, &peak_hashes).expect("untampered encoding must verify");
+
+    *bytes.last_mut().unwrap() ^= 0x01;
+    let result = verify_commitment_object(&bytes, &peak_hashes);
+    assert!(
+        result.is_err(),
+        "verifier must reject a commitment object with a tampered peak byte"
+    );
+}
+
+#[test]
+fn commitment_object_decoder_rejects_a_hostile_array_count_without_panicking() {
+    // A count header claiming far more peaks than the input holds must be
+    // a typed error, not an allocation sized by the header. Mutant: drop
+    // the remaining-length bound in `decode_commitment_object` and the
+    // u64::MAX case panics with "capacity overflow" in `Vec::with_capacity`.
+    // The other two cases are boundary sanity only: without the bound they
+    // still reject, later, on truncation.
+    let mut huge_u64 = vec![0x9b];
+    huge_u64.extend_from_slice(&u64::MAX.to_be_bytes());
+    let huge_u32 = [0x9a, 0xff, 0xff, 0xff, 0xff];
+    // One peak's worth of bytes, but a count of two.
+    let mut one_short = commitment_object(&[[0x11; 32]]);
+    one_short[0] = 0x82;
+    for (label, bytes) in [
+        ("u64::MAX count", huge_u64.as_slice()),
+        ("u32::MAX count", huge_u32.as_slice()),
+        ("count one past the input", one_short.as_slice()),
+    ] {
+        assert!(
+            decode_commitment_object(bytes).is_err(),
+            "{label}: decoder accepted an array count the input cannot hold"
+        );
+    }
+}
+
+#[test]
+fn commitment_object_decoder_rejects_non_minimal_cbor_headers() {
+    // RFC 8949 SS4.2.1: a header must use the shortest argument encoding.
+    // Each case re-encodes a valid single-peak object with one header
+    // widened; the peak list it decodes to is unchanged, so only the
+    // minimality check can reject it. Mutant: drop the `value < min`
+    // check in `cbor_read_uint_header` and this test goes red.
+    let peak: Hash = [0x22; 32];
+    let canonical = commitment_object(&[peak]);
+    assert_eq!(&canonical[..3], &[0x81, 0x58, 0x20]);
+    assert_eq!(decode_commitment_object(&canonical).unwrap(), vec![peak]);
+
+    let with_headers = |array_hdr: &[u8], bstr_hdr: &[u8]| {
+        let mut v = array_hdr.to_vec();
+        v.extend_from_slice(bstr_hdr);
+        v.extend_from_slice(&peak);
+        v
+    };
+    let cases = [
+        (
+            "array count 1 as 0x98 0x01",
+            with_headers(&[0x98, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 2-byte",
+            with_headers(&[0x99, 0x00, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 4-byte",
+            with_headers(&[0x9a, 0x00, 0x00, 0x00, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "array count 1 as 8-byte",
+            with_headers(&[0x9b, 0, 0, 0, 0, 0, 0, 0, 0x01], &[0x58, 0x20]),
+        ),
+        (
+            "bstr len 32 as 2-byte",
+            with_headers(&[0x81], &[0x59, 0x00, 0x20]),
+        ),
+        (
+            "bstr len 32 as 4-byte",
+            with_headers(&[0x81], &[0x5a, 0x00, 0x00, 0x00, 0x20]),
+        ),
+    ];
+    for (label, bytes) in &cases {
+        assert!(
+            decode_commitment_object(bytes).is_err(),
+            "{label}: decoder accepted a non-minimal CBOR header"
+        );
+    }
+}
+
+#[test]
+fn commitment_object_decoder_accepts_minimal_headers_at_width_boundaries() {
+    // Positive half of the minimality check: 23 peaks is the last count
+    // in the header byte (0x97), 24 the first needing a 1-byte argument
+    // (0x98 0x18). Both are minimal and must round-trip. Mutant: an
+    // off-by-one minimum (`value <= min`, or 25 for info 24) rejects the
+    // 24-peak object and this test goes red.
+    for n in [23u8, 24] {
+        let peaks: Vec<Hash> = (0..n).map(|i| [i; 32]).collect();
+        let bytes = commitment_object(&peaks);
+        let expected_hdr: &[u8] = if n < 24 { &[0x80 | n] } else { &[0x98, n] };
+        assert_eq!(&bytes[..expected_hdr.len()], expected_hdr);
+        assert_eq!(
+            decode_commitment_object(&bytes).expect("minimal encoding must decode"),
+            peaks,
+            "{n}-peak object did not round-trip"
+        );
     }
 }
