@@ -7,8 +7,7 @@ Ported from capsule-ledger's ``tests/test_mmr_index.py``, generalized from a
 real ``LedgerStore`` to the ``FakeLogSource`` in ``conftest.py`` so this
 package's own test suite carries no dependency on capsule-ledger. The
 downstream smoke check (a real ``LedgerStore`` driven through
-``cll.checkpoint.MmrLedger``) is reported separately -- see the
-outbox entry for this task.
+``cll.checkpoint.MmrLedger``) is reported separately, outside this file.
 """
 from __future__ import annotations
 

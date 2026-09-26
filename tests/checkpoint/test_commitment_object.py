@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""[cll-commitment-interop]: the conformant commitment object.
+"""The conformant commitment object.
 
 ``core.commitment_object`` -- NOT ``root_from_peaks`` -- is the value an
 independent draft-bryce-cose-receipts-mmr-profile/MMRIVER-conformant tool

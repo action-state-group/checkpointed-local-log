@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Signed peaks-checkpoint emission: log_id-scoped signing, monotonicity,
-rollback detection, and the mutant-must-fail discipline (QUEUE_PROTOCOL §7).
+rollback detection, and the mutant-must-fail discipline.
 """
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def _test_ts_public_key_pem() -> bytes:
 
 
 def _pin_test_key_as_default(monkeypatch) -> None:
-    """[verify-batch-fastfollow] item D: simulate that ``DEFAULT_TS_URL`` is
+    """Simulate that ``DEFAULT_TS_URL`` is
     pinned to this file's fixed test keypair, so a genuine ``WitnessRecord``
     built with ``ts_url=DEFAULT_TS_URL`` and signed with
     ``_TEST_TS_PRIVATE_KEY_PEM`` auto-verifies via the DEFAULT (no
@@ -144,7 +144,7 @@ def test_emit_checkpoint_rejects_non_monotonic_size():
 
 
 def test_verify_checkpoint_consistency_mutant_rolled_back_log_fails():
-    """RED case per QUEUE_PROTOCOL §7: cp2 CLAIMS to extend cp1 (its
+    """RED case for the mutant-must-fail discipline: cp2 CLAIMS to extend cp1 (its
     prev_size/prev_root fields say so), but the log backing cp2 actually has
     DIFFERENT content at that size -- a rollback-and-rewrite. The live root
     recomputed at prev_size must not match, so verify_checkpoint_consistency
@@ -226,7 +226,7 @@ def test_digest_changes_with_log_id():
 def _genuine_witness_record(cp, ts_url: str = "https://witness.example") -> WitnessRecord:
     """A ``WitnessRecord`` bound to ``cp`` with a real, structurally valid
     COSE Receipt -- what ``grade()``'s stamp-authenticity check
-    ([stamp-authenticity-on-read-not-presence]) requires. A hand-fabricated
+    requires. A hand-fabricated
     ``entry_hash``/``receipt_b64`` (this helper's pre-fix shape) is now
     exactly the file-forger attack ``grade()`` must reject -- see
     ``test_grade_rejects_a_hand_fabricated_witness_record`` below."""
@@ -297,7 +297,7 @@ def test_grade_is_any_of_not_all_of_across_multiple_witnesses(monkeypatch):
 
 
 def test_grade_rejects_a_hand_fabricated_witness_record():
-    """[stamp-authenticity-on-read-not-presence]: a file-level forger who
+    """Read-side authenticity check: a file-level forger who
     appends a fabricated ``WitnessRecord`` (no real TS ever contacted) does
     NOT launder a checkpoint to WITNESSED -- presence in ``witnesses`` alone
     no longer counts."""
@@ -358,8 +358,7 @@ def test_verify_witness_stamp_offline_rejects_entry_hash_not_bound_to_this_check
 
 
 def test_verify_witness_stamp_offline_unpinned_ts_reports_shape_valid_identity_unverified():
-    """[verify-threestate-trustanchor] (revises [verify-batch-fastfollow]
-    item D's message text): a genuine, structurally valid receipt from a TS
+    """Revises an earlier message text: a genuine, structurally valid receipt from a TS
     that is neither the pinned default nor caller-supplied does NOT confer
     WITNESSED on shape alone -- it must fail closed on the two-state
     ``bool`` projection (ok is False) with the honest "pin not supplied"
@@ -373,7 +372,7 @@ def test_verify_witness_stamp_offline_unpinned_ts_reports_shape_valid_identity_u
 
 
 def test_verify_witness_stamp_tristate_unpinned_ts_is_unverified_not_invalid():
-    """[verify-threestate-trustanchor]: the THREE-STATE form must resolve
+    """Three-state verification: the THREE-STATE form must resolve
     this exact case to UNVERIFIED, not INVALID -- an unpinned TS is not
     evidence of forgery, only evidence we cannot check. This is the state
     ``verify_bundle``/``verify_disclosure`` key off of to avoid false-
@@ -633,7 +632,7 @@ def test_default_ts_url_is_the_witness_host():
 
 
 #: register_checkpoint no longer knows anything about ``CheckpointRecord``
-#: shape ([cll-checkpoint-cose-wire] alignment) -- it POSTs whatever COSE
+#: shape (COSE wire-form alignment) -- it POSTs whatever COSE
 #: bytes it is handed and parses the JSON stamp response. A fixed dummy
 #: payload is enough for these dispatch/routing tests; the wire body's own
 #: content (a real COSE_Sign1) is covered by ``tests/checkpoint/test_cose_wire.py``.

@@ -243,7 +243,7 @@ fn commitment_conformance_vectors_pass() {
 
 #[test]
 fn commitment_object_verifier_rejects_a_tampered_peak_byte() {
-    // R4: this crate's OWN conformant encoding of a real peak list, with a
+    // This crate's OWN conformant encoding of a real peak list, with a
     // single bit flipped in one peak hash, must be REJECTED by
     // `verify_commitment_object` -- mirrors the tampered-signature pattern
     // in `checkpoint_roundtrip.rs`. Mutant: drop the content comparison in

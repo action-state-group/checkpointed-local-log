@@ -178,7 +178,7 @@ def root_from_peaks(peak_hashes: list[bytes]) -> bytes:
 # `root_from_peaks` above is this module's own internal fold: convenient for
 # a fast scalar comparison, but a bespoke convention -- no external
 # MMRIVER-family tool has any way to know its bagging order or that it omits
-# a domain-separator byte. `[cll-commitment-interop]` requires the checkpoint
+# a domain-separator byte. The commitment-interop requirement is for the checkpoint
 # to commit to the REAL commitment object instead: the one
 # draft-bryce-cose-receipts-mmr-profile (Bryce, Datatrails -- the MMRIVER
 # draft's own author; https://www.ietf.org/archive/id/draft-bryce-cose-

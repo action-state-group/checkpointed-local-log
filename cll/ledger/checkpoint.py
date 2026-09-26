@@ -8,7 +8,7 @@ signing (via any ``Signer``-shaped object, not the Ed25519/COSE signer
 ``cll.checkpoint.emit`` uses) and registration against the **legacy**
 capsule-anchor ``/v1/digest`` generic-digest-anchoring endpoint (not the
 checkpoint-aware ``/checkpoints`` COSE route ``cll.checkpoint.emit.
-register_checkpoint`` posts to — see the ``[witness-aac-deploy]`` two-stage
+register_checkpoint`` posts to — part of the two-stage
 witness rollout). The two are wire-COMPATIBLE in field shape (both are the
 Amendment E CLL checkpoint shape) but not the same object, the same
 signature scheme, or the same registration protocol — so their same-named

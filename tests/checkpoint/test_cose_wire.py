@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-"""[cll-checkpoint-cose-wire]: COSE_Sign1 + CBOR wire form for CLL
+"""COSE_Sign1 + CBOR wire form for CLL
 checkpoints, and -- the point of this file -- proof that the wire-carried
 MMR consistency proof is a REAL extension proof, not field equality.
 
@@ -227,7 +227,7 @@ def test_checkpoint_to_cose_requires_a_cose_capable_signer() -> None:
 def test_checkpoint_to_cose_refuses_peak_hashes_that_do_not_bag_to_root(
     signer: Ed25519TestSigner,
 ) -> None:
-    """[cll-commitment-interop] reconciliation: the wire form's commitment
+    """Commitment-interop reconciliation: the wire form's commitment
     is minted from ``new_peak_hashes``, not read from ``cp.root`` -- so a
     caller passing the WRONG peak set (any set that doesn't bag to the
     checkpoint's own root) must be refused, not silently signed into a
@@ -268,7 +268,7 @@ def test_checkpoint_to_cose_requires_prev_peak_hashes_when_prev_size_positive(
 def test_checkpoint_to_cose_refuses_prev_peak_hashes_that_do_not_bag_to_prev_root(
     signer: Ed25519TestSigner,
 ) -> None:
-    """[cll-commitment-interop] reconciliation, ``prev_commitment`` side:
+    """Commitment-interop reconciliation, ``prev_commitment`` side:
     same guard as ``new_peak_hashes``, on the prior-state peak list --
     catches a caller passing the wrong prior peak set BEFORE it is ever
     signed, independent of whatever ``consistency_proof`` happens to say."""
@@ -503,7 +503,7 @@ def test_encode_checkpoint_claims_uses_id_spec_field_names(signer: Ed25519TestSi
     claims = encode_checkpoint_claims(cp, peak_hashes)
     assert claims["kind"] == WIRE_KIND == "cll-checkpoint"
     assert claims["log_size"] == cp.mmr_size
-    # [cll-commitment-interop] conformant commitment -- NOT cp.root: the
+    # Commitment-interop conformant commitment -- NOT cp.root: the
     # ordered peak-hash list, canonical-CBOR-encoded, not the bagged fold.
     assert claims["commitment"] == mmr_core.commitment_object(peak_hashes)
     assert mmr_core.root_from_peaks(peak_hashes).hex() == cp.root  # still recoverable from it

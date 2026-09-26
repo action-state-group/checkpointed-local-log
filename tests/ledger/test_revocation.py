@@ -12,8 +12,7 @@ product code, the wrong dependency direction for a cll test) -- same pattern
 ``tests/ledger/test_checkpoint.py`` already uses for its own synthetic
 capsules.
 
-The integration tests below are the acceptance check for
-[cll-revocation-default-finding]: :meth:`LedgerStore.verify` must flag a
+The integration tests below are the acceptance check: :meth:`LedgerStore.verify` must flag a
 time-fenced revocation violation with ZERO caller configuration -- no
 ``extra_findings`` supplied at construction. (Mutant-tested manually: with
 the ``build_key_timeline``/``check_time_fenced_revocation`` call removed
