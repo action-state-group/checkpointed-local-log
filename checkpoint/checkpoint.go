@@ -309,6 +309,11 @@ func (r Record) VerifySignature() error {
 }
 
 // Ed25519Signer emits checkpoint records whose key_id is the raw public key.
+// It is this package's reference implementation of Signer (runner.go); a
+// host may substitute another key custodian (HSM, KMS, ...) behind the same
+// interface, mirroring the Rust cll crate's CheckpointSigner trait.
+var _ Signer = (*Ed25519Signer)(nil)
+
 type Ed25519Signer struct {
 	private ed25519.PrivateKey
 	public  ed25519.PublicKey

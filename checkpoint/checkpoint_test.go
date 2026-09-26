@@ -160,35 +160,9 @@ func TestLinkedCheckpointCarriesConsistencyProof(t *testing.T) {
 	require.True(t, mmr.VerifyConsistency(oldRoot, newRoot, *record.ConsistencyProof))
 }
 
-func TestCommitmentConformanceVectors(t *testing.T) {
-	// Pinned cross-language commitment-conformance vectors at aa9f2fd.
-	vectors := []struct {
-		name       string
-		peaks      []string
-		commitment string
-	}{
-		{"empty-accumulator", nil, "80"},
-		{"kat39-index-0", []string{"af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"}, "815820af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"},
-		{"kat39-index-3", []string{"ad104051c516812ea5874ca3ff06d0258303623d04307c41ec80a7a18b332ef8", "d5688a52d55a02ec4aea5ec1eadfffe1c9e0ee6a4ddbe2377f98326d42dfc975"}, "825820ad104051c516812ea5874ca3ff06d0258303623d04307c41ec80a7a18b332ef85820d5688a52d55a02ec4aea5ec1eadfffe1c9e0ee6a4ddbe2377f98326d42dfc975"},
-		{"kat39-index-10", []string{"827f3213c1de0d4c6277caccc1eeca325e45dfe2c65adce1943774218db61f88", "b8faf5f748f149b04018491a51334499fd8b6060c42a835f361fa9665562d12d", "8d85f8467240628a94819b26bee26e3a9b2804334c63482deacec8d64ab4e1e7"}, "835820827f3213c1de0d4c6277caccc1eeca325e45dfe2c65adce1943774218db61f885820b8faf5f748f149b04018491a51334499fd8b6060c42a835f361fa9665562d12d58208d85f8467240628a94819b26bee26e3a9b2804334c63482deacec8d64ab4e1e7"},
-		{"kat39-index-18", []string{"78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112", "f4a0db79de0fee128fbe95ecf3509646203909dc447ae911aa29416bf6fcba21", "5bc67471c189d78c76461dcab6141a733bdab3799d1d69e0c419119c92e82b3d"}, "83582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f1125820f4a0db79de0fee128fbe95ecf3509646203909dc447ae911aa29416bf6fcba2158205bc67471c189d78c76461dcab6141a733bdab3799d1d69e0c419119c92e82b3d"},
-		{"kat39-index-25", []string{"78b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112", "61b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a22710", "dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae", "561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"}, "84582078b2b4162eb2c58b229288bbcb5b7d97c7a1154eed3161905fb0f180eba6f112582061b3ff808934301578c9ed7402e3dd7dfe98b630acdf26d1fd2698a3c4a227105820dd7efba5f1824103f1fa820a5c9e6cd90a82cf123d88bd035c7e5da0aba8a9ae5820561f627b4213258dc8863498bb9b07c904c3c65a78c1a36bca329154d1ded213"},
-		{"kat39-index-38", []string{"d4fb5649422ff2eaf7b1c0b851585a8cfd14fb08ce11addb30075a96309582a7", "6a169105dcc487dbbae5747a0fd9b1d33a40320cf91cf9a323579139e7ff72aa", "e9a5f5201eb3c3c856e0a224527af5ac7eb1767fb1aff9bd53ba41a60cde9785"}, "835820d4fb5649422ff2eaf7b1c0b851585a8cfd14fb08ce11addb30075a96309582a758206a169105dcc487dbbae5747a0fd9b1d33a40320cf91cf9a323579139e7ff72aa5820e9a5f5201eb3c3c856e0a224527af5ac7eb1767fb1aff9bd53ba41a60cde9785"},
-	}
-	for _, vector := range vectors {
-		t.Run(vector.name, func(t *testing.T) {
-			peaks := make([][]byte, len(vector.peaks))
-			for index, value := range vector.peaks {
-				decoded, err := hex.DecodeString(value)
-				require.NoError(t, err)
-				peaks[index] = decoded
-			}
-			encoded, err := canonicalCBOR.Marshal(peaks)
-			require.NoError(t, err)
-			require.Equal(t, vector.commitment, hex.EncodeToString(encoded))
-		})
-	}
-}
+// The full commitment-conformance-vectors suite (positive + must-fail cases)
+// now lives in mmr.TestCommitmentConformanceVectors, exercised against the
+// production CommitmentObject encoder directly.
 
 func TestDecodeWireClaimsAcceptsCanonicalCadence(t *testing.T) {
 	cadence := uint64(900)
