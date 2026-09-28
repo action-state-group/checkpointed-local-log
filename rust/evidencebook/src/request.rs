@@ -20,8 +20,11 @@ pub enum SubjectKind {
     Range,
     /// Every record whose correlation field matches: operational index.
     Correlation,
-    /// Every record citing the named interaction half's digest. The variant
-    /// name is the request draft's wire token for this subject form.
+    /// Every record citing the named interaction half's digest. The wire
+    /// token is fixed by the request draft's subject registry and is part of
+    /// the public serialized form, so it cannot be renamed here; the variant
+    /// carries this crate's own name, and the vocabulary gate exempts exactly
+    /// this token on the lines marked below.
     #[serde(rename = "exchange")] // vocabulary-gate: request-draft wire token
     CitingRecords,
     /// The store's whole evidence body, subject to disclosure policy.

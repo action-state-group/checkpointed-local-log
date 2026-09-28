@@ -130,9 +130,19 @@ mod tests {
             compute_capsule_id(&a).unwrap(),
             a["capsule_id"].as_str().unwrap()
         );
-        for absent in ["chain", "references", "timestamp", "model_attestation"] {
-            assert!(a.get(absent).is_none(), "{absent} must be absent");
-        }
+        // Nothing beyond the committed nonce and its identity: no chain,
+        // references, timestamp or capsule envelope.
+        let mut members: Vec<&str> = a.as_object().unwrap().keys().map(String::as_str).collect();
+        members.sort_unstable();
+        assert_eq!(
+            members,
+            [
+                "capsule_id",
+                "epistemic_type",
+                "record_type",
+                STORE_NONCE_FIELD
+            ]
+        );
     }
 
     #[test]

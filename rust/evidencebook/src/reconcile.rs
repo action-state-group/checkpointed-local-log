@@ -14,8 +14,9 @@
 //! them: a primary key, a secondary key tried only for halves the primary
 //! left unpaired, and an optional grouping key that is recorded when both
 //! halves carry the same value and never joined on. Pairing and
-//! classification follow the Go implementation's `ReconcileHalves` given the
-//! policy (`exchange_id`, `request_digest`, `twin_bracket_id`); the
+//! classification follow the Go implementation's `ReconcileHalves` given a
+//! policy of its three keys: a correlation id as the primary key, the request
+//! digest as the secondary, and a paired-run id as the grouping key. The
 //! consuming plugin's `tests/reconcile_parity.rs` checks that on the fixture
 //! Go and Python both check. Result member names (`group`) are this
 //! crate's own.

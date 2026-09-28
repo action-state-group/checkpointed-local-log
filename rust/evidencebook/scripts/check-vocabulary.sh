@@ -6,10 +6,9 @@
 # gate fails if a word that names one deployment's concepts appears anywhere in
 # the crate (source, tests, manifest, docs, vendored data).
 #
-# Words are matched whole (grep -w), and an underscore is a word character,
-# so a compound identifier such as a capsule envelope member
-# (`model_attestation`) is not a hit: the gate is about vocabulary the crate
-# uses for its own concepts, not member names of formats it reads.
+# A word is a hit wherever it stands between non-alphanumeric characters,
+# and an underscore counts as a separator, so compound identifiers
+# (`some_word_id`, `word_attestation`) are hits too.
 #
 # One exemption exists, and it is per line: a request-draft wire token that
 # happens to be one of these words, marked on that line with
@@ -22,7 +21,7 @@ crate_dir="$(cd "$(dirname "$0")/.." && pwd)"
 words='mesh|exchange|exchanges|twin|twins|provider|providers|model|models'
 mark='vocabulary-gate: request-draft wire token'
 
-hits="$(grep -RInwiE "$words" "$crate_dir" \
+hits="$(grep -RIniE "(^|[^[:alnum:]])($words)($|[^[:alnum:]])" "$crate_dir" \
   --exclude-dir=target --exclude=Cargo.lock --exclude="$(basename "$0")" || true)"
 
 violations="$(printf '%s\n' "$hits" | grep -v '^$' | while IFS= read -r line; do
