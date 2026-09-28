@@ -61,11 +61,7 @@ pub trait Substrate {
     fn append(&mut self, record_id: &RecordId) -> Result<u64, Self::Error>;
 
     /// Records committed so far.
-    fn len(&self) -> u64;
-
-    fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
+    fn record_count(&self) -> Result<u64, Self::Error>;
 
     /// Checkpoint identity: the latest committed checkpoint, if any.
     fn latest_checkpoint(&self) -> Option<&Checkpoint>;
@@ -160,7 +156,7 @@ pub struct Checkpoint {
 impl Checkpoint {
     /// Records this checkpoint covers.
     pub fn leaf_count(&self) -> Result<u64, SubstrateError> {
-        Ok(mmr_leaf_count(self.mmr_size)?)
+        mmr_leaf_count(self.mmr_size).log_err()
     }
 
     /// The canonical JSON the signature covers.
@@ -343,37 +339,34 @@ pub enum SubstrateError {
     },
     #[error("cutting at {requested} leaves, but only {available} are committed")]
     CutBeyondLog { requested: u64, available: u64 },
+    #[error(
+        "prepared checkpoint chains to size {prev_size}, but the latest committed checkpoint \
+         is at size {latest_size} -- prepare it again"
+    )]
+    StalePrepared { prev_size: u64, latest_size: u64 },
 }
 
-impl From<cll::mmr::MmrError> for SubstrateError {
-    fn from(e: cll::mmr::MmrError) -> Self {
-        SubstrateError::Mmr(e.to_string())
-    }
+/// Converts the embedded log's errors into [`SubstrateError`]. Private, so no
+/// `cll` error type appears in this crate's public trait impls.
+trait FromLog<T> {
+    fn log_err(self) -> Result<T, SubstrateError>;
 }
 
-impl From<cll::node_store::NodeStoreError> for SubstrateError {
-    fn from(e: cll::node_store::NodeStoreError) -> Self {
-        SubstrateError::NodeStore(e.to_string())
-    }
+macro_rules! from_log {
+    ($err:ty, $variant:ident) => {
+        impl<T> FromLog<T> for Result<T, $err> {
+            fn log_err(self) -> Result<T, SubstrateError> {
+                self.map_err(|e| SubstrateError::$variant(e.to_string()))
+            }
+        }
+    };
 }
 
-impl From<cll::store::StoreError> for SubstrateError {
-    fn from(e: cll::store::StoreError) -> Self {
-        SubstrateError::Store(e.to_string())
-    }
-}
-
-impl From<cll::checkpoint::CheckpointError> for SubstrateError {
-    fn from(e: cll::checkpoint::CheckpointError) -> Self {
-        SubstrateError::Checkpoint(e.to_string())
-    }
-}
-
-impl From<SignerError> for SubstrateError {
-    fn from(e: SignerError) -> Self {
-        SubstrateError::Signer(e.to_string())
-    }
-}
+from_log!(cll::mmr::MmrError, Mmr);
+from_log!(cll::node_store::NodeStoreError, NodeStore);
+from_log!(cll::store::StoreError, Store);
+from_log!(cll::checkpoint::CheckpointError, Checkpoint);
+from_log!(SignerError, Signer);
 
 /// A signed checkpoint not yet persisted. Witness receipts may be attached
 /// to `checkpoint.witnesses` before [`CllSubstrate::commit_checkpoint`].
@@ -421,8 +414,8 @@ impl CllSubstrate {
         node_store_path: &Path,
         checkpoints_path: &Path,
     ) -> Result<(Self, OpenReport), SubstrateError> {
-        let (node_store, report) = FileNodeStore::open(node_store_path)?;
-        let last_line = read_last_checkpoint(checkpoints_path)?;
+        let (node_store, report) = FileNodeStore::open(node_store_path).log_err()?;
+        let last_line = read_last_checkpoint(checkpoints_path).log_err()?;
         let last_checkpoint = last_line
             .as_ref()
             .map(|l| Checkpoint::from_log(l.record.clone()));
@@ -445,13 +438,13 @@ impl CllSubstrate {
 
     /// Records committed so far.
     pub fn leaf_count(&self) -> Result<u64, SubstrateError> {
-        Ok(mmr_leaf_count(self.node_store.size())?)
+        mmr_leaf_count(self.node_store.size()).log_err()
     }
 
     /// Commit `record_id` as the next leaf; returns its leaf index.
     pub fn append_leaf(&mut self, record_id: &RecordId) -> Result<u64, SubstrateError> {
         let index = self.leaf_count()?;
-        add_leaf(&mut self.node_store, leaf_hash(record_id))?;
+        add_leaf(&mut self.node_store, leaf_hash(record_id)).log_err()?;
         Ok(index)
     }
 
@@ -460,7 +453,9 @@ impl CllSubstrate {
     /// substrate must never checkpoint over superseded leaves.
     pub fn check_leaf(&self, leaf_index: u64, record_id: &RecordId) -> Result<(), SubstrateError> {
         let expected_leaf = leaf_hash(record_id);
-        let stored_leaf = self.node_store.node(leaf_index_to_pos(leaf_index)?);
+        let stored_leaf = self
+            .node_store
+            .node(leaf_index_to_pos(leaf_index).log_err()?);
         if stored_leaf != expected_leaf {
             return Err(SubstrateError::LeafMismatch {
                 leaf_index,
@@ -550,7 +545,7 @@ impl CllSubstrate {
             signature: String::new(),
             witnesses: Vec::new(),
         };
-        cp.signature = try_sign_checkpoint_digest(&cp, &adapter)?;
+        cp.signature = try_sign_checkpoint_digest(&cp, &adapter).log_err()?;
 
         // COSE wire form, best-effort: `cadence_seconds` is omitted, as the
         // Python reference omits it.
@@ -560,11 +555,7 @@ impl CllSubstrate {
             None
         };
         let consistency = if prev_size > 0 {
-            Some(consistency_proof(
-                &self.node_store,
-                prev_size,
-                current_size,
-            )?)
+            Some(consistency_proof(&self.node_store, prev_size, current_size).log_err()?)
         } else {
             None
         };
@@ -597,13 +588,26 @@ impl CllSubstrate {
         let PreparedCheckpoint {
             checkpoint, cose, ..
         } = prepared;
+        // A prepared checkpoint chains to the checkpoint that was latest when
+        // it was prepared; if another was committed since, it would fork.
+        let (latest_size, latest_root) = self
+            .last_checkpoint
+            .as_ref()
+            .map_or((0, ""), |cp| (cp.mmr_size, cp.root.as_str()));
+        if checkpoint.prev_size != latest_size || checkpoint.prev_root != latest_root {
+            return Err(SubstrateError::StalePrepared {
+                prev_size: checkpoint.prev_size,
+                latest_size,
+            });
+        }
         append_checkpoint(
             &self.checkpoints_path,
             &CheckpointLine {
                 record: checkpoint.to_log(),
                 checkpoint_cose_hex: cose.as_ref().map(hex::encode),
             },
-        )?;
+        )
+        .log_err()?;
         self.last_checkpoint = Some(checkpoint.clone());
         self.last_checkpoint_cose = cose;
         Ok(checkpoint)
@@ -616,15 +620,14 @@ impl CllSubstrate {
         leaf_index: u64,
         mmr_size: u64,
     ) -> Result<InclusionEvidence, SubstrateError> {
-        Ok(InclusionEvidence::from_log(inclusion_proof(
-            &self.node_store,
-            leaf_index,
-            mmr_size,
-        )?))
+        Ok(InclusionEvidence::from_log(
+            inclusion_proof(&self.node_store, leaf_index, mmr_size).log_err()?,
+        ))
     }
 
     fn peak_hashes(&self, size: u64) -> Result<Vec<Hash>, SubstrateError> {
-        Ok(peaks(size)?
+        Ok(peaks(size)
+            .log_err()?
             .iter()
             .map(|&p| self.node_store.node(p))
             .collect())
@@ -638,9 +641,8 @@ impl Substrate for CllSubstrate {
         self.append_leaf(record_id)
     }
 
-    fn len(&self) -> u64 {
-        // A node store that opened cleanly always has a valid MMR size.
-        self.leaf_count().unwrap_or(0)
+    fn record_count(&self) -> Result<u64, SubstrateError> {
+        self.leaf_count()
     }
 
     fn latest_checkpoint(&self) -> Option<&Checkpoint> {
@@ -697,7 +699,7 @@ mod tests {
         drop(s);
 
         let mut s = open(dir.path());
-        assert_eq!(s.len(), 5);
+        assert_eq!(s.record_count().unwrap(), 5);
         assert_eq!(s.latest_checkpoint(), Some(&first));
         let second = cut(&mut s, 5, &key).unwrap();
         assert_eq!(
@@ -769,6 +771,30 @@ mod tests {
     }
 
     #[test]
+    fn a_prepared_checkpoint_goes_stale_once_another_is_committed() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = SigningKey::from_bytes(&[9u8; 32]);
+        let mut s = open(dir.path());
+        s.append(&id(1)).unwrap();
+        s.append(&id(2)).unwrap();
+        let first = s
+            .prepare_checkpoint(1, "log", "2026-09-27T00:00:00.000Z", &key)
+            .unwrap();
+        let second = s
+            .prepare_checkpoint(2, "log", "2026-09-27T00:00:00.000Z", &key)
+            .unwrap();
+        s.commit_checkpoint(second).unwrap();
+        assert!(matches!(
+            s.commit_checkpoint(first),
+            Err(SubstrateError::StalePrepared {
+                prev_size: 0,
+                latest_size: 3
+            })
+        ));
+        assert_eq!(s.last_checkpoint().unwrap().mmr_size, 3);
+    }
+
+    #[test]
     fn check_leaf_detects_a_different_record_at_a_position() {
         let dir = tempfile::tempdir().unwrap();
         let mut s = open(dir.path());
@@ -819,7 +845,14 @@ mod tests {
             key_id: "b".repeat(64),
             timestamp: "2026-09-27T00:00:00.000Z".into(),
             signature: "c".repeat(128),
-            witnesses: vec![],
+            witnesses: vec![WitnessEntry {
+                ts_url: "https://witness.example".into(),
+                entry_hash: "e".repeat(64),
+                receipt_b64: "cmVjZWlwdA==".into(),
+                leaf_index: 3,
+                tree_size: 4,
+                is_stub: true,
+            }],
         };
         assert_eq!(
             serde_json::to_value(&cp).unwrap(),

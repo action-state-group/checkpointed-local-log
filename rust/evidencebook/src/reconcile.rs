@@ -13,8 +13,12 @@
 //! The correlation keys are the calling profile's. A [`JoinPolicy`] names
 //! them: a primary key, a secondary key tried only for halves the primary
 //! left unpaired, and an optional grouping key that is recorded when both
-//! halves carry the same value and never joined on. Semantics match the Go
-//! implementation's `ReconcileHalves` with its keys supplied as a policy.
+//! halves carry the same value and never joined on. Pairing and
+//! classification follow the Go implementation's `ReconcileHalves` given the
+//! policy (`exchange_id`, `request_digest`, `twin_bracket_id`); the
+//! consuming plugin's `tests/reconcile_parity.rs` checks that on the fixture
+//! Go and Python both check. Result member names (`group`) are this
+//! crate's own.
 
 use crate::record::LinkType;
 use serde::{Deserialize, Serialize};
@@ -85,10 +89,10 @@ impl Half {
             .filter(|v| !v.is_empty())
     }
 
-    fn has_no_keys(&self, policy: &JoinPolicy) -> bool {
-        self.key(&policy.primary).is_none()
-            && self.key(&policy.secondary).is_none()
-            && policy.group.as_deref().and_then(|g| self.key(g)).is_none()
+    /// No correlation value at all, under any key name. Such a half could be
+    /// anyone's counterpart, so its absence on the other side is not provable.
+    fn has_no_keys(&self) -> bool {
+        self.correlation.values().all(String::is_empty)
     }
 }
 
@@ -231,7 +235,7 @@ pub fn reconcile_halves(
     let mut results = Vec::with_capacity(a.halves.len() + b.halves.len());
     for (i, own) in a.halves.iter().enumerate() {
         let Some(j) = partner[i] else {
-            let provable = own.covered && b.complete && !own.has_no_keys(policy);
+            let provable = own.covered && b.complete && !own.has_no_keys();
             results.push(PairResult {
                 state: if provable {
                     PairState::AOnly
@@ -279,7 +283,7 @@ pub fn reconcile_halves(
         if used[j] {
             continue;
         }
-        let provable = peer.covered && a.complete && !peer.has_no_keys(policy);
+        let provable = peer.covered && a.complete && !peer.has_no_keys();
         results.push(PairResult {
             state: if provable {
                 PairState::BOnly
@@ -551,6 +555,28 @@ mod tests {
             assert_eq!(results[0].state, PairState::Matched);
             assert_eq!(results[0].group, None, "peer group {peer_group:?}");
         }
+    }
+
+    #[test]
+    fn a_half_carrying_only_a_group_key_is_provably_absent_without_a_group_policy() {
+        let no_group = JoinPolicy {
+            group: None,
+            ..policy()
+        };
+        let a = HalfSet {
+            complete: true,
+            halves: vec![half("a", &[("g", "grp")], "p")],
+        };
+        let (_, t) = reconcile_halves(
+            &a,
+            &HalfSet {
+                complete: true,
+                halves: vec![],
+            },
+            &no_group,
+            &same_payload_commitments,
+        );
+        assert_eq!((t.a_only, t.insufficient), (1, 0));
     }
 
     #[test]

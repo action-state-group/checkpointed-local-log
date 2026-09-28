@@ -124,8 +124,6 @@ pub struct Refusal {
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum RefusalError {
-    #[error("refusal reason {0:?} is not a registered token")]
-    UnknownReason(String),
     #[error("refusal key_id is not a raw Ed25519 public key in hex")]
     BadKey,
     #[error("refusal signature is not 64 bytes of hex")]
@@ -145,12 +143,14 @@ impl Refusal {
         crate::canonical::jcs(&body).expect("three string members always canonicalize")
     }
 
-    /// Check the reason token and the signature, offline, against the
-    /// refusal's own `key_id`.
+    /// Whether `reason` is a registered token. Separate from [`Refusal::verify`],
+    /// which, like the Go and Python verifiers, checks only the signature.
+    pub fn reason_is_registered(&self) -> bool {
+        reasons::ALL.contains(&self.reason.as_str())
+    }
+
+    /// Check the signature, offline, against the refusal's own `key_id`.
     pub fn verify(&self) -> Result<(), RefusalError> {
-        if !reasons::ALL.contains(&self.reason.as_str()) {
-            return Err(RefusalError::UnknownReason(self.reason.clone()));
-        }
         let key: [u8; 32] = hex::decode(&self.key_id)
             .ok()
             .and_then(|b| b.try_into().ok())
@@ -246,10 +246,10 @@ mod tests {
         t.request_digest = "cd".repeat(32);
         assert_eq!(t.verify(), Err(RefusalError::Unverified));
 
-        assert_eq!(
-            signed("no_such_record").verify(),
-            Err(RefusalError::UnknownReason("no_such_record".into()))
-        );
+        let unregistered = signed("no_such_record");
+        unregistered.verify().unwrap();
+        assert!(!unregistered.reason_is_registered());
+        assert!(good.reason_is_registered());
 
         let mut t = good.clone();
         t.key_id = "zz".into();

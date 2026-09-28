@@ -17,7 +17,10 @@ fn public_lines_naming_cll(src: &str) -> Vec<String> {
         if t.starts_with("//") {
             continue;
         }
-        let opens_pub = t.starts_with("pub ") && !t.starts_with("pub(crate)");
+        // A trait impl for a public type is public API whatever its
+        // visibility keyword, so an `impl` line opens a signature too.
+        let opens_pub =
+            (t.starts_with("pub ") && !t.starts_with("pub(crate)")) || t.starts_with("impl");
         if opens_pub {
             in_pub_signature = true;
         }
@@ -58,6 +61,8 @@ fn the_scan_catches_each_way_a_cll_type_could_leak() {
         "pub fn proof(&self) -> cll::mmr::InclusionProof {",
         "pub fn load(\n    path: &Path,\n) -> Result<cll::store::CheckpointLine, E> {",
         "pub struct S {\n    pub inner: cll::node_store::FileNodeStore,\n}",
+        "impl From<cll::mmr::MmrError> for SubstrateError {",
+        "impl<T> Tr for Result<T, cll::mmr::MmrError> {",
     ] {
         assert!(
             !public_lines_naming_cll(leaking).is_empty(),
