@@ -1,0 +1,51 @@
+# SPDX-License-Identifier: Apache-2.0
+# Builds and tests the `evidencebook` Rust crate (rust/evidencebook/), which
+# embeds the `cll` crate beside it, so a change to either triggers it. Also
+# runs the crate's vocabulary gate: the crate carries no deployment
+# vocabulary, and scripts/check-vocabulary.sh fails the build if any appears.
+name: evidencebook
+
+on:
+  push:
+    paths:
+      - "rust/evidencebook/**"
+      - "rust/cll/**"
+      - ".github/workflows/evidencebook.yml"
+  pull_request:
+    paths:
+      - "rust/evidencebook/**"
+      - "rust/cll/**"
+      - ".github/workflows/evidencebook.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  evidencebook-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust/evidencebook
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: vocabulary gate
+        run: ./scripts/check-vocabulary.sh
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: cargo test
+        run: cargo test --all-features
+
+      - name: cargo doc (warnings are errors)
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps
