@@ -1,13 +1,20 @@
 [package]
-name = "cll"
-version = "0.1.0"
+# Published as `checkpointed-local-log` (the name `cll` is taken on crates.io);
+# the library keeps the name `cll`, so `use cll::...` is unchanged.
+name = "checkpointed-local-log"
+version = "0.2.0"
 edition = "2021"
+rust-version = "1.88"
 license = "Apache-2.0"
 description = "Checkpointed Local Log (CLL): Merkle Mountain Range, signed COSE checkpoints, per-record range proofs, and witness registration -- a Rust sibling of the checkpointed-local-log Python reference, sharing its conformance vectors."
 repository = "https://github.com/action-state-group/checkpointed-local-log"
 keywords = ["scitt", "mmr", "merkle-mountain-range", "merkle", "checkpoint"]
 categories = ["cryptography"]
-publish = false
+readme = "README.md"
+documentation = "https://docs.rs/checkpointed-local-log"
+# The package carries the library only: the tests and examples read the
+# conformance vectors from the repository root, which does not ship.
+include = ["src/**/*.rs", "Cargo.toml", "README.md", "CHANGELOG.md"]
 
 [lib]
 name = "cll"

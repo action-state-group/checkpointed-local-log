@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: Apache-2.0
+# crates-package: the two Rust crates package cleanly for crates.io.
+#
+# For each crate, the package's file list is checked (the library, its README
+# and CHANGELOG, and for evidencebook the vendored schema it embeds; never
+# tests, vectors, keys or build output), then `cargo publish --dry-run` builds
+# the packaged crate against crates.io. Nothing is uploaded.
+#
+# evidencebook depends on checkpointed-local-log by version. Until that version
+# is on crates.io, its dry run cannot resolve it, so the two crates are instead
+# packaged together in a temporary workspace: cargo then verifies evidencebook
+# against the just-packaged checkpointed-local-log, as it would after publish.
+name: crates-package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rust/**"
+      - ".github/workflows/crates-package.yml"
+  pull_request:
+    paths:
+      - "rust/**"
+      - ".github/workflows/crates-package.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: package file lists
+        run: |
+          set -euo pipefail
+          for crate in cll evidencebook; do
+            (cd "rust/$crate" && cargo package --list --allow-dirty) > "/tmp/$crate.list"
+            echo "== rust/$crate"; cat "/tmp/$crate.list"
+            if grep -E '^(tests|examples|scripts|target)/|vectors|\.(pem|key|env)$' "/tmp/$crate.list"; then
+              echo "::error::rust/$crate packages a file it must not ship"; exit 1
+            fi
+          done
+
+      - name: checkpointed-local-log dry run
+        working-directory: rust/cll
+        run: cargo publish --dry-run --allow-dirty
+
+      - name: evidencebook dry run
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/cll/Cargo.toml | head -1)
+          if curl -fsS "https://index.crates.io/ch/ec/checkpointed-local-log" | grep -q "\"vers\":\"$version\""; then
+            (cd rust/evidencebook && cargo publish --dry-run --allow-dirty)
+          else
+            echo "checkpointed-local-log $version is not on crates.io yet: packaging both crates together."
+            ws=$(mktemp -d)
+            cp -R rust/cll rust/evidencebook "$ws/"
+            rm -f "$ws/cll/Cargo.lock" "$ws/evidencebook/Cargo.lock"
+            printf '[workspace]\nmembers = ["cll", "evidencebook"]\nresolver = "2"\n' > "$ws/Cargo.toml"
+            (cd "$ws" && cargo package --workspace --allow-dirty)
+          fi
