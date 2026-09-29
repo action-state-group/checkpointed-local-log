@@ -1,9 +1,7 @@
 {
-  "$comment": "Vendored, not owned here. The epistemic_type value set is defined ONCE, on EvidenceBook's EvidenceRecordHeader (spec-evidencebook-v3.md §3, 2026-09-20). This file is a literal, case-folded transcription of that section's closed set -- created here because no machine-readable copy existed yet for capsule-engine's EPISTEMIC_TYPE_VALUES parity test to read (evidence-contract-internal-spec-v3.md §4 requires the parity test to read a vendored JSON, not a second hand-typed enum). A change to the owning spec's set is a drift that must be re-vendored here, not silently re-derived.",
+  "$comment": "The closed value set of record.epistemic_type, as a machine-readable list. Tests read this file instead of a second hand-typed enum, so the two cannot drift apart; a change to the set is made here first.",
   "source": {
-    "document": "evidence-book-internal-spec-v3.md",
-    "section": "§3 Record header",
-    "date": "2026-09-20",
+    "section": "Record header",
     "owning_field": "record.epistemic_type"
   },
   "values": [
