@@ -18,10 +18,12 @@ on:
     paths:
       - "rust/**"
       - ".github/workflows/crates-package.yml"
+      - ".github/scripts/check_crate_metadata.py"
   pull_request:
     paths:
       - "rust/**"
       - ".github/workflows/crates-package.yml"
+      - ".github/scripts/check_crate_metadata.py"
 
 permissions:
   contents: read
@@ -33,6 +35,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: crates.io metadata (keywords, categories, required fields)
+        run: python3 .github/scripts/check_crate_metadata.py rust/cll/Cargo.toml rust/evidencebook/Cargo.toml
 
       - name: package file lists
         run: |
