@@ -123,6 +123,11 @@ being reachable. See comments in `spec/Makefile` for `rebuild` and
 
 ## License
 
-See [LICENSE](LICENSE): the specification text is governed by
-[BCP 78](https://www.rfc-editor.org/info/bcp78) and the IETF Trust's Legal
-Provisions; code and reference material are under the Revised BSD License.
+- **Code** (the Python package `cll/`, the Rust crates under `rust/`, tests and
+  tooling unless a file's SPDX header says otherwise) is licensed under the
+  Apache License 2.0: see [LICENSE-APACHE](LICENSE-APACHE). The crates publish
+  to crates.io as `Apache-2.0`.
+- **The specification text** under `spec/` is under the Revised BSD License:
+  see [LICENSE](LICENSE). As an Internet-Draft it is also governed by
+  [BCP 78](https://www.rfc-editor.org/info/bcp78) and the IETF Trust's Legal
+  Provisions.

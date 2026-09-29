@@ -12,7 +12,7 @@ readme = "README.md"
 documentation = "https://docs.rs/evidencebook"
 # The library and the vendored schema it embeds; the tests, their vectors and
 # the vocabulary script stay in the repository.
-include = ["src/**/*.rs", "schemas/vendor/epistemic-types.json", "Cargo.toml", "README.md", "CHANGELOG.md"]
+include = ["src/**/*.rs", "schemas/vendor/epistemic-types.json", "Cargo.toml", "README.md", "CHANGELOG.md", "LICENSE-APACHE"]
 
 [lib]
 name = "evidencebook"
