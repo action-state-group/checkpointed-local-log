@@ -1,0 +1,139 @@
+# SPDX-License-Identifier: Apache-2.0
+# Publish one Rust crate to crates.io when its release tag is pushed.
+#
+# Tag: crates/<crate>-v<version>, e.g. crates/evidencebook-v0.0.2. The tag
+# must point at a commit on main, and <version> must equal the crate's
+# Cargo.toml version.
+#
+# Authentication is crates.io Trusted Publishing (OIDC): the publish job
+# exchanges GitHub's short-lived identity token for a crates.io token that is
+# scoped to this repository, this workflow file and the `crates-io`
+# environment, and is revoked when the job ends. No crates.io token is stored
+# in this repository. The `crates-io` environment requires a reviewer, so
+# nothing is uploaded until a maintainer approves the run.
+#
+# Actions are pinned to full commit SHAs (tag in the trailing comment).
+name: publish-crates
+
+on:
+  push:
+    tags: ["crates/*-v*"]
+
+permissions: {}
+
+concurrency:
+  group: publish-crates-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RUST_TOOLCHAIN: "1.97.1"
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: check the tag and package the crate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      crate: ${{ steps.tag.outputs.crate }}
+      dir: ${{ steps.tag.outputs.dir }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      # The tag is read from the environment, never interpolated into the
+      # script. Only the crates listed here can be published; each is its own
+      # package under rust/, with its own Cargo.lock.
+      - name: The tag names a crate of this repository, on main
+        id: tag
+        run: |
+          set -euo pipefail
+          if [[ ! "$GITHUB_REF_NAME" =~ ^crates/([a-z0-9_-]+)-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::tag $GITHUB_REF_NAME is not crates/<crate>-v<major.minor.patch>"; exit 1
+          fi
+          crate="${BASH_REMATCH[1]}"; version="${BASH_REMATCH[2]}"
+          case "$crate" in
+            checkpointed-local-log) dir=rust/cll ;;
+            evidencebook) dir=rust/evidencebook ;;
+            *) echo "::error::$crate is not a crate this workflow publishes"; exit 1 ;;
+          esac
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main"; exit 1
+          fi
+          {
+            echo "crate=$crate"
+            echo "dir=$dir"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: The tag version is the Cargo.toml version, and not yet on crates.io
+        working-directory: ${{ steps.tag.outputs.dir }}
+        env:
+          CRATE: ${{ steps.tag.outputs.crate }}
+          VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          manifest=$(cargo metadata --no-deps --format-version 1 --locked \
+            | jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version')
+          if [ "$manifest" != "$VERSION" ]; then
+            echo "::error::tag says $CRATE $VERSION, Cargo.toml says ${manifest:-nothing}"; exit 1
+          fi
+          if curl -fsS -A "publish-crates (github.com/${GITHUB_REPOSITORY})" \
+              "https://crates.io/api/v1/crates/$CRATE/$VERSION" > /dev/null 2>&1; then
+            echo "::error::$CRATE $VERSION is already on crates.io"; exit 1
+          fi
+
+      # crates.io checks keywords, categories, description, license and
+      # repository at upload; `cargo publish --dry-run` does not.
+      - name: Crate metadata meets crates.io's publish rules
+        env:
+          DIR: ${{ steps.tag.outputs.dir }}
+        run: python3 .github/scripts/check_crate_metadata.py "$DIR/Cargo.toml"
+
+      - name: Package contents
+        working-directory: ${{ steps.tag.outputs.dir }}
+        run: cargo package --locked --list
+
+      - name: Publish dry run (no upload)
+        working-directory: ${{ steps.tag.outputs.dir }}
+        run: cargo publish --locked --dry-run
+
+  publish:
+    name: publish to crates.io
+    needs: check
+    runs-on: ubuntu-24.04
+    environment: crates-io
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+
+      - name: Exchange the OIDC token for a short-lived crates.io token
+        id: auth
+        uses: rust-lang/crates-io-auth-action@c6f97d42243bad5fab37ca0427f495c86d5b1a18 # v1.0.5
+
+      - name: Publish
+        working-directory: ${{ needs.check.outputs.dir }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+        run: cargo publish --locked
