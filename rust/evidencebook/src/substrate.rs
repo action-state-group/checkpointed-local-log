@@ -344,6 +344,21 @@ pub enum SubstrateError {
          is at size {latest_size} -- prepare it again"
     )]
     StalePrepared { prev_size: u64, latest_size: u64 },
+    #[error(
+        "cannot re-prove the checkpoint at size {mmr_size} from size {from_size}: the witness \
+         is already at or past it"
+    )]
+    ReproveNotBehind { from_size: u64, mmr_size: u64 },
+    #[error(
+        "MMR root at size {from_size} is {actual_root} but the witness accepted {witness_root} \
+         -- this log does not extend what the witness holds (fork, or a log restarted under a \
+         reused log_id); refusing to re-prove"
+    )]
+    ReproveRootMismatch {
+        from_size: u64,
+        actual_root: String,
+        witness_root: String,
+    },
 }
 
 /// Converts the embedded log's errors into [`SubstrateError`]. Private, so no
@@ -613,6 +628,73 @@ impl CllSubstrate {
         Ok(checkpoint)
     }
 
+    /// Re-prove `checkpoint` from a witness's last-accepted `(from_size,
+    /// from_root)`: the same log id, size, root and timestamp, re-signed with
+    /// `prev_size`/`prev_root` set to the witness's view, and a consistency
+    /// proof from `from_size`, in the COSE wire form. Used when a witness
+    /// refuses a checkpoint (HTTP 409) because the checkpoint it last
+    /// accepted is not this one's own prev -- a push-time cut it never saw,
+    /// or a restart. Returns the re-signed checkpoint and its COSE bytes;
+    /// neither is persisted (the local chain keeps its own prev).
+    ///
+    /// Refuses a `from_size` not below the checkpoint's size
+    /// ([`SubstrateError::ReproveNotBehind`]), and a witness root this log
+    /// does not hold at `from_size` ([`SubstrateError::ReproveRootMismatch`]):
+    /// re-signing must never paper over a different history.
+    pub fn reprove_cose(
+        &self,
+        checkpoint: &Checkpoint,
+        from_size: u64,
+        from_root: &str,
+        signer: &dyn Signer,
+    ) -> Result<(Checkpoint, Vec<u8>), SubstrateError> {
+        if from_size == 0 || from_size >= checkpoint.mmr_size {
+            return Err(SubstrateError::ReproveNotBehind {
+                from_size,
+                mmr_size: checkpoint.mmr_size,
+            });
+        }
+        let new_peak_hashes = self.peak_hashes(checkpoint.mmr_size)?;
+        let actual_root = hex::encode(root_from_peaks(&new_peak_hashes));
+        if actual_root != checkpoint.root {
+            return Err(SubstrateError::RollbackRoot {
+                prev_size: checkpoint.mmr_size,
+                actual_root,
+                recorded_root: checkpoint.root.clone(),
+            });
+        }
+        let prev_peak_hashes = self.peak_hashes(from_size)?;
+        let actual_from_root = hex::encode(root_from_peaks(&prev_peak_hashes));
+        if actual_from_root != from_root {
+            return Err(SubstrateError::ReproveRootMismatch {
+                from_size,
+                actual_root: actual_from_root,
+                witness_root: from_root.to_string(),
+            });
+        }
+
+        let adapter = SignerAdapter(signer);
+        let mut cp = checkpoint.to_log();
+        cp.witnesses = Vec::new();
+        cp.prev_size = from_size;
+        cp.prev_root = from_root.to_string();
+        cp.key_id = adapter.key_id();
+        cp.signature = String::new();
+        cp.signature = try_sign_checkpoint_digest(&cp, &adapter).log_err()?;
+        let consistency =
+            consistency_proof(&self.node_store, from_size, checkpoint.mmr_size).log_err()?;
+        let cose = checkpoint_to_cose(
+            &cp,
+            &adapter,
+            &new_peak_hashes,
+            Some(&prev_peak_hashes),
+            Some(&consistency),
+            None,
+        )
+        .log_err()?;
+        Ok((Checkpoint::from_log(cp), cose))
+    }
+
     /// Inclusion evidence for the leaf at `leaf_index` under a checkpoint of
     /// `mmr_size`.
     pub fn inclusion_at(
@@ -724,6 +806,77 @@ mod tests {
                 &proof
             ));
         }
+    }
+
+    #[test]
+    fn reprove_rechains_a_checkpoint_from_the_witness_view() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = SigningKey::from_bytes(&[9u8; 32]);
+        let mut s = open(dir.path());
+        for n in 0..3 {
+            s.append(&id(n)).unwrap();
+        }
+        // The witness accepted `first`; `second` (a push-time cut) it never saw.
+        let first = cut(&mut s, 3, &key).unwrap();
+        for n in 3..5 {
+            s.append(&id(n)).unwrap();
+        }
+        let second = cut(&mut s, 5, &key).unwrap();
+        for n in 5..8 {
+            s.append(&id(n)).unwrap();
+        }
+        let third = cut(&mut s, 8, &key).unwrap();
+        assert_eq!(third.prev_size, second.mmr_size);
+
+        let (reproved, cose) = s
+            .reprove_cose(&third, first.mmr_size, &first.root, &key)
+            .unwrap();
+        assert_eq!(
+            (reproved.mmr_size, &reproved.root, &reproved.timestamp),
+            (third.mmr_size, &third.root, &third.timestamp)
+        );
+        assert_eq!(
+            (reproved.prev_size, &reproved.prev_root),
+            (first.mmr_size, &first.root)
+        );
+        assert!(reproved.verify_signature_offline());
+
+        let verified = cll::checkpoint::verify_checkpoint_cose_offline(&cose);
+        assert!(verified.ok, "{:?}", verified.errors);
+        let decoded = verified.decoded.unwrap();
+        let proof = decoded
+            .consistency_proof
+            .expect("a re-proved checkpoint carries a proof");
+        assert_eq!(
+            (proof.size_a, proof.size_b),
+            (first.mmr_size, third.mmr_size)
+        );
+
+        // The local chain is untouched.
+        assert_eq!(s.latest_checkpoint(), Some(&third));
+    }
+
+    #[test]
+    fn reprove_refuses_a_witness_root_or_size_this_log_cannot_extend() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = SigningKey::from_bytes(&[9u8; 32]);
+        let mut s = open(dir.path());
+        for n in 0..3 {
+            s.append(&id(n)).unwrap();
+        }
+        let first = cut(&mut s, 3, &key).unwrap();
+        for n in 3..5 {
+            s.append(&id(n)).unwrap();
+        }
+        let second = cut(&mut s, 5, &key).unwrap();
+        assert!(matches!(
+            s.reprove_cose(&second, first.mmr_size, &"ab".repeat(32), &key),
+            Err(SubstrateError::ReproveRootMismatch { .. })
+        ));
+        assert!(matches!(
+            s.reprove_cose(&second, second.mmr_size, &second.root, &key),
+            Err(SubstrateError::ReproveNotBehind { .. })
+        ));
     }
 
     #[test]

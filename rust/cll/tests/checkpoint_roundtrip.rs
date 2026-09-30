@@ -169,3 +169,37 @@ fn cose_wire_chained_checkpoint_with_consistency_proof() {
     let err = checkpoint_to_cose(&cp_b, &key, &peaks_b, Some(&peaks_a), None, None);
     assert!(err.is_err());
 }
+
+/// A witness requires a `consistency_proof` on every checkpoint after a
+/// log's first, so the wire form must never carry a chained checkpoint
+/// without one.
+#[test]
+fn cose_wire_refuses_a_chained_checkpoint_without_a_consistency_proof() {
+    let key = test_key();
+    let mut store = MemoryNodeStore::new();
+    for seq in 1..=7u64 {
+        add_leaf(&mut store, leaf_hash(&body_digest_for_seq(seq))).unwrap();
+    }
+    let size_a = store.size();
+    let peaks_a = peak_hashes_at(&store, size_a);
+    let root_a = cll::mmr::root_from_peaks(&peaks_a);
+    for seq in 8..=12u64 {
+        add_leaf(&mut store, leaf_hash(&body_digest_for_seq(seq))).unwrap();
+    }
+    let size_b = store.size();
+    let peaks_b = peak_hashes_at(&store, size_b);
+    let cp_b = CheckpointRecord {
+        v: 1,
+        kind: "mmr_checkpoint".to_string(),
+        log_id: "test-log".to_string(),
+        mmr_size: size_b,
+        root: hex::encode(cll::mmr::root_from_peaks(&peaks_b)),
+        prev_size: size_a,
+        prev_root: hex::encode(root_a),
+        key_id: hex::encode(key.verifying_key().to_bytes()),
+        timestamp: "2026-01-01T00:05:00Z".to_string(),
+        signature: String::new(),
+        witnesses: Vec::new(),
+    };
+    assert!(checkpoint_to_cose(&cp_b, &key, &peaks_b, Some(&peaks_a), None, None).is_err());
+}

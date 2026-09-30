@@ -190,6 +190,34 @@ class RollbackError(RuntimeError):
     """The current MMR is inconsistent with a prior checkpoint (rollback detected)."""
 
 
+class WitnessContinuityRefused(CheckpointError):
+    """The witness refused a checkpoint with HTTP 409 because its continuity
+    claim does not match what the witness last accepted for the ``log_id``:
+    the ``prev_size``/``prev_root`` differ from the witness's last-accepted
+    checkpoint, the ``consistency_proof`` does not verify, or (``code ==
+    "consistency_proof_required"``) the checkpoint carries no proof.
+
+    ``last_accepted_mmr_size``/``last_accepted_root`` are the witness's own
+    view. An honest producer whose MMR still holds that state can re-prove
+    the same checkpoint from it with :func:`reprove_checkpoint` (see
+    ``cose_wire.reprove_checkpoint_cose``) and submit once more. A producer
+    whose root at that size differs has forked, or restarted its log, and
+    must not reuse the ``log_id``."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        last_accepted_mmr_size: int,
+        last_accepted_root: str,
+        code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.last_accepted_mmr_size = last_accepted_mmr_size
+        self.last_accepted_root = last_accepted_root
+        self.code = code
+
+
 class Signer(Protocol):
     """Any object with a stable ``key_id`` and a ``sign(digest_hex) -> str``
     method. Never imported concretely by this module -- bring your own key
@@ -581,6 +609,66 @@ def emit_checkpoint(
     return cp
 
 
+def reprove_checkpoint(
+    cp: CheckpointRecord,
+    mmr: MmrLedger,
+    signer: Signer,
+    *,
+    from_size: int,
+    from_root: str,
+) -> CheckpointRecord:
+    """Re-sign ``cp`` so that it chains from ``(from_size, from_root)``
+    instead of its own ``prev_size``/``prev_root``: same ``log_id``,
+    ``mmr_size``, ``root`` and ``timestamp``, new ``prev_*`` fields, new
+    signature. Used when a witness refuses ``cp`` (409,
+    :class:`WitnessContinuityRefused`) because the checkpoint it last
+    accepted is not ``cp``'s own prev -- e.g. the producer restarted, or cut
+    checkpoints the witness never saw.
+
+    Raises ``CheckpointError`` if ``from_size`` is not below ``cp.mmr_size``
+    (the witness is already at or past this checkpoint: there is nothing to
+    re-prove), and ``RollbackError`` if this MMR's root at ``from_size`` is
+    not ``from_root`` or its root at ``cp.mmr_size`` is not ``cp.root``: the
+    witness holds a different history than this log, which re-signing must
+    never paper over.
+
+    The consistency proof to send with the result is
+    ``mmr.consistency_proof(from_size, cp.mmr_size)``.
+    """
+    if not 0 < from_size < cp.mmr_size:
+        raise CheckpointError(
+            f"cannot re-prove checkpoint mmr_size={cp.mmr_size} for log_id={cp.log_id!r} "
+            f"from size {from_size}: the witness is already at or past this checkpoint"
+        )
+    actual_root = _root_hex(mmr, cp.mmr_size)
+    if actual_root != cp.root:
+        raise RollbackError(
+            f"MMR root at mmr_size={cp.mmr_size} is {actual_root!r} but the checkpoint "
+            f"records {cp.root!r} -- refusing to re-prove"
+        )
+    actual_from_root = _root_hex(mmr, from_size)
+    if actual_from_root != from_root:
+        raise RollbackError(
+            f"MMR root at size {from_size} is {actual_from_root!r} but the witness accepted "
+            f"{from_root!r} for log_id={cp.log_id!r} -- this log does not extend what the "
+            "witness holds (fork, or a log restarted under a reused log_id); refusing to re-prove"
+        )
+    out = CheckpointRecord(
+        v=cp.v,
+        kind=cp.kind,
+        log_id=cp.log_id,
+        mmr_size=cp.mmr_size,
+        root=cp.root,
+        prev_size=from_size,
+        prev_root=from_root,
+        key_id=signer.key_id,
+        timestamp=cp.timestamp,
+        signature="",
+    )
+    out.signature = signer.sign(out.digest())
+    return out
+
+
 def verify_checkpoint_signature(cp: CheckpointRecord, signer: Signer) -> bool:
     """Recompute and compare the checkpoint's signature. Never raises."""
     try:
@@ -661,6 +749,27 @@ def verify_checkpoint_consistency(
 _CHECKPOINT_ROUTE = "/checkpoints"
 
 
+def _continuity_refusal(body: str, message: str) -> WitnessContinuityRefused | None:
+    """Parse a witness's 409 body (``{"detail": {"error", "last_accepted_mmr_size",
+    "last_accepted_root", "code"?}}``) into :class:`WitnessContinuityRefused`;
+    ``None`` if it is not that shape."""
+    try:
+        detail = json.loads(body).get("detail")
+        size = detail["last_accepted_mmr_size"]
+        root = detail["last_accepted_root"]
+    except (ValueError, AttributeError, KeyError, TypeError):
+        return None
+    if not isinstance(size, int) or isinstance(size, bool) or not isinstance(root, str):
+        return None
+    code = detail.get("code")
+    return WitnessContinuityRefused(
+        message,
+        last_accepted_mmr_size=size,
+        last_accepted_root=root,
+        code=code if isinstance(code, str) else None,
+    )
+
+
 def register_checkpoint(
     checkpoint_cose: bytes,
     ts_url: str = DEFAULT_TS_URL,
@@ -706,7 +815,12 @@ def register_checkpoint(
             body = json.loads(resp.read())
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode(errors="replace")
-        raise CheckpointError(f"TS returned HTTP {exc.code}: {detail}") from exc
+        message = f"TS returned HTTP {exc.code}: {detail}"
+        if exc.code == 409:
+            refused = _continuity_refusal(detail, message)
+            if refused is not None:
+                raise refused from exc
+        raise CheckpointError(message) from exc
 
     return WitnessRecord(
         ts_url=ts_url,
