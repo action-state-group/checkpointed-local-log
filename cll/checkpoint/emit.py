@@ -190,6 +190,34 @@ class RollbackError(RuntimeError):
     """The current MMR is inconsistent with a prior checkpoint (rollback detected)."""
 
 
+class WitnessContinuityRefused(CheckpointError):
+    """The witness refused a checkpoint with HTTP 409 because its continuity
+    claim does not match what the witness last accepted for the ``log_id``:
+    the ``prev_size``/``prev_root`` differ from the witness's last-accepted
+    checkpoint, the ``consistency_proof`` does not verify, or (``code ==
+    "consistency_proof_required"``) the checkpoint carries no proof.
+
+    ``last_accepted_mmr_size``/``last_accepted_root`` are the witness's own
+    view. A producer that holds a local checkpoint at that size (with that
+    root) can catch the witness up by submitting its later checkpoints in
+    order, each of which chains from the one before. A producer with no such
+    checkpoint holds a different history (a fork, or a log restarted under a
+    reused ``log_id``) and must start a new ``log_id``."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        last_accepted_mmr_size: int,
+        last_accepted_root: str,
+        code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.last_accepted_mmr_size = last_accepted_mmr_size
+        self.last_accepted_root = last_accepted_root
+        self.code = code
+
+
 class Signer(Protocol):
     """Any object with a stable ``key_id`` and a ``sign(digest_hex) -> str``
     method. Never imported concretely by this module -- bring your own key
@@ -661,6 +689,27 @@ def verify_checkpoint_consistency(
 _CHECKPOINT_ROUTE = "/checkpoints"
 
 
+def _continuity_refusal(body: str, message: str) -> WitnessContinuityRefused | None:
+    """Parse a witness's 409 body (``{"detail": {"error", "last_accepted_mmr_size",
+    "last_accepted_root", "code"?}}``) into :class:`WitnessContinuityRefused`;
+    ``None`` if it is not that shape."""
+    try:
+        detail = json.loads(body).get("detail")
+        size = detail["last_accepted_mmr_size"]
+        root = detail["last_accepted_root"]
+    except (ValueError, AttributeError, KeyError, TypeError):
+        return None
+    if not isinstance(size, int) or isinstance(size, bool) or not isinstance(root, str):
+        return None
+    code = detail.get("code")
+    return WitnessContinuityRefused(
+        message,
+        last_accepted_mmr_size=size,
+        last_accepted_root=root,
+        code=code if isinstance(code, str) else None,
+    )
+
+
 def register_checkpoint(
     checkpoint_cose: bytes,
     ts_url: str = DEFAULT_TS_URL,
@@ -706,7 +755,12 @@ def register_checkpoint(
             body = json.loads(resp.read())
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode(errors="replace")
-        raise CheckpointError(f"TS returned HTTP {exc.code}: {detail}") from exc
+        message = f"TS returned HTTP {exc.code}: {detail}"
+        if exc.code == 409:
+            refused = _continuity_refusal(detail, message)
+            if refused is not None:
+                raise refused from exc
+        raise CheckpointError(message) from exc
 
     return WitnessRecord(
         ts_url=ts_url,

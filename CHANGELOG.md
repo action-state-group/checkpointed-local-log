@@ -7,6 +7,19 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Added — a witness's continuity refusal is a typed error
+
+A witness refuses (409) a checkpoint whose `prev_size`/`prev_root` is not the
+checkpoint it last accepted for the `log_id`, one whose `consistency_proof`
+does not verify, and (when it requires proofs) one after the first that
+carries no proof. `register_checkpoint` now raises `WitnessContinuityRefused`
+(a `CheckpointError` subclass, so existing handlers still catch it) for that
+409, with the witness's own `last_accepted_mmr_size`/`last_accepted_root` and
+`code` (`"consistency_proof_required"` for a proof-less checkpoint, else
+`None`). A producer holding a local checkpoint at that size can catch the
+witness up by submitting its later checkpoints in order; one without it must
+start a new `log_id`. Any other error is unchanged.
+
 ### Changed — range proofs bind every leaf, not just the two boundaries
 
 `cll.checkpoint.core`/`cll.checkpoint.index`'s `RangeProof`/`range_proof`/
