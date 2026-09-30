@@ -8,6 +8,10 @@ Checkpoints may be registered with one or more independent SCITT Transparency
 Services or witnesses, turning a set of individually signed records into a
 stream with provable order, contemporaneity, and completeness.
 
+A "witness" in this repository is a SCITT Transparency Service registering
+checkpoint statements under a consistency Registration Policy
+([RFC 9943](https://www.rfc-editor.org/rfc/rfc9943)).
+
 The log itself is a **Merkle Mountain Range (MMR)**, whose COSE proof formats
 are specified in `I-D.bryce-cose-receipts-mmr-profile`. This document
 specifies the log discipline and the checkpoint structure on top of that
