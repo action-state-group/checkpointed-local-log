@@ -1,0 +1,481 @@
+---
+title: "The Checkpointed Local Log (CLL)"
+abbrev: "CLL"
+docname: draft-mih-scitt-checkpointed-local-log-02
+date: 2026-09-30
+category: std
+ipr: trust200902
+area: Security
+workgroup: SCITT
+keyword:
+  - transparency
+  - merkle mountain range
+  - receipts
+  - audit log
+stand_alone: yes
+pi: [toc, sortrefs, symrefs]
+
+author:
+ - ins: S. Mih
+   name: Steven Mih
+   organization: Action State Group
+   email: steven@actionstate.ai
+
+normative:
+  RFC2119:
+  RFC3339:
+  RFC8174:
+  RFC8949:
+  RFC9052:
+  RFC9942:
+  I-D.bryce-cose-receipts-mmr-profile:
+  RFC9943:
+
+informative:
+  RFC9162:
+  I-D.mih-sokolov-scitt-payload-binding:
+
+--- abstract
+
+Many systems emit individually signed records — receipts, attestations,
+statements — and store them locally. Each record verifies on its own, but the
+collection proves nothing: records can be deleted, reordered, or created after
+the fact without detection. This document specifies the Checkpointed Local Log
+(CLL): a producer-operated append-only log, built on the Merkle Mountain Range
+structure whose COSE proof formats are specified in
+{{I-D.bryce-cose-receipts-mmr-profile}}, together with a small signed
+checkpoint that commits to the log's entire history. Records of any format are
+appended as they are produced; checkpoints are emitted on a declared cadence
+and may be registered, as ordinary Signed Statements, with one or more
+independent SCITT Transparency Services. A CLL upgrades a set of point
+receipts into a stream with provable order, contemporaneity, and completeness
+— while defining precisely, and narrowly, what such a log does and does not
+establish. This document defines the log discipline and the checkpoint
+structure; it defines no new proof formats, no change to SCITT registration
+or Receipts, and no payload semantics.
+
+--- middle
+
+# Introduction
+
+A signed record proves that its issuer produced those bytes. It does not prove
+when the record was produced relative to its neighbors, that no record between
+two others was deleted, or that the set presented to a verifier is the set
+that existed. In current practice, producers of agent receipts, decision
+records, build attestations, SBOM and other supply-chain artifact revisions,
+and similar records sign each record and store the results in ordinary
+storage — a "log" whose integrity rests entirely on the operator's word. A
+relying party examining such a collection cannot distinguish an honest
+archive from a curated one. The problem is payload-neutral: a stream of SBOM
+revisions and a stream of agent action receipts fail in exactly the same way,
+and this document treats them identically.
+
+Transparency logs in the style of {{RFC9162}} address this by publishing
+entries to a small number of large, centrally operated logs, where anyone can
+audit the whole. That model asks two things the local case cannot give: that
+the entries themselves be published to a log the producer does not control,
+which is unacceptable when the content is private; and that each record be
+registered with a central service as it is produced, which a producer emitting
+thousands of records a day will not sustain in cost or latency. The need is a
+construction that keeps entries local and private and still lets a relying
+party check order and completeness.
+
+The Checkpointed Local Log occupies the middle position: the log is local and
+private; only a small **checkpoint** — a signed commitment to the log's entire
+history — ever leaves the producer. The local log makes the record set
+tamper-evident to anyone who trusts the producer; the checkpoint collapses
+that history, however many entries, into one commitment cheap enough to
+publish on every emission; and a Transparency Service whose published
+Registration Policy admits a checkpoint only when it is consistent with the
+one before is what removes "trust the producer" from existence and ordering
+claims. The Merkle Mountain Range (MMR)
+structure makes this practical: appends are streaming and never restructure
+earlier entries, and inclusion and consistency proofs are logarithmic. This
+document deliberately specifies a thing, not a protocol: the log discipline
+(when entries are appended), the checkpoint structure and its REQUIRED
+constraints, and the verification claims the pair supports. Proof formats come
+from {{I-D.bryce-cose-receipts-mmr-profile}}; checkpoint registration, where
+elected, uses SCITT registration {{RFC9943}} unchanged.
+
+## Conventions and Definitions
+
+{::boilerplate bcp14-tagged}
+
+**Entry:** a byte string appended to the log. Entries are opaque to this
+specification. An entry is typically the digest of a signed record produced by
+the operator or received from another party; the binding between an entry and
+the record it commits to MAY be expressed using a declared digest context
+(e.g., {{I-D.mih-sokolov-scitt-payload-binding}}), including contexts that
+commit to already-signed bytes exactly as transmitted.
+
+**Log:** an append-only sequence of entries organized as a Merkle Mountain
+Range per {{I-D.bryce-cose-receipts-mmr-profile}}'s underlying structure.
+
+**Checkpoint:** a signed statement committing to the log's state at a given
+size, structured per {{checkpoint}}.
+
+**Consistency Registration Policy:** a Registration Policy
+({{Section 5.1.1 of RFC9943}}), published by a Transparency Service operated
+by a party other than the log operator, that admits a checkpoint only if it is
+consistent ({{constraints}}) with the last checkpoint that service registered
+for the same log identity. Earlier revisions called such a service a
+"witness". SCITT defines no such role, and this document now uses only
+{{RFC9943}} terms.
+
+**Producer / operator:** the party that appends entries and signs checkpoints.
+This specification assumes they are the same party ({{claims}}).
+
+**Log identity:** the pair (producer identity, log identifier) carried in the
+checkpoint's CWT_Claims ({{registration}}). All continuity requirements in this
+document are per log identity.
+
+## Relation to SCITT Terms {#scitt-terms}
+
+This document uses the terms of {{RFC9943}}. The party that signs a record is
+an Issuer, and a signed record is a Signed Statement (COSE_Sign1). A
+checkpoint is a Signed Statement whose payload is a log head. A service that
+registers Signed Statements and returns Receipts {{RFC9942}} is a
+Transparency Service; a Receipt proves inclusion in that service's log, not
+agreement with the statement. The check a Transparency Service makes before
+registering is its published Registration Policy. Independence comes from
+registering the same Signed Statement with more than one Transparency
+Service. A party that independently recomputes checks over records it is
+given works in the manner of an Auditor. SCITT defines no "witness" role and
+this document defines none. One party signing another operator's log head is
+a separate layer outside SCITT and outside this document.
+
+# The Log Discipline {#discipline}
+
+1. **Append at production time.** An entry SHOULD be appended when the record
+   it commits to is produced or received, not batched for later assembly. The
+   evidentiary difference is the point of this document: an entry appended at
+   time t is committed by every subsequent checkpoint, so contemporaneity
+   becomes checkable; end-of-period assembly permits curation that no later
+   verification can detect.
+2. **Append-only.** Entries MUST NOT be modified or removed. Erasure of the
+   *content* an entry commits to is a separate act on separate storage and
+   does not touch the log; the entry (a digest) remains.
+3. **One log, one signing identity.** A log's checkpoints are signed under one
+   key at a time. Key rotation is announced by an entry declaring the
+   rotation — produced under the outgoing key and naming the incoming key
+   identifier — appended before the first checkpoint signed under the new
+   key. The log identity ({{registration}}) is unchanged by rotation.
+
+**Segmentation and archival (non-normative).** A conforming implementation MAY
+store the log as a sequence of segments rather than one unbounded file. This
+specification imposes no segment format; the only checkpoint-relevant
+discipline is that any segment boundary a producer defines SHOULD coincide
+with a checkpoint boundary, never a calendar boundary: closing a segment at
+the log's state at a checkpoint's declared size means the segment plus that
+checkpoint is independently verifiable without the rest of the log, using an
+inclusion or range proof anchored to the checkpoint's committed root. A
+store's own manifest of which segments exist, and whether each is presently
+retrievable ("mounted") or has been archived elsewhere, is local bookkeeping,
+not itself evidence a verifier trusts — only a checkpoint (and what it
+commits to) carries that property. A verifier presented with a reference to
+an entry whose segment is not presently retrievable receives a distinct,
+honest refusal (e.g., "retention expired") rather than being told the entry
+never existed, since the checkpoint chain already proves it did.
+
+# The Checkpoint {#checkpoint}
+
+A checkpoint is a COSE_Sign1 {{RFC9052}} whose payload is a CBOR map
+{{RFC8949}} with the following claims:
+
+| Claim | Type | Description |
+|---|---|---|
+| `kind` | tstr | MUST be `"cll-checkpoint"` |
+| `log_size` | uint | number of entries committed |
+| `commitment` | bstr | the peak-list accumulator for the MMR over entries 0..log_size-1, canonical-CBOR-encoded exactly as the commitment object of {{I-D.bryce-cose-receipts-mmr-profile}} at that size; see {{commitment-variants}} |
+| `prev_size` | uint | `log_size` of this log's previous checkpoint; 0 for the first |
+| `prev_commitment` | bstr | the previous checkpoint's commitment; zero-length for the first |
+| `issued_at` | tstr | issuance time per {{RFC3339}} |
+| `cadence` | uint | OPTIONAL: declared maximum seconds between checkpoints ({{constraints}}) |
+
+The protected header carries the algorithm and the key identifier of the log's
+signing identity, and the CWT_Claims of {{registration}}. Additional claims MAY
+be present; verifiers MUST ignore claims they do not understand.
+
+When a checkpoint is submitted for registration, the producer MUST make
+available, with it or on request, the {{I-D.bryce-cose-receipts-mmr-profile}}
+consistency proof from `prev_size`/`prev_commitment` to `log_size`/`commitment`;
+the Transparency Service cannot evaluate a consistency Registration Policy
+without it.
+
+## Commitment Representation {#commitment-variants}
+
+The MMR accumulator over a set of entries can be represented two ways: as
+the **peak-list** — an ordered array of one hash per mountain, tallest
+first, with no further combination — or as a single **bagged root** formed
+by folding that array down to one hash (the specific fold, including
+ordering and any domain separation, is a choice of the folding
+implementation and is not standardized by any document this one depends
+on).
+
+`commitment` and `prev_commitment` MUST carry the peak-list representation,
+canonical-CBOR-encoded (RFC 8949 {{RFC8949}} §4.2 deterministic encoding: a
+definite-length array of definite-length byte strings, one per peak) exactly
+as produced by the commitment object construction of
+{{I-D.bryce-cose-receipts-mmr-profile}}. This is the only representation a
+verifier can check {{I-D.bryce-cose-receipts-mmr-profile}} inclusion and
+consistency proofs against, and is therefore the only wire-interoperable
+form this document defines.
+
+Implementations MAY additionally maintain a bagged root, and commonly do,
+for fast internal equality checks between local log states — this is a
+legitimate implementation optimization, but such a fold is not specified by
+this document, is not portable across implementations that choose a
+different fold, and MUST NOT be carried in the `commitment` or
+`prev_commitment` claims. Multiple independent implementations of this
+document have converged on exactly this split — peak-list on the wire,
+bagged root (if any) kept internal-only — and this document records that
+convergence as a wire requirement rather than leaving it to be
+rediscovered per implementation.
+
+**Cryptographic agility.** This document defines no hash or signature
+algorithm of its own. The peak-list `commitment` is a sequence of opaque
+byte strings whose construction, including the hash algorithm each entry
+was produced with, is entirely that of
+{{I-D.bryce-cose-receipts-mmr-profile}}; the checkpoint's signature algorithm
+is carried in the COSE protected header per {{RFC9052}}. A CLL therefore
+inherits algorithm agility from both underlying specifications and adds no
+agility surface of its own.
+
+## Required constraints — elected once, then binding {#constraints}
+
+Publishing checkpoints is OPTIONAL. **Once a producer elects to publish, the
+following are REQUIREMENTS**, because a checkpoint regime with discretionary
+gaps supports none of the claims in {{claims}}:
+
+1. **Declared cadence.** The producer MUST declare a maximum interval between
+   checkpoints (and MAY declare a maximum entry lag). The declaration SHOULD
+   be carried in the checkpoint's `cadence` claim; however conveyed, it MUST
+   be available to every Transparency Service the checkpoints are registered
+   with. A missing checkpoint at any of them is thereby a detectable event,
+   not an ambiguity.
+2. **Continuity.** Each checkpoint's `log_size` MUST be greater than or equal
+   to its `prev_size`, and the consistency relation of
+   {{I-D.bryce-cose-receipts-mmr-profile}} MUST hold between `prev_commitment`
+   at `prev_size` and `commitment` at `log_size`. This *internal* relation is
+   checkable offline by any verifier holding the two checkpoints and the
+   proof between them; it establishes that the presented history was not
+   rewritten between them. It does **not**, by itself, establish that no
+   divergent history exists: a forking producer can satisfy the internal
+   relation on each fork separately. Detecting that requires state across
+   time, which a single offline verifier does not have. Therefore a
+   Transparency Service applying a consistency Registration Policy MUST
+   additionally verify that the presented `prev_size`/`prev_commitment`
+   equal the `log_size`/`commitment` of the last checkpoint *it itself
+   registered* for this log identity, and on failure MUST refuse
+   registration and MUST treat the failure as evidence of log mutation,
+   never as an error to be retried. A Transparency Service that registers
+   the checkpoint without this check returns a Receipt that proves inclusion
+   in its log — and the time of registration if and only if the Receipt
+   carries a signed time claim — and proves nothing about continuity
+   ({{registration}}).
+3. **Named, independent Transparency Services.** A producer representing a
+   log's checkpoints as independently registered MUST name the Transparency
+   Services it relies on and the Registration Policy each publishes. A
+   Transparency Service operated by the producer confers no independence; it
+   is a replica.
+4. **No claims beyond the last registered checkpoint.** Entries appended
+   after the most recent registered checkpoint are, to a relying party,
+   exactly as strong as a log with no registered checkpoint. Producers MUST
+   NOT represent them otherwise.
+
+## Checkpoint Registration {#registration}
+
+A checkpoint is registered with a Transparency Service as follows. The
+checkpoint's protected header MUST carry the CWT_Claims required by
+{{RFC9943}} for Signed Statements: `iss` identifies the producer, and `sub`
+identifies the log (together, the **log identity** all continuity checks key
+on). The checkpoint COSE_Sign1 is registered as a Signed Statement per
+{{RFC9943}}, by any transport the Transparency Service accepts. A
+Transparency Service unaware of this document can register the checkpoint as
+an ordinary Signed Statement.
+
+The {{RFC9942}} Receipt proves that the checkpoint is included in the
+Transparency Service's log, and the time of registration if and only if the
+Receipt carries a signed time claim. A Receipt is an inclusion proof; it is
+not the service's agreement with the checkpoint. Continuity follows from the
+published Registration Policy: where that policy admits a checkpoint only when
+the continuity check of {{constraints}} passes, inclusion under that policy
+shows the check passed. A verifier relies on continuity only when it knows which Registration
+Policy was in force.
+
+**Scope of the consistency Registration Policy.** {{RFC9943}} defines a
+Registration Policy over the non-opaque header and metadata of the COSE
+Envelope, and leaves the scope of checks beyond the mandatory ones to the
+implementation ({{Section 5.1.1 of RFC9943}}). A consistency Registration
+Policy reads the log identity from the protected header's CWT_Claims and
+reads the checkpoint's payload claims `log_size`, `commitment`, `prev_size`
+and `prev_commitment` ({{checkpoint}}), together with the consistency proof
+the producer makes available. This document does not copy those claims into
+the protected header; a Transparency Service applying the policy parses the
+payload as {{checkpoint}} specifies. {{Section 5.1.1.2 of RFC9943}} requires
+the service to make available to Auditors what they need to reproduce its
+Registration checks; for this policy that includes the consistency proof.
+
+A verifier weighing a registered checkpoint SHOULD know which Registration
+Policy the Transparency Service applied.
+
+Registering the same checkpoint with more than one Transparency Service
+({{Section 6.3 of RFC9943}}) strengthens the log against equivocation
+(presenting different histories to different parties): an equivocating
+producer must present a consistent history to every one of them
+({{security}}).
+
+# Verification {#verification}
+
+Given a checkpoint (registered or not), a verifier can check, using only the
+proof formats of {{I-D.bryce-cose-receipts-mmr-profile}}:
+
+- **Inclusion:** a given entry is committed at a given position under
+  `commitment`.
+- **Consistency:** a later checkpoint's log extends an earlier checkpoint's
+  log without modification.
+- **Range completeness:** the entries between positions i and j under a
+  checkpoint are exactly the presented set — nothing between them was omitted.
+
+Given a checkpoint registered under a consistency Registration Policy, each
+of these claims additionally holds against a party who does not trust the
+producer, to the extent the verifier trusts that the Transparency Services
+are independent of the producer and apply their published policy.
+
+# What a CLL Does and Does Not Establish {#claims}
+
+A CLL whose checkpoints are registered under a consistency Registration
+Policy establishes: that each committed entry existed no later than the first
+registered checkpoint covering it
+(**contemporaneity**); that the committed sequence has not been reordered,
+had entries removed, or been rewritten (**order and integrity**); and that a
+presented range is complete (**completeness**).
+
+These claims come from what the Transparency Service registers, which is
+**only checkpoints, not entries**. A Transparency Service registering
+checkpoints receives commitments; it does not receive, index, or retain the
+entries themselves. Its log therefore records the *shape* of the committed
+history — existence, order, completeness of the committed sequence — and
+nothing about any individual entry beyond its membership. Two consequences a
+reader familiar with per-record transparency logs must not overlook: it
+cannot be queried as an independent index or lookup for a particular record,
+because it never held one; and verifying any individual entry still requires
+the producer, or another holder, to present that entry and its inclusion
+proof — the registered checkpoint is the commitment they resolve against, not
+the entry. A deployment that needs per-record lookup registers those records
+directly with a Transparency Service ({{RFC9943}}); that is a
+different trade — publication and per-record registration cost in exchange for
+independent per-record lookup — and is outside this document, which commits
+only the checkpoint.
+
+A CLL establishes **nothing about the truth of any entry's content**. A log
+of false records with every checkpoint registered is still a set of false
+records. Whether a record's content is accurate, whether its signer was
+authorized, and whether any claimed real-world effect occurred are separate
+claims requiring separate evidence (counterparty confirmation, external
+corroboration), outside this document's scope. Producers and tools MUST NOT
+present registration of checkpoints as evidence of content accuracy.
+
+A CLL likewise does not establish that the log is the producer's *only* log,
+nor that all records the producer created were appended. It bounds omission
+*within* the committed history; it cannot prove a parallel uncommitted
+history does not exist. Deployments for which that distinction matters bind
+the log identity to an accountable party by mechanisms outside this document.
+
+# Security Considerations {#security}
+
+**Equivocation.** A producer maintaining two divergent logs under one
+identity must present each Transparency Service a consistent view. With k
+independent Transparency Services and a verifier that checks Receipts from
+any subset of them, sustained equivocation requires controlling or
+partitioning every Transparency Service that verifier relies on; the
+cheapness of MMR checkpoint verification (a consistency Registration Policy
+checks consistency from the prior commitment and a logarithmic proof, holding
+no entry data) is what makes registration with a meaningful number of
+independent Transparency Services economically plausible. Verifiers SHOULD
+require Receipts from more than one Transparency Service where the threat
+model includes collusion between the producer and a service operator.
+
+**Backdating.** An entry can be created with any internal timestamp, but its
+position in the log bounds its creation time from above by the first
+registered checkpoint covering it. The backdating window is therefore the
+declared cadence plus registration latency. Producers wanting a smaller window
+declare a shorter cadence.
+
+**Key compromise.** A stolen signing key permits forged future checkpoints
+but cannot rewrite history already registered: a forged checkpoint
+inconsistent with a registered predecessor fails constraint 2 of
+{{constraints}}. Each Transparency Service's append-only log retains every
+registered checkpoint, which is part of the security function.
+
+**Privacy.** A checkpoint reveals the log's size and cadence and nothing
+else; entries are digests; content never leaves the producer. Deployments for
+which entry *count* is sensitive MAY pad with reserved entries; this document
+does not define a padding scheme.
+
+# IANA Considerations
+
+This document makes no IANA requests.
+
+--- back
+
+# Changes since -01
+{:removeinrfc="true"}
+
+* Aligned terminology with {{RFC9943}}. Removed the "Witness" definition.
+  The role is now a Transparency Service that registers checkpoints under a
+  consistency Registration Policy (new definition), and every requirement
+  that rested on a witness now rests on that. Added {{scitt-terms}}. Renamed
+  the section on conveying checkpoints to {{registration}} and its anchor;
+  no wire change.
+* Stated that a Receipt proves inclusion in the Transparency Service's log
+  (and the time of registration only if it carries a signed time claim), not
+  agreement, and carries no continuity meaning of its own. Continuity comes
+  from the Registration Policy in force.
+* Stated the scope of the consistency Registration Policy: it reads the
+  checkpoint's payload claims, which {{Section 5.1.1 of RFC9943}} permits. No
+  claim moved into the protected header.
+* Replaced the multiple-witness text with registering the same checkpoint
+  with more than one Transparency Service ({{Section 6.3 of RFC9943}}).
+* Removed the direct checkpoint countersignature form (RFC 9338), the "Stub
+  Countersignatures — Future Work" section, and the IANA sentence
+  forecasting a COSE header parameter for stub countersignatures. Dropped
+  the RFC 9338 reference.
+* Removed the SHOULD that each checkpoint holder retain every checkpoint: a
+  Transparency Service's append-only log already retains every registered
+  checkpoint.
+* No change to the checkpoint structure, claim names, the constraints'
+  checks, proof formats, or conformance vectors.
+
+# Changes since -00
+{:removeinrfc="true"}
+
+* Clarified {{commitment-variants}}: named the bagged-root fold as an
+  explicit, non-wire, implementation-internal alternative to the peak-list
+  commitment, and stated the peak-list encoding as the required wire form.
+  No claim names changed: the `commitment`/`prev_commitment` claims already
+  denoted the peak-list form in -00; independent implementations' COSE wire
+  encoders already produce it, cross-validated byte-for-byte against each
+  other. This revision makes explicit what was previously only implicit in
+  the "commitment object" cross-reference.
+* Downgraded the stub countersignature section (removed in -02) from a
+  normatively-specified mechanism to a Future Work note: no shipping
+  implementation constructs an RFC 9338 countersignature for local stub
+  use as of this revision, so the `-00` text described a wire format nothing produces. Removed the corresponding
+  IANA registration request until the mechanism is actually defined.
+* No checkpoint claim names were renamed. An earlier plan for this revision
+  considered renaming the CBOR claims to match each implementation's
+  internal, non-wire JSON field names (`mmr_size`/`root`/`prev_root`/
+  `timestamp`); that internal shape is real and shared across independent
+  implementations, but is deliberately kept off the wire by those same
+  implementations, which already emit this document's `-00` claim names
+  (`log_size`/`commitment`/`prev_commitment`/`issued_at`) on the wire,
+  cross-validated byte-for-byte between two of them. Renaming would have
+  put this document out of sync with the format actually in use.
+
+# Acknowledgments
+{:numbered="false"}
+
+The Merkle Mountain Range structure and its COSE proof formats are the work
+of the authors of {{I-D.bryce-cose-receipts-mmr-profile}}; this document
+exists because that structure makes streaming local commitment practical.
