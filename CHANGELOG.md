@@ -7,27 +7,18 @@ are documented here. The format follows
 
 ## Unreleased
 
-### Added — re-prove a checkpoint from a witness's last-accepted state
+### Added — a witness's continuity refusal is a typed error
 
 A witness refuses (409) a checkpoint whose `prev_size`/`prev_root` is not the
 checkpoint it last accepted for the `log_id`, one whose `consistency_proof`
 does not verify, and (when it requires proofs) one after the first that
-carries no proof. The 409 body carries the witness's own
-`last_accepted_mmr_size`/`last_accepted_root`.
-
-- `register_checkpoint` now raises `WitnessContinuityRefused` (a
-  `CheckpointError` subclass, so existing handlers still catch it) for that
-  409, with `last_accepted_mmr_size`, `last_accepted_root` and `code`
-  (`"consistency_proof_required"` when the witness refused a proof-less
-  checkpoint, else `None`). Any other error is unchanged.
-- `reprove_checkpoint(cp, mmr, signer, *, from_size, from_root)` re-signs a
-  checkpoint so it chains from the witness's view: same `log_id`, size, root
-  and timestamp, new `prev_*`. It refuses when the witness is already at or
-  past the checkpoint, and when this log's root at `from_size` is not the
-  witness's (a fork, or a log restarted under a reused `log_id`, which must
-  start a new `log_id` instead).
-- `reprove_checkpoint_cose(...)` does the same and returns the COSE wire form
-  with a `consistency_proof` from `from_size`.
+carries no proof. `register_checkpoint` now raises `WitnessContinuityRefused`
+(a `CheckpointError` subclass, so existing handlers still catch it) for that
+409, with the witness's own `last_accepted_mmr_size`/`last_accepted_root` and
+`code` (`"consistency_proof_required"` for a proof-less checkpoint, else
+`None`). A producer holding a local checkpoint at that size can catch the
+witness up by submitting its later checkpoints in order; one without it must
+start a new `log_id`. Any other error is unchanged.
 
 ### Changed — range proofs bind every leaf, not just the two boundaries
 

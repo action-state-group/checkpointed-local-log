@@ -54,7 +54,6 @@ from .cose_wire import (
     DecodedCheckpointCose,
     checkpoint_to_cose,
     encode_checkpoint_claims,
-    reprove_checkpoint_cose,
     verify_checkpoint_cose_offline,
 )
 from .emit import (
@@ -78,7 +77,6 @@ from .emit import (
     lag_exceeded,
     register_checkpoint,
     register_checkpoint_stub,
-    reprove_checkpoint,
     verify_checkpoint_consistency,
     verify_checkpoint_signature,
     verify_checkpoint_signature_offline,
@@ -100,7 +98,6 @@ __all__ = [
     "DecodedCheckpointCose",
     "checkpoint_to_cose",
     "encode_checkpoint_claims",
-    "reprove_checkpoint_cose",
     "verify_checkpoint_cose_offline",
     "ConsistencyProof",
     "InclusionProof",
@@ -145,7 +142,6 @@ __all__ = [
     "lag_exceeded",
     "register_checkpoint",
     "register_checkpoint_stub",
-    "reprove_checkpoint",
     "verify_checkpoint_consistency",
     "verify_checkpoint_signature",
     "verify_checkpoint_signature_offline",

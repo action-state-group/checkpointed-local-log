@@ -198,11 +198,11 @@ class WitnessContinuityRefused(CheckpointError):
     "consistency_proof_required"``) the checkpoint carries no proof.
 
     ``last_accepted_mmr_size``/``last_accepted_root`` are the witness's own
-    view. An honest producer whose MMR still holds that state can re-prove
-    the same checkpoint from it with :func:`reprove_checkpoint` (see
-    ``cose_wire.reprove_checkpoint_cose``) and submit once more. A producer
-    whose root at that size differs has forked, or restarted its log, and
-    must not reuse the ``log_id``."""
+    view. A producer that holds a local checkpoint at that size (with that
+    root) can catch the witness up by submitting its later checkpoints in
+    order, each of which chains from the one before. A producer with no such
+    checkpoint holds a different history (a fork, or a log restarted under a
+    reused ``log_id``) and must start a new ``log_id``."""
 
     def __init__(
         self,
@@ -607,66 +607,6 @@ def emit_checkpoint(
     sig = signer.sign(cp.digest())
     cp.signature = sig
     return cp
-
-
-def reprove_checkpoint(
-    cp: CheckpointRecord,
-    mmr: MmrLedger,
-    signer: Signer,
-    *,
-    from_size: int,
-    from_root: str,
-) -> CheckpointRecord:
-    """Re-sign ``cp`` so that it chains from ``(from_size, from_root)``
-    instead of its own ``prev_size``/``prev_root``: same ``log_id``,
-    ``mmr_size``, ``root`` and ``timestamp``, new ``prev_*`` fields, new
-    signature. Used when a witness refuses ``cp`` (409,
-    :class:`WitnessContinuityRefused`) because the checkpoint it last
-    accepted is not ``cp``'s own prev -- e.g. the producer restarted, or cut
-    checkpoints the witness never saw.
-
-    Raises ``CheckpointError`` if ``from_size`` is not below ``cp.mmr_size``
-    (the witness is already at or past this checkpoint: there is nothing to
-    re-prove), and ``RollbackError`` if this MMR's root at ``from_size`` is
-    not ``from_root`` or its root at ``cp.mmr_size`` is not ``cp.root``: the
-    witness holds a different history than this log, which re-signing must
-    never paper over.
-
-    The consistency proof to send with the result is
-    ``mmr.consistency_proof(from_size, cp.mmr_size)``.
-    """
-    if not 0 < from_size < cp.mmr_size:
-        raise CheckpointError(
-            f"cannot re-prove checkpoint mmr_size={cp.mmr_size} for log_id={cp.log_id!r} "
-            f"from size {from_size}: the witness is already at or past this checkpoint"
-        )
-    actual_root = _root_hex(mmr, cp.mmr_size)
-    if actual_root != cp.root:
-        raise RollbackError(
-            f"MMR root at mmr_size={cp.mmr_size} is {actual_root!r} but the checkpoint "
-            f"records {cp.root!r} -- refusing to re-prove"
-        )
-    actual_from_root = _root_hex(mmr, from_size)
-    if actual_from_root != from_root:
-        raise RollbackError(
-            f"MMR root at size {from_size} is {actual_from_root!r} but the witness accepted "
-            f"{from_root!r} for log_id={cp.log_id!r} -- this log does not extend what the "
-            "witness holds (fork, or a log restarted under a reused log_id); refusing to re-prove"
-        )
-    out = CheckpointRecord(
-        v=cp.v,
-        kind=cp.kind,
-        log_id=cp.log_id,
-        mmr_size=cp.mmr_size,
-        root=cp.root,
-        prev_size=from_size,
-        prev_root=from_root,
-        key_id=signer.key_id,
-        timestamp=cp.timestamp,
-        signature="",
-    )
-    out.signature = signer.sign(out.digest())
-    return out
 
 
 def verify_checkpoint_signature(cp: CheckpointRecord, signer: Signer) -> bool:

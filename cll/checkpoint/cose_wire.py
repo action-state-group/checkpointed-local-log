@@ -139,7 +139,7 @@ from dataclasses import dataclass, field
 import cbor2
 
 from .core import ConsistencyProof, commitment_object, root_from_peaks, verify_consistency
-from .emit import CheckpointRecord, reprove_checkpoint
+from .emit import CheckpointRecord
 
 __all__ = [
     "CLL_CHECKPOINT_CONTENT_TYPE",
@@ -415,33 +415,6 @@ class CoseCheckpointVerification:
     ok: bool = False
     decoded: DecodedCheckpointCose | None = None
     errors: list = field(default_factory=list)
-
-
-def reprove_checkpoint_cose(
-    cp: CheckpointRecord,
-    mmr,
-    signer,
-    *,
-    from_size: int,
-    from_root: str,
-    cadence_seconds: int | None = None,
-) -> tuple[CheckpointRecord, bytes]:
-    """Re-prove ``cp`` from a witness's last-accepted ``(from_size,
-    from_root)`` and serialize it: :func:`~cll.checkpoint.emit.reprove_checkpoint`
-    plus a ``consistency_proof`` from ``from_size`` to ``cp.mmr_size``, in
-    the COSE wire form. ``signer`` must sign both the JSON checkpoint and the
-    COSE envelope, as for :func:`checkpoint_to_cose`. Returns the re-signed
-    record and its COSE bytes. Raises as ``reprove_checkpoint`` does."""
-    reproved = reprove_checkpoint(cp, mmr, signer, from_size=from_size, from_root=from_root)
-    cose = checkpoint_to_cose(
-        reproved,
-        signer,
-        mmr.peak_hashes_at(reproved.mmr_size),
-        prev_peak_hashes=mmr.peak_hashes_at(from_size),
-        consistency_proof=mmr.consistency_proof(from_size, reproved.mmr_size),
-        cadence_seconds=cadence_seconds,
-    )
-    return reproved, cose
 
 
 def _extract_kid(cose_bytes: bytes) -> bytes | None:
