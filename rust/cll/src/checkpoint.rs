@@ -483,9 +483,39 @@ pub fn encode_checkpoint_claims(
     }
 
     let mut out = Vec::new();
-    coset::cbor::ser::into_writer(&CborValue::Map(claims), &mut out)
+    coset::cbor::ser::into_writer(&canonical(CborValue::Map(claims))?, &mut out)
         .map_err(|e| CheckpointError::Cbor(format!("{e:?}")))?;
     Ok(out)
+}
+
+/// `value` in RFC 8949 §4.2.1 deterministic order: every map's entries,
+/// at every depth, sorted by the bytewise order of their keys' encodings
+/// (for the short text keys here: shorter first, then lexical). The claims
+/// map is the signed payload, so its bytes must be the same in every
+/// implementation; verifiers that require deterministic encoding (cll-ts)
+/// refuse any other order. Integers and lengths are already encoded in
+/// their shortest form by the serializer.
+fn canonical(value: CborValue) -> Result<CborValue, CheckpointError> {
+    Ok(match value {
+        CborValue::Map(entries) => {
+            let mut keyed = entries
+                .into_iter()
+                .map(|(k, v)| {
+                    let mut key_bytes = Vec::new();
+                    coset::cbor::ser::into_writer(&k, &mut key_bytes)
+                        .map_err(|e| CheckpointError::Cbor(format!("{e:?}")))?;
+                    Ok((key_bytes, k, canonical(v)?))
+                })
+                .collect::<Result<Vec<_>, CheckpointError>>()?;
+            keyed.sort_by(|a, b| a.0.cmp(&b.0));
+            CborValue::Map(keyed.into_iter().map(|(_, k, v)| (k, v)).collect())
+        }
+        CborValue::Array(items) => {
+            CborValue::Array(items.into_iter().map(canonical).collect::<Result<_, _>>()?)
+        }
+        CborValue::Tag(tag, inner) => CborValue::Tag(tag, Box::new(canonical(*inner)?)),
+        other => other,
+    })
 }
 
 /// Serialize `cp` as a COSE_Sign1 statement over the CBOR claims map,

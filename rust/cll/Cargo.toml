@@ -2,7 +2,7 @@
 # Published as `checkpointed-local-log` (the name `cll` is taken on crates.io);
 # the library keeps the name `cll`, so `use cll::...` is unchanged.
 name = "checkpointed-local-log"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 rust-version = "1.88"
 license = "Apache-2.0"

@@ -42,6 +42,16 @@ encoding, and the signed checkpoint record that wraps a root.
 
 ## Files and use
 
+- `cose-vectors.json` pins the COSE_Sign1 wire form of both cases below,
+  signed with the same seed. `claims_hex` is the signed claims payload, a CBOR
+  map in RFC 8949 section 4.2.1 deterministic order: every producer MUST emit
+  exactly these bytes. `cose_hex` is the Python reference's whole statement:
+  every verifier MUST accept it. The protected header is not pinned across
+  producers (its map order is each COSE library's own), so a producer's own
+  statement is checked by verifying it and comparing its payload with
+  `claims_hex`. `reference_verifier.py` regenerates both byte-for-byte;
+  `rust/cll/tests/checkpoint_cose_vectors.rs` checks the Rust crate.
+
 - `vectors.json` contains 2 cases: `checkpoint-first-2-leaves` (a log's
   first checkpoint, `prev_size=0`, no consistency proof) and
   `checkpoint-chained-2-to-7-leaves` (a second checkpoint chained from the
