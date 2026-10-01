@@ -22,6 +22,14 @@ SAME digest through scitt-cose's real (non-cll) receipt build/verify path
 demonstrates a Rust-anchored checkpoint's digest receipts exactly as a
 Python-anchored one would, with no scitt-cose change required.
 
+Also checks ``cose-vectors.json``: regenerates each case's COSE_Sign1
+checkpoint statement with ``cll.checkpoint.cose_wire.checkpoint_to_cose``
+and the same fixture seed, demands the signed claims payload and the whole
+statement byte-identical to the pins, and verifies the pinned statement
+offline. The claims payload is a CBOR map in RFC 8949 section 4.2.1
+deterministic order -- the bytes every producer (Python, Rust, TS) must
+emit.
+
 Run: ``python3 reference_verifier.py``.
 """
 from __future__ import annotations
@@ -97,6 +105,81 @@ def check_checkpoint_vectors(doc: VectorsDoc, sk: Ed25519PrivateKey, failures: l
             failures.append(f"{name}: entry_digest mismatch: {entry_digest} != {case['entry_digest_hex']}")
 
 
+class _SeedSigner:
+    """``checkpoint_to_cose``'s signer from the fixture seed: the same
+    ``scitt_cose.statement.build_signed_statement`` path a real signer takes."""
+
+    def __init__(self, sk: Ed25519PrivateKey) -> None:
+        self._sk = sk
+        self.key_id = sk.public_key().public_bytes(serialization.Encoding.Raw, serialization.PublicFormat.Raw).hex()
+
+    def sign_cose_statement(
+        self, payload: bytes, *, content_type: str, issuer: str, subject: str, extra_cwt_claims: dict | None = None
+    ) -> bytes:
+        from scitt_cose.statement import build_signed_statement
+
+        pem = self._sk.private_bytes(
+            serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()
+        )
+        return build_signed_statement(
+            payload,
+            alg="EdDSA",
+            private_key_pem=pem,
+            issuer=issuer,
+            subject=subject,
+            content_type=content_type,
+            extra_cwt_claims=extra_cwt_claims,
+            kid=bytes.fromhex(self.key_id),
+        )
+
+
+def check_cose_vectors(doc: VectorsDoc, sk: Ed25519PrivateKey, failures: list[str]) -> None:
+    import hashlib
+
+    import cbor2
+    from cll.checkpoint import ConsistencyProof, MemoryNodeStore, add_leaf, leaf_hash, peaks
+    from cll.checkpoint.cose_wire import checkpoint_to_cose, verify_checkpoint_cose_offline
+
+    pinned = json.loads((pathlib.Path(__file__).parent / "cose-vectors.json").read_text())
+    store = MemoryNodeStore()
+    for seq in range(1, 8):
+        add_leaf(store, leaf_hash(hashlib.sha256(f"asg-ledger-mmr-vector-leaf-{seq}".encode()).digest()))
+
+    def peak_hashes(size: int) -> list[bytes]:
+        return [store.node(pos) for pos in peaks(size)]
+
+    by_name = {case["name"]: case for case in doc["cases"]}
+    signer = _SeedSigner(sk)
+    for vector in pinned["cases"]:
+        name = vector["name"]
+        case = by_name[vector["checkpoint_case"]]
+        cp = CheckpointRecord(
+            v=case["v"], kind=case["kind"], log_id=case["log_id"], mmr_size=case["mmr_size"], root=case["root"],
+            prev_size=case["prev_size"], prev_root=case["prev_root"], key_id=case["key_id"],
+            timestamp=case["timestamp"], signature=case["signature"],
+        )
+        if case["prev_size"]:
+            raw = case["consistency_proof"]  # type: ignore[typeddict-item]
+            proof = ConsistencyProof(
+                v=raw["v"], kind=raw["kind"], size_a=raw["size_a"], size_b=raw["size_b"],
+                old_peaks=tuple(raw["old_peaks"]), witness=tuple(tuple(w) for w in raw["witness"]),
+                new_peaks=tuple(raw["new_peaks"]),
+            )
+            cose = checkpoint_to_cose(
+                cp, signer, peak_hashes(cp.mmr_size), prev_peak_hashes=peak_hashes(cp.prev_size), consistency_proof=proof
+            )
+        else:
+            cose = checkpoint_to_cose(cp, signer, peak_hashes(cp.mmr_size))
+        claims = cbor2.loads(cose).value[2]
+        if claims.hex() != vector["claims_hex"]:
+            failures.append(f"{name}: COSE claims payload differs from the pinned bytes")
+        if cose.hex() != vector["cose_hex"]:
+            failures.append(f"{name}: COSE statement differs from the pinned bytes")
+        result = verify_checkpoint_cose_offline(bytes.fromhex(vector["cose_hex"]))
+        if not result.ok or result.decoded is None or result.decoded.root != case["root"]:
+            failures.append(f"{name}: pinned COSE statement does not verify: {result.errors}")
+
+
 def check_scitt_cose_receipt_interop(doc: VectorsDoc, failures: list[str]) -> None:
     """Every case's `digest_hex` receipts cleanly through scitt-cose's own
     (cll-agnostic) RFC 9162 receipt build/verify path -- see module
@@ -135,6 +218,7 @@ def main() -> int:
 
     failures: list[str] = []
     check_checkpoint_vectors(doc, sk, failures)
+    check_cose_vectors(doc, sk, failures)
     check_scitt_cose_receipt_interop(doc, failures)
 
     if failures:
@@ -145,7 +229,7 @@ def main() -> int:
 
     print(
         f"OK: all {len(doc['cases'])} checkpoint conformance cases verified "
-        "(digest/signature parity + scitt-cose receipt interop)"
+        "(digest/signature parity, COSE statement bytes + scitt-cose receipt interop)"
     )
     return 0
 
