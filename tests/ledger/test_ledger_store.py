@@ -108,12 +108,29 @@ def test_chain_gap_located_finding(tmp_path):
 
 
 def test_verify_passthrough_ok(tmp_path):
+    # A record valid under the current capsule format verifies clean. (The
+    # sample ledger above is format 2, which the reference verifier no longer
+    # accepts; it stays for the store-level checks that need its chain.)
+    from agent_action_capsule import AssuranceBlock, Capsule
+
+    capsule = Capsule(
+        spec_version="draft-mih-scitt-agent-action-capsule-04",
+        format_version="4",
+        canonicalization_id="jcs",
+        action_id="verify-passthrough",
+        action_type="fyi",
+        operator="ACME-CO",
+        developer="agent@v1",
+        timestamp="2026-09-08T00:00:00Z",
+        assurance=AssuranceBlock(
+            attestation_mode="self_attested", effect_mode="not_applicable", ledger_mode="standalone"
+        ),
+    ).seal()
     store = LedgerStore(tmp_path)
-    store.import_jsonl(AMAURY)
-    first = next(store.scan())
-    result = store.verify(first.capsule_id)
+    store.append(capsule, consequential=False)
+    result = store.verify(capsule["capsule_id"])
     assert result is not None
-    assert result.ok is True
+    assert result.ok is True, result.findings
     store.close()
 
 

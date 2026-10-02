@@ -1,0 +1,37 @@
+name: python
+
+# The Python reference's own tests. Runs on every push and pull request: the
+# package is the reference the conformance vectors are generated from, and its
+# tests exercise the agent-action-capsule release pip resolves today, so a
+# change there that breaks them shows up here.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Python the package supports, and a current one.
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install checkpointed-local-log (dev)
+        run: python -m pip install -e ".[dev]"
+
+      - name: ruff
+        run: python -m ruff check .
+
+      - name: pytest
+        run: python -m pytest -q
