@@ -256,14 +256,15 @@ def emit_checkpoint(
 
     ``signer`` is any object with ``key_id: str`` and ``sign(digest_hex: str) -> str``.
     ``prev`` is the previous checkpoint (for monotonicity + rollback detection).
-    ``timestamp`` overrides the current UTC time (for deterministic tests).
+    ``timestamp`` overrides the current UTC time (for deterministic tests);
+    the default is whole-second UTC with no fraction (``2026-10-01T23:04:00Z``).
     ``log_id`` defaults to ``""`` — single-node deployments never need to set it.
 
     Raises ``RollbackError`` if the MMR is inconsistent with ``prev``.
     """
     if timestamp is None:
         from datetime import datetime, timezone
-        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     current_size = mmr.size()
     if current_size == 0:
