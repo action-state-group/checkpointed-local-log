@@ -1,0 +1,17 @@
+{
+  "description": "Leaf 2 (index 3) in MMR(4): it is itself a peak, so the path is empty. Note: -03's CDDL 'inclusion-path: [ + bstr ]' rejects this encoding.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792032",
+  "node_hash": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+  "index": 3,
+  "tree_size": 4,
+  "inclusion_path": [],
+  "inclusion_proof_cbor": "820380",
+  "receipt_payload": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+  "reconstructed_root": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

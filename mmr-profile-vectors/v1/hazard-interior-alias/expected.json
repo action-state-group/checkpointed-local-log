@@ -1,0 +1,20 @@
+{
+  "description": "Accepted by -03 as written. The 72 bytes be64(3) || node0 || node1 were never appended, yet H(them) equals interior node 2, so the proof index=2, path=[node5] reaches the signed peak 6 of MMR(7). A verifier that requires index_height(index) == 0 for an entry (not in -03) rejects it.",
+  "leaf_entry": "0000000000000003be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127dedba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+  "node_hash": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+  "index": 2,
+  "tree_size": 7,
+  "inclusion_path": [
+    "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+  ],
+  "inclusion_proof_cbor": "8202815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+  "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "rejected_if_leaf_only_check": true,
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

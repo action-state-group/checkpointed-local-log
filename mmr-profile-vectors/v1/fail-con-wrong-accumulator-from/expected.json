@@ -1,0 +1,41 @@
+{
+  "description": "con-10-to-39 with a wrong trusted origin accumulator (first peak bit-flipped): the computed accumulator differs from the signed one.",
+  "tree_size_1": 10,
+  "tree_size_2": 39,
+  "accumulator_from": [
+    "bab386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "ea54d2821154708c0ca09413438cc3e5d137e16116a894e40d096874118341d0"
+  ],
+  "consistency_paths": [
+    [
+      "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+      "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+    ],
+    [
+      "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+      "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+      "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+    ]
+  ],
+  "right_peaks": [
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistency_proof_cbor": "840a1827828258207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc8358200182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b35820bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d58205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc825820b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae965820eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+  "signed_accumulator": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistent_accumulator": null,
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "INVALID",
+  "failure_code": "ACCUMULATOR_MISMATCH"
+}

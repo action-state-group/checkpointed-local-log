@@ -1,0 +1,36 @@
+{
+  "description": "Same size: every path empty, no right-peaks.",
+  "tree_size_1": 39,
+  "tree_size_2": 39,
+  "accumulator_from": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistency_paths": [
+    [],
+    [],
+    []
+  ],
+  "right_peaks": [],
+  "consistency_proof_cbor": "84182718278380808080",
+  "signed_accumulator": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistent_accumulator": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "VALID"
+}

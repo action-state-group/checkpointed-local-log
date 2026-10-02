@@ -7,6 +7,21 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Added — draft-exact vectors for the MMR receipt profile (-03)
+
+`mmr-profile-vectors/` holds known-answer vectors derived from the text of
+draft-bryce-cose-receipts-mmr-profile-03 alone (sha256 `fba48381…8b56d7`):
+the pseudocode transcribed with only the repairs its own prose states, each
+named (R1–R8), including the MMR(4) → MMR(8) merge case and negatives. They are
+the draft's values, not CLL's. `generate.py --check` runs in CI, and
+`tests/checkpoint/test_mmr_profile_vectors.py` checks the transcription against
+an independently built tree. They will be regenerated against -04.
+
+### Added — the merge-case consistency vector
+
+`mmr-conformance-vectors/` gains `consistency-3-to-5-leaves` (size 4 to 8),
+where both old peaks fold into one new peak. The set had no case of that shape.
+
 ### Fixed — the default checkpoint time is whole seconds with no fraction
 
 `emit_checkpoint` (both `cll.checkpoint.emit` and `cll.ledger.checkpoint`)

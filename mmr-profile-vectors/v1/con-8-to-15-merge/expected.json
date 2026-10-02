@@ -1,0 +1,36 @@
+{
+  "description": "MMR(8) to MMR(15): peaks [6, 7] both reach peak 14.",
+  "tree_size_1": 8,
+  "tree_size_2": 15,
+  "accumulator_from": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistency_paths": [
+    [
+      "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050"
+    ],
+    [
+      "e049e3372cbc3b51954ca5b8338896c91384d5d5e53c4239a0a76b89555904dd",
+      "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+      "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+    ]
+  ],
+  "right_peaks": [],
+  "consistency_proof_cbor": "84080f828158207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050835820e049e3372cbc3b51954ca5b8338896c91384d5d5e53c4239a0a76b89555904dd58200182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b35820bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d80",
+  "signed_accumulator": [
+    "3885c9025a2576a525e92e310279d7d3c5a346df0e0817cf0fb15c4742a65666"
+  ],
+  "consistent_accumulator": [
+    "3885c9025a2576a525e92e310279d7d3c5a346df0e0817cf0fb15c4742a65666"
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "VALID"
+}

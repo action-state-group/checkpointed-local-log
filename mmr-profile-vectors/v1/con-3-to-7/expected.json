@@ -1,0 +1,30 @@
+{
+  "description": "MMR(3) to MMR(7): peak 2 grows into peak 6.",
+  "tree_size_1": 3,
+  "tree_size_2": 7,
+  "accumulator_from": [
+    "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+  ],
+  "consistency_paths": [
+    [
+      "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+    ]
+  ],
+  "right_peaks": [],
+  "consistency_proof_cbor": "84030781815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd80",
+  "signed_accumulator": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+  ],
+  "consistent_accumulator": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "VALID"
+}

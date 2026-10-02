@@ -1,0 +1,34 @@
+{
+  "description": "tree-size-2 = 9 is not a complete MMR size (index_height(9) != 0) and must be rejected (R7). Without R7, peaks(8) returns [6, 7, 8].",
+  "tree_size_1": 8,
+  "tree_size_2": 9,
+  "accumulator_from": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistency_paths": [
+    [],
+    []
+  ],
+  "right_peaks": [
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistency_proof_cbor": "8408098280808158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "signed_accumulator": null,
+  "consistent_accumulator": null,
+  "peaks_as_printed_for_size_9": [
+    6,
+    7,
+    8
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "INVALID",
+  "failure_code": "INCOMPLETE_TREE_SIZE"
+}

@@ -1,0 +1,36 @@
+{
+  "description": "The merge case with only one origin peak value supplied for MMR(4), which has two (R6).",
+  "tree_size_1": 4,
+  "tree_size_2": 8,
+  "accumulator_from": [
+    "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+  ],
+  "consistency_paths": [
+    [
+      "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+    ],
+    [
+      "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+      "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+    ]
+  ],
+  "right_peaks": [
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistency_proof_cbor": "84040882815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd82582018f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb52638158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "signed_accumulator": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistent_accumulator": null,
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "INVALID",
+  "failure_code": "CARDINALITY_MISMATCH"
+}

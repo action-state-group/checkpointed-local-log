@@ -1,0 +1,23 @@
+{
+  "description": "Leaf 0 in MMR(39) with one bit flipped in the first path node. The computed peak no longer matches the signed peak.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+  "node_hash": "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+  "index": 0,
+  "tree_size": 39,
+  "inclusion_path": [
+    "daa0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+    "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+    "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+    "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+  ],
+  "inclusion_proof_cbor": "8200845820daa0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+  "receipt_payload": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+  "reconstructed_root": null,
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "INVALID",
+  "failure_code": "TAMPERED_INCLUSION_PATH"
+}

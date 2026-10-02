@@ -17,6 +17,7 @@ on:
     paths:
       - "rust/cll/**"
       - "mmr-conformance-vectors/**"
+      - "mmr-profile-vectors/**"
       - "commitment-conformance-vectors/**"
       - "checkpoint-conformance-vectors/**"
       - "cll/checkpoint/**"
@@ -25,6 +26,7 @@ on:
     paths:
       - "rust/cll/**"
       - "mmr-conformance-vectors/**"
+      - "mmr-profile-vectors/**"
       - "commitment-conformance-vectors/**"
       - "checkpoint-conformance-vectors/**"
       - "cll/checkpoint/**"
@@ -81,6 +83,7 @@ jobs:
           python3 mmr-conformance-vectors/reference_verifier.py
           python3 commitment-conformance-vectors/reference_verifier.py
           python3 checkpoint-conformance-vectors/reference_verifier.py
+          python3 mmr-profile-vectors/generate.py --check
 
       - name: trait-signed checkpoint verifies under the Python reference
         working-directory: rust/cll

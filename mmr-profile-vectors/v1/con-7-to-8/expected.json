@@ -1,0 +1,32 @@
+{
+  "description": "MMR(7) to MMR(8): peak 6 unchanged (empty path), right-peaks [7].",
+  "tree_size_1": 7,
+  "tree_size_2": 8,
+  "accumulator_from": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+  ],
+  "consistency_paths": [
+    []
+  ],
+  "right_peaks": [
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistency_proof_cbor": "84070881808158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "signed_accumulator": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "consistent_accumulator": [
+    "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+    "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "VALID"
+}

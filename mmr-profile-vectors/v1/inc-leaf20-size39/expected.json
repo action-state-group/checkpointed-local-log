@@ -1,0 +1,17 @@
+{
+  "description": "Last leaf (index 38) in MMR(39): single-leaf peak, empty path.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203230",
+  "node_hash": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+  "index": 38,
+  "tree_size": 39,
+  "inclusion_path": [],
+  "inclusion_proof_cbor": "82182680",
+  "receipt_payload": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+  "reconstructed_root": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}
