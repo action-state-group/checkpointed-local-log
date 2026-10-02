@@ -852,3 +852,38 @@ def test_witness_record_from_dict_defaults_is_stub_false_for_old_persisted_recor
     }
     restored = WitnessRecord.from_dict(old_style)
     assert restored.is_stub is False
+
+def _typescript_verifier_accepts_time(t: str) -> bool:
+    """The TypeScript CLL verifier's timestamp rule (``formatTime(t) === t``):
+    an RFC 3339 UTC time ending in ``Z`` whose fraction, if any, has no
+    trailing zero."""
+    import re
+    from datetime import datetime
+
+    match = re.fullmatch(r"(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?Z", t)
+    if match is None or (match.group(2) or "").endswith("0"):
+        return False
+    try:
+        datetime.strptime(match.group(1), "%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return False
+    return True
+
+
+def test_the_ported_timestamp_rule_matches_the_typescript_verifier():
+    for ok in ("2026-10-01T23:04:00Z", "2026-10-01T23:04:00.5Z", "2026-10-01T23:04:00.123456Z"):
+        assert _typescript_verifier_accepts_time(ok), ok
+    for refused in ("2026-10-01T23:04:00.000Z", "2026-10-01T23:04:00.123450Z", "2026-10-01T23:04:00+00:00"):
+        assert not _typescript_verifier_accepts_time(refused), refused
+
+
+def test_the_default_checkpoint_time_is_whole_seconds_every_verifier_accepts(cose_signer):
+    from cll.checkpoint.cose_wire import checkpoint_to_cose, verify_checkpoint_cose_offline
+
+    mmr = _mmr_with(5)
+    cp = emit_checkpoint(mmr, HmacSigner("node-a"), log_id="log-a")
+    assert len(cp.timestamp) == 20 and _typescript_verifier_accepts_time(cp.timestamp), cp.timestamp
+    # The checkpoint's COSE statement signs that same time as issued_at.
+    cose = checkpoint_to_cose(cp, cose_signer, mmr.peak_hashes_at(cp.mmr_size))
+    decoded = verify_checkpoint_cose_offline(cose).decoded
+    assert decoded is not None and decoded.timestamp == cp.timestamp

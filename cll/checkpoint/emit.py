@@ -552,7 +552,10 @@ def emit_checkpoint(
 
     ``prev`` is the previous checkpoint for this same ``log_id`` (for
     monotonicity + rollback detection). ``timestamp`` overrides the current
-    UTC time (for deterministic tests).
+    UTC time (for deterministic tests). The default is whole-second UTC with
+    no fraction (``2026-10-01T23:04:00Z``): the checkpoint's COSE
+    ``issued_at``, in the one RFC 3339 form every verifier accepts (the
+    TypeScript one refuses a trailing-zero fraction).
 
     Raises ``RollbackError`` if the MMR is inconsistent with ``prev``, or
     ``CheckpointError`` if ``prev`` belongs to a different log.
@@ -560,7 +563,7 @@ def emit_checkpoint(
     if timestamp is None:
         from datetime import datetime, timezone
 
-        timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     current_size = mmr.size()
     if current_size == 0:

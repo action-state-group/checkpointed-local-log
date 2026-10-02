@@ -141,6 +141,17 @@ class TestEmitCheckpoint:
         assert cp.prev_root == ""
         assert len(cp.signature) == 64
 
+    def test_default_timestamp_is_whole_seconds_with_no_fraction(self):
+        import re
+
+        from tests.checkpoint.conftest import FakeLogSource, synthetic_capsule
+
+        mmr = MmrLedger(FakeLogSource())
+        for i in range(1, 4):
+            mmr.append(synthetic_capsule(i), consequential=False)
+        cp = emit_checkpoint(mmr, _make_signer())
+        assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", cp.timestamp), cp.timestamp
+
     def test_empty_mmr_raises(self):
         store = LedgerStore(Path(tempfile.mkdtemp()))
         mmr = MmrLedger(store)

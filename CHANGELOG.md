@@ -7,6 +7,17 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Fixed — the default checkpoint time is whole seconds with no fraction
+
+`emit_checkpoint` (both `cll.checkpoint.emit` and `cll.ledger.checkpoint`)
+defaulted to `isoformat()`, with microseconds. A checkpoint's time is its COSE
+statement's `issued_at`, and the TypeScript verifier holds RFC 3339 times to
+one normalized form (no trailing-zero fraction), so it refused about one
+default-timed checkpoint in ten (any whose microseconds end in 0). The default
+is now whole-second UTC with no fraction (`2026-10-01T23:04:00Z`). An explicit
+`timestamp` is used as given. Tests hold the default to that verifier's rule,
+including through `checkpoint_to_cose`.
+
 ### Added — a witness's continuity refusal is a typed error
 
 A witness refuses (409) a checkpoint whose `prev_size`/`prev_root` is not the
