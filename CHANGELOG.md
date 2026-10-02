@@ -7,6 +7,17 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Fixed — `LedgerStore.scan` compares time bounds as instants, not strings
+
+`ScanQuery.since`/`until` were compared as SQL strings (`timestamp >= ?`/`<= ?`). Record times come
+in more than one spelling (whole seconds `…:59Z`, microseconds `…:59.999999Z`, other offsets), and
+string order is wrong across them: `…23:59:59Z` sorts after `…23:59:59.999999Z`, so a record stamped
+in a period's last second fell outside an inclusive upper bound. Bounds and record times are now
+compared as parsed instants (any fraction length, `Z` or an offset). A date alone means midnight UTC,
+and a time with no offset means UTC. SQL narrows by date first, a day wider on each side, so scans
+stay indexed. `limit` applies after the time filter. A record whose time does not parse is left out
+of a bounded scan, and an unreadable bound raises `ValueError`.
+
 ### Changed — the Python tests run in CI, and pass against current agent-action-capsule
 
 No workflow ran the Python tests, and 59 of them in `tests/ledger/` had been failing against
