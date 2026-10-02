@@ -7,6 +7,8 @@ are documented here. The format follows
 
 ## Unreleased
 
+## 0.4.1 — 2026-10-02
+
 ### Changed — requires agent-action-capsule 0.6.0
 
 The `agent-action-capsule` floor is now `>=0.6.0`, the release the format-4 tests are written
@@ -72,6 +74,20 @@ carries no proof. `register_checkpoint` now raises `WitnessContinuityRefused`
 witness up by submitting its later checkpoints in order; one without it must
 start a new `log_id`. Any other error is unchanged.
 
+### Docs — dev↔I-D field-mapping doc reconciled
+
+`docs/module-map.md`'s checkpoint row and `cll.checkpoint.cose_wire`'s
+module docstring disagreed on whether the dev (`CheckpointRecord`)
+vs. wire (CBOR claim) field-name split was a resolved, deliberate dialect
+or an open reconciliation gap — it's the former (Decision 1: ship the
+mapping table, never rename `CheckpointRecord`). Corrected the stale
+row, confirmed `issued_at`'s CDDL type (`tstr`, was previously flagged
+unconfirmed), and documented a known `iss`/`sub` semantics deviation from
+the I-D's stated producer/log identity split. No code or wire-format
+change.
+
+## 0.4.0 — 2026-09-19
+
 ### Changed — range proofs bind every leaf, not just the two boundaries
 
 `cll.checkpoint.core`/`cll.checkpoint.index`'s `RangeProof`/`range_proof`/
@@ -102,18 +118,6 @@ bundle viewer's `MMR_JS`/`BUNDLE_JS` (a separate repo/PR): the viewer's
 copy now reads "records *from*–*to* are present, unaltered, and bound to
 checkpoint *C* — this does not show that no other records exist" in place
 of the old "N of N claimed records" phrasing.
-
-### Docs — dev↔I-D field-mapping doc reconciled
-
-`docs/module-map.md`'s checkpoint row and `cll.checkpoint.cose_wire`'s
-module docstring disagreed on whether the dev (`CheckpointRecord`)
-vs. wire (CBOR claim) field-name split was a resolved, deliberate dialect
-or an open reconciliation gap — it's the former (Decision 1: ship the
-mapping table, never rename `CheckpointRecord`). Corrected the stale
-row, confirmed `issued_at`'s CDDL type (`tstr`, was previously flagged
-unconfirmed), and documented a known `iss`/`sub` semantics deviation from
-the I-D's stated producer/log identity split. No code or wire-format
-change.
 
 ## 0.3.0 — 2026-09-08
 
