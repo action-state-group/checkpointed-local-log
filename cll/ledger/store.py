@@ -29,10 +29,11 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sqlite3
 import threading
 from collections.abc import Callable, Iterator
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -704,23 +705,41 @@ class LedgerStore(LedgerAPI):
             if query.action_type is not None:
                 clauses.append("action_type = ?")
                 params.append(query.action_type)
-            if query.since is not None:
+            # Time bounds compare instants, not strings: "...23:59:59Z" and
+            # "...23:59:59.999999Z" are two spellings that string order gets
+            # wrong ('Z' > '.'), as do offsets. SQL only narrows by date, a
+            # day wider on each side (safe for any UTC offset); the exact
+            # comparison runs on each row's parsed time below.
+            since = _bound_instant(query.since, "since") if query.since is not None else None
+            until = _bound_instant(query.until, "until") if query.until is not None else None
+            if since is not None:
                 clauses.append("timestamp >= ?")
-                params.append(query.since)
-            if query.until is not None:
-                clauses.append("timestamp <= ?")
-                params.append(query.until)
+                params.append((since - timedelta(days=1)).date().isoformat())
+            if until is not None:
+                clauses.append("timestamp < ?")
+                params.append((until + timedelta(days=2)).date().isoformat())
 
             sql = "SELECT * FROM records"
             if clauses:
                 sql += " WHERE " + " AND ".join(clauses)
             sql += " ORDER BY seq"
-            if query.limit is not None:
+            timed = since is not None or until is not None
+            if query.limit is not None and not timed:
                 sql += " LIMIT ?"
                 params.append(query.limit)
 
             cur = self._conn.execute(sql, params)
-            records = [self._row_to_record(row) for row in cur]
+            records = []
+            for row in cur:
+                if timed:
+                    stamped = _instant(row["timestamp"], zoneless_is_utc=True)
+                    if stamped is None or (since is not None and stamped < since) or (
+                        until is not None and stamped > until
+                    ):
+                        continue
+                    if query.limit is not None and len(records) >= query.limit:
+                        break
+                records.append(self._row_to_record(row))
             self._conn.row_factory = None
         yield from records
 
@@ -1041,3 +1060,40 @@ class LedgerStore(LedgerAPI):
             if not segment_path.exists():
                 return False, [f"segment file {segment_path} is missing"]
             return verify_segment(segment_path.read_bytes(), seg_manifest)
+
+
+_RFC3339 = re.compile(r"(\d{4}-\d\d-\d\d)[Tt ](\d\d:\d\d:\d\d)(?:\.(\d+))?([Zz]|[+-]\d\d:\d\d)?")
+
+
+def _instant(value: object, *, zoneless_is_utc: bool = False) -> datetime | None:
+    """``value`` (an RFC 3339 time, any fraction length) as an aware instant,
+    or ``None`` when it does not parse. A time with no offset is ``None``
+    unless ``zoneless_is_utc``."""
+    if not isinstance(value, str):
+        return None
+    match = _RFC3339.fullmatch(value.strip())
+    if match is None:
+        return None
+    date, clock, fraction, offset = match.groups()
+    if offset is None and not zoneless_is_utc:
+        return None
+    zone = "+00:00" if offset in (None, "Z", "z") else offset
+    try:
+        # fromisoformat on Python 3.9/3.10 takes only 3 or 6 fraction digits.
+        return datetime.fromisoformat(f"{date}T{clock}.{(fraction or '')[:6].ljust(6, '0')}{zone}")
+    except ValueError:
+        return None
+
+
+def _bound_instant(value: str, name: str) -> datetime:
+    """A ``ScanQuery`` time bound as an instant. A date alone is midnight UTC;
+    a time with no offset is UTC."""
+    if isinstance(value, str) and re.fullmatch(r"\d{4}-\d\d-\d\d", value.strip()):
+        try:
+            return datetime.fromisoformat(value.strip()).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    parsed = _instant(value, zoneless_is_utc=True)
+    if parsed is None:
+        raise ValueError(f"ScanQuery.{name} is not an RFC 3339 time or date: {value!r}")
+    return parsed

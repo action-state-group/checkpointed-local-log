@@ -35,8 +35,11 @@ class ScanQuery:
 
     ``agent`` matches the capsule's ``developer`` field; ``counterparty`` matches
     ``operator`` (the closest available mapping — the envelope has no literal
-    ``counterparty`` field). ``since``/``until`` are inclusive ISO-8601 bounds on
-    ``timestamp``; ``verdict`` matches ``disposition.verdict_class``.
+    ``counterparty`` field). ``since``/``until`` are inclusive bounds on
+    ``timestamp``, compared as instants (never as strings): RFC 3339 times
+    with any fraction and offset; a date alone means midnight UTC and a time
+    with no offset (in a bound or a record) means UTC. A record whose ``timestamp`` does not parse is
+    left out of a bounded scan. ``verdict`` matches ``disposition.verdict_class``.
     """
 
     agent: str | None = None
