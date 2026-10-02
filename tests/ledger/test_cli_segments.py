@@ -16,6 +16,8 @@ _capsule_counter = itertools.count()
 def _synthetic_capsule() -> dict:
     i = next(_capsule_counter)
     return {
+        "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+        "format_version": "4",
         "canonicalization_id": "jcs",
         "action_type": "fyi",
         "operator": "test-op",

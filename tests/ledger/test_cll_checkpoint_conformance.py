@@ -64,6 +64,8 @@ def _emit_cll_checkpoint():
 
     for i in range(3):
         capsule = {
+            "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+            "format_version": "4",
             "canonicalization_id": "jcs",
             "action_type": "fyi",
             "operator": "test-op",

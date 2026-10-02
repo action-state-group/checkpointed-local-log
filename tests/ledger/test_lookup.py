@@ -24,6 +24,8 @@ def _synthetic_capsule(*, exchange_id: str | None = None, i: int | None = None) 
     if i is None:
         i = next(_capsule_counter)
     capsule = {
+        "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+        "format_version": "4",
         "canonicalization_id": "jcs",
         "action_type": "fyi",
         "operator": "test-op",

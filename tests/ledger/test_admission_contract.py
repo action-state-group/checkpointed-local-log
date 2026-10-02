@@ -41,6 +41,8 @@ from cll.ledger.admission import (
 
 def _capsule(**overrides) -> dict:
     cap = {
+        "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+        "format_version": "4",
         "canonicalization_id": "jcs",
         "action_type": "record_transaction",
         "operator": "acme",

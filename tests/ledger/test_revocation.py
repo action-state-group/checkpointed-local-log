@@ -57,8 +57,9 @@ def _build_capsule(*, operator: str, developer: str, event: str, detail: dict, s
     """
     i = next(_capsule_counter)
     capsule_obj = Capsule(
-        spec_version="draft-mih-scitt-agent-action-capsule-02",
-        format_version="2",
+        spec_version="draft-mih-scitt-agent-action-capsule-04",
+        format_version="4",
+        canonicalization_id="jcs",
         action_id=f"rotation-test-{i}",
         action_type="fyi",
         operator=operator,

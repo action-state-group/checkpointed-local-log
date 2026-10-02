@@ -89,6 +89,8 @@ def _synthetic_capsule(*, operator: str, developer: str, event: str, detail: dic
     self-attested guard signature; these tests never check it."""
     i = next(_capsule_counter)
     return {
+        "spec_version": "draft-mih-scitt-agent-action-capsule-04",
+        "format_version": "4",
         "canonicalization_id": "jcs",
         "action_type": "fyi",
         "operator": operator,

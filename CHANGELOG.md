@@ -7,6 +7,15 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Changed — the Python tests run in CI, and pass against current agent-action-capsule
+
+No workflow ran the Python tests, and 59 of them in `tests/ledger/` had been failing against
+`agent-action-capsule` 0.4 and later. Their hand-built fixture capsules carried no
+`format_version` (or the retired `"2"`), and the reference verifier now requires `"4"`. The fixtures
+now build current-format capsules. `test_verify_passthrough_ok` checks a freshly sealed format-4
+record; the format-2 sample ledger stays for the chain checks that use it. A new `python` workflow
+runs ruff and pytest on Python 3.9 and 3.12 on every push and pull request.
+
 ### Added — draft-exact vectors for the MMR receipt profile (-03)
 
 `mmr-profile-vectors/` holds known-answer vectors derived from the text of
