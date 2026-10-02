@@ -1,0 +1,62 @@
+{
+  "description": "A.4 all_ones as printed vs repaired (R1), pos 1..16.",
+  "pos": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "all_ones_as_printed": [
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  ],
+  "all_ones_repaired": [
+    true,
+    false,
+    true,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false
+  ],
+  "index_height_0_as_printed_returns_within_100000_steps": false,
+  "repairs_applied": [
+    "R1"
+  ],
+  "result": "VALID"
+}

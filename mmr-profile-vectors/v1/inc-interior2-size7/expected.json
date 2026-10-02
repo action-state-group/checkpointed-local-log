@@ -1,0 +1,19 @@
+{
+  "description": "Interior node 2 in MMR(7), node value given directly (-03 lets index name any node).",
+  "leaf_entry": null,
+  "node_hash": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+  "index": 2,
+  "tree_size": 7,
+  "inclusion_path": [
+    "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+  ],
+  "inclusion_proof_cbor": "8202815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+  "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

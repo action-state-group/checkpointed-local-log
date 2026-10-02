@@ -1,0 +1,20 @@
+{
+  "description": "Leaf 3 (index 4) in MMR(8): right sibling first, path to peak 6.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792033",
+  "node_hash": "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+  "index": 4,
+  "tree_size": 8,
+  "inclusion_path": [
+    "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+    "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+  ],
+  "inclusion_proof_cbor": "82048258205100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+  "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

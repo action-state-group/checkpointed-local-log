@@ -1,0 +1,1400 @@
+{
+  "version": "v1",
+  "stability": "draft-exact; regenerated, not appended, when the draft changes",
+  "provenance": {
+    "draft": "draft-bryce-cose-receipts-mmr-profile-03",
+    "draft_url": "https://www.ietf.org/archive/id/draft-bryce-cose-receipts-mmr-profile-03.txt",
+    "draft_sha256": "fba4838118dad19733ab6c6dbdcb92f799ccfa35db38ae3a6c1e17b84b8b56d7",
+    "generator": "mmr-profile-vectors/generate.py",
+    "note": "Derived from the -03 text alone: pseudocode transcribed in draft03.py with only the repairs the -03 prose states, each named in `repairs`. These are the draft's values, not checkpointed-local-log's (CLL domain-separates leaves; see README)."
+  },
+  "repairs": {
+    "R1": {
+      "name": "all_ones per its prose",
+      "where": "Appendix A.4 (all_ones); used by Section 9.1 index_height",
+      "printed": "mask = (1 << (msb + 1)) - 1, where msb = most_sig_bit(pos) is already a mask",
+      "repair": "mask = (most_sig_bit(pos) << 1) - 1",
+      "prose": "A.4: 'Tests if all bits, from the most significant that is set, are 1, b0111 would be true, b0101 would be false.'",
+      "why": "as printed all_ones is false for every pos, so index_height never terminates"
+    },
+    "R2": {
+      "name": "append returns the node count (the index the next node will occupy)",
+      "where": "Section 8.1 (add_leaf_hash)",
+      "printed": "db 'append(entry) -> index', read as the index just stored, leaves the loop one node behind",
+      "repair": "db.append returns the MMR size after the append; code otherwise unchanged",
+      "prose": "8.1 listing comments: the left child of i 'is i - 2^(g+1)', the right child 'is i - 1', 'Set v to H(i + 1 || ...)', with Section 2 'pos = i + 1' for the node being stored",
+      "why": "only this reading makes every comment in the listing true; four leaves give seven nodes"
+    },
+    "R3": {
+      "name": "right-peaks count from consistent_roots, not len(proofs)",
+      "where": "Section 6.1 vs Section 7.1 step 7",
+      "printed": "6.1: right-peaks = peaks(tree-size-2 - 1) 'discarding length(proofs) from the left'",
+      "repair": "discard the number of roots consistent_roots returns (7.1 step 7)",
+      "prose": "7.1 step 7: 'discard from the left the number of roots returned by consistent_roots'",
+      "why": "for MMR(4) -> MMR(8) both origin peaks reach peak 6; 6.1 as printed drops peak 7"
+    },
+    "R4": {
+      "name": "right-peaks are node values, taken from the proof",
+      "where": "Section 7.1 steps 6-8",
+      "printed": "steps 6-8 call peaks(), which returns indices, and never read the right-peaks field",
+      "repair": "the consistent accumulator is consistent_roots(...) followed by the right-peaks values",
+      "prose": "Section 6 CDDL comment on right-peaks: 'the additional peaks that complete the accumulator for tree-size-2, when appended to those produced by the consistency paths'",
+      "why": "a verifier holds no node store; peaks() alone cannot produce values"
+    },
+    "R5": {
+      "name": "accumulatorfrom is a trusted verifier input",
+      "where": "Section 7.1 step 2, Section 7.1.1",
+      "printed": "step 2: 'Initialize accumulatorfrom to the peaks of tree-size-1 in the current proof', but the proof carries no such values",
+      "repair": "accumulatorfrom is supplied by the verifier (the node values of peaks(tree-size-1 - 1))",
+      "prose": "7.1.1 Given: 'accumulatorfrom the node values corresponding to the peaks of the accumulator for tree-size-1'",
+      "why": "consistent_roots needs values the wire format does not carry"
+    },
+    "R6": {
+      "name": "cardinality checks raise",
+      "where": "Section 7.1.1 (consistent_roots)",
+      "printed": "prose MUST compares len(peaks(ifrom)) with len(accumulatorfrom); the code comment compares len(frompeaks) with len(proofs); neither is executed",
+      "repair": "both checks are executed and raise",
+      "prose": "7.1.1: 'Implementations MUST require that the number of peaks returned by Section 9.2(ifrom) equals the number of entries in accumulatorfrom' and the '# if length(frompeaks) != length(proofs) -> ERROR' comment",
+      "why": "otherwise extra or missing proof material is silently ignored or crashes"
+    },
+    "R7": {
+      "name": "reject incomplete sizes: MMR(n) is complete iff index_height(n) == 0",
+      "where": "Section 9.2 (peaks)",
+      "printed": "'Assumes MMR(i+1) is complete, implementations can check for this condition by testing the height of i+1' (the value tested for is not stated)",
+      "repair": "peaks(i) raises unless index_height(i + 1) == 0",
+      "prose": "9.2 names the test; 0 is the only height for which it holds (the next node would be a leaf). The text names the test but not the value, so this one is a reading",
+      "why": "peaks(4) returns [2, 3, 4] for the incomplete size 5, which is not an accumulator"
+    },
+    "R8": {
+      "name": "the inclusion input is H(entry)",
+      "where": "Section 5.1 vs Section 8.1",
+      "printed": "5.1 applies the proof 'to a possible entry (set member) bytes'; included_root takes a nodehash",
+      "repair": "nodehash = SHA-256(entry bytes)",
+      "prose": "8.1: 'f the leaf value resulting from H(x) for the caller defined leaf value x'",
+      "why": "raw bytes and H(bytes) give different roots"
+    }
+  },
+  "hash": "SHA-256; interior node = SHA-256(be64(pos) || left || right), pos = index + 1",
+  "leaf_entry_definition": "leaf node value = SHA-256(entry bytes) (Section 8.1, R8)",
+  "tree_construction": "21 entries 'draft-bryce-cose-receipts-mmr-profile-03 vector entry {k}' (k = 0..20, UTF-8) appended with add_leaf_hash; MMR(39)",
+  "sizes": "tree_size, tree_size_1 and tree_size_2 are MMR node counts, not leaf counts",
+  "vectors": [
+    {
+      "id": "prim-all-ones",
+      "dir": "v1/prim-all-ones",
+      "kind": "primitive",
+      "description": "A.4 all_ones as printed vs repaired (R1), pos 1..16.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "A.4 all_ones as printed vs repaired (R1), pos 1..16.",
+        "pos": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16
+        ],
+        "all_ones_as_printed": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "all_ones_repaired": [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          true,
+          false
+        ],
+        "index_height_0_as_printed_returns_within_100000_steps": false,
+        "repairs_applied": [
+          "R1"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "prim-index-height-mmr39",
+      "dir": "v1/prim-index-height-mmr39",
+      "kind": "primitive",
+      "description": "9.1 index_height for every node of MMR(39).",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "9.1 index_height for every node of MMR(39).",
+        "tree_size": 39,
+        "index_height": [
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          2,
+          3,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          2,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          2,
+          3,
+          4,
+          0,
+          0,
+          1,
+          0,
+          0,
+          1,
+          2,
+          0
+        ],
+        "repairs_applied": [
+          "R1"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "prim-peaks-complete-sizes",
+      "dir": "v1/prim-peaks-complete-sizes",
+      "kind": "primitive",
+      "description": "9.2 peaks(tree_size - 1) for every complete size up to 39; sizes are node counts.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "9.2 peaks(tree_size - 1) for every complete size up to 39; sizes are node counts.",
+        "complete_sizes": [
+          0,
+          1,
+          3,
+          4,
+          7,
+          8,
+          10,
+          11,
+          15,
+          16,
+          18,
+          19,
+          22,
+          23,
+          25,
+          26,
+          31,
+          32,
+          34,
+          35,
+          38,
+          39
+        ],
+        "leaf_counts": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21
+        ],
+        "peaks": {
+          "0": [],
+          "1": [
+            0
+          ],
+          "3": [
+            2
+          ],
+          "4": [
+            2,
+            3
+          ],
+          "7": [
+            6
+          ],
+          "8": [
+            6,
+            7
+          ],
+          "10": [
+            6,
+            9
+          ],
+          "11": [
+            6,
+            9,
+            10
+          ],
+          "15": [
+            14
+          ],
+          "16": [
+            14,
+            15
+          ],
+          "18": [
+            14,
+            17
+          ],
+          "19": [
+            14,
+            17,
+            18
+          ],
+          "22": [
+            14,
+            21
+          ],
+          "23": [
+            14,
+            21,
+            22
+          ],
+          "25": [
+            14,
+            21,
+            24
+          ],
+          "26": [
+            14,
+            21,
+            24,
+            25
+          ],
+          "31": [
+            30
+          ],
+          "32": [
+            30,
+            31
+          ],
+          "34": [
+            30,
+            33
+          ],
+          "35": [
+            30,
+            33,
+            34
+          ],
+          "38": [
+            30,
+            37
+          ],
+          "39": [
+            30,
+            37,
+            38
+          ]
+        },
+        "repairs_applied": [
+          "R1",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "prim-add-leaf-hash-4",
+      "dir": "v1/prim-add-leaf-hash-4",
+      "kind": "primitive",
+      "description": "8.1 add_leaf_hash over 4 leaves: R2 gives the 7-node post-order layout; reading append() as 'index just stored' gives 5 nodes.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "8.1 add_leaf_hash over 4 leaves: R2 gives the 7-node post-order layout; reading append() as 'index just stored' gives 5 nodes.",
+        "leaf_entries": [
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792031",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792032",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792033"
+        ],
+        "nodes_r2": [
+          "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+          "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+          "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+        ],
+        "node_count_r2": 7,
+        "node_count_if_append_returns_stored_index": 5,
+        "repairs_applied": [
+          "R1",
+          "R2",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "fixture-mmr39",
+      "dir": "v1/fixture-mmr39",
+      "kind": "fixture",
+      "description": "The fixture: 21 entries appended with add_leaf_hash; every node value of MMR(39).",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "The fixture: 21 entries appended with add_leaf_hash; every node value of MMR(39).",
+        "entry_template": "draft-bryce-cose-receipts-mmr-profile-03 vector entry {k}",
+        "leaf_entries": [
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792031",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792032",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792033",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792034",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792035",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792036",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792037",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792038",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792039",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203130",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203131",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203132",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203133",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203134",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203135",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203136",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203137",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203138",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203139",
+          "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203230"
+        ],
+        "leaf_node_index": [
+          0,
+          1,
+          3,
+          4,
+          7,
+          8,
+          10,
+          11,
+          15,
+          16,
+          18,
+          19,
+          22,
+          23,
+          25,
+          26,
+          31,
+          32,
+          34,
+          35,
+          38
+        ],
+        "nodes": [
+          "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+          "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+          "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+          "e049e3372cbc3b51954ca5b8338896c91384d5d5e53c4239a0a76b89555904dd",
+          "ea54d2821154708c0ca09413438cc3e5d137e16116a894e40d096874118341d0",
+          "6188c04ef588728b691f78460401a563a142bbf3db7a69bcec6c26834e9f3cf4",
+          "94c7cc053b585762b99a41128d175b5b7116e3577894a0b455da4a93be3f44c7",
+          "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+          "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+          "3885c9025a2576a525e92e310279d7d3c5a346df0e0817cf0fb15c4742a65666",
+          "ec0aded6728498cd31f82f464c05cc4aa9d53d02e9b052729aaa75ce27e178e6",
+          "3fc7f84db8bb13bb1c7d8a0257a73ec2bd59eb814a25e4ae02483352c92a69bc",
+          "386e3f28961b3b62e02ad683ac3fa3c59bb6a8931a65609b06055bb7940a150c",
+          "850a440537ae5ee861b0c68a677cdbdca5626be2d1a4933f9bb6131493124682",
+          "79455e64ebeab4c69ce9f5fadb4dbecec34db0c48c0a6a66fa7b85b452d4f369",
+          "9ac596c8db23609cc770cf98502fafb66f7c0c9e33491a7a164dc6fdee9e7777",
+          "39920065fb9916f6493f00d091eaad5f03a3d0f64a72215a0b169f7a25560321",
+          "ba83aaece76cd3b7972243e7fa3ed4d85bade6bd09d6afbcd7d34bc3a5014195",
+          "1f3b01f72b37d6ee9b28196d4f94c82ccc869a842da1ec8c566c8d1454ecd756",
+          "b4ecf8848169c7b6459e0aa52fa0b989c896efce61c118e6316f1996e133f8d7",
+          "7cfd28eb3cfcf9b83240f4ecb79c50af3c414b218d9b1bae83d7bbedd2cb9991",
+          "ecbbdca801bcb713ad0946c59900097ece92fe3efddb2bc6f91e5c0e1c11cb20",
+          "8a87a7b024e41b29237de29dc12431a5454d9120872748773fff10ce81d82c70",
+          "dafa0407f238caa5f84dc8a6d656cee6908b1323b37e33f47ed5de5805d6c4c1",
+          "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "3a1addf533b4445832aaf5d3fff6adace36076b1e829297dcda9ec189433e949",
+          "87428aaea88f1ce5f39499a6c8661684a728ae2ec020d851bda5f6851614e591",
+          "a5d324aacb6f5d708c07f05a9c0c8b63b07fec9ded51fecda61d5ebcee4cf346",
+          "1b4a385a1ecf871229733b6ce269c4b4620ffd83e72eba9b40d9ae9b81648fa3",
+          "59bbcb19f8dc04bc1204fa80beffe9398b685cb8b2e66f2546ce66738d2f3b6a",
+          "faddf850655d18304e2841adb8363b1706e342caf3f7760046b8516fbaeaba1f",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "peaks": [
+          30,
+          37,
+          38
+        ],
+        "accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R2",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf0-size3",
+      "dir": "v1/inc-leaf0-size3",
+      "kind": "inclusion",
+      "description": "Leaf 0 in MMR(3): one-step path to peak 2.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 0 in MMR(3): one-step path to peak 2.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+        "node_hash": "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+        "index": 0,
+        "tree_size": 3,
+        "inclusion_path": [
+          "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5"
+        ],
+        "inclusion_proof_cbor": "8200815820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+        "receipt_payload": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+        "reconstructed_root": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf0-size39",
+      "dir": "v1/inc-leaf0-size39",
+      "kind": "inclusion",
+      "description": "Leaf 0 in MMR(39): four-step path to peak 30.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 0 in MMR(39): four-step path to peak 30.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+        "node_hash": "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+        "index": 0,
+        "tree_size": 39,
+        "inclusion_path": [
+          "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+          "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+        ],
+        "inclusion_proof_cbor": "8200845820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+        "receipt_payload": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+        "reconstructed_root": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf2-size4",
+      "dir": "v1/inc-leaf2-size4",
+      "kind": "inclusion",
+      "description": "Leaf 2 (index 3) in MMR(4): it is itself a peak, so the path is empty. Note: -03's CDDL 'inclusion-path: [ + bstr ]' rejects this encoding.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 2 (index 3) in MMR(4): it is itself a peak, so the path is empty. Note: -03's CDDL 'inclusion-path: [ + bstr ]' rejects this encoding.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792032",
+        "node_hash": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+        "index": 3,
+        "tree_size": 4,
+        "inclusion_path": [],
+        "inclusion_proof_cbor": "820380",
+        "receipt_payload": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+        "reconstructed_root": "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf4-size8",
+      "dir": "v1/inc-leaf4-size8",
+      "kind": "inclusion",
+      "description": "Leaf 4 (index 7) in MMR(8): single-leaf peak, empty path.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 4 (index 7) in MMR(8): single-leaf peak, empty path.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792034",
+        "node_hash": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "index": 7,
+        "tree_size": 8,
+        "inclusion_path": [],
+        "inclusion_proof_cbor": "820780",
+        "receipt_payload": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "reconstructed_root": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf3-size8",
+      "dir": "v1/inc-leaf3-size8",
+      "kind": "inclusion",
+      "description": "Leaf 3 (index 4) in MMR(8): right sibling first, path to peak 6.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 3 (index 4) in MMR(8): right sibling first, path to peak 6.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792033",
+        "node_hash": "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+        "index": 4,
+        "tree_size": 8,
+        "inclusion_path": [
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c",
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+        ],
+        "inclusion_proof_cbor": "82048258205100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+        "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf17-size39",
+      "dir": "v1/inc-leaf17-size39",
+      "kind": "inclusion",
+      "description": "Leaf 17 (index 32) in MMR(39): path to peak 37.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Leaf 17 (index 32) in MMR(39): path to peak 37.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203137",
+        "node_hash": "87428aaea88f1ce5f39499a6c8661684a728ae2ec020d851bda5f6851614e591",
+        "index": 32,
+        "tree_size": 39,
+        "inclusion_path": [
+          "3a1addf533b4445832aaf5d3fff6adace36076b1e829297dcda9ec189433e949",
+          "faddf850655d18304e2841adb8363b1706e342caf3f7760046b8516fbaeaba1f"
+        ],
+        "inclusion_proof_cbor": "8218208258203a1addf533b4445832aaf5d3fff6adace36076b1e829297dcda9ec189433e9495820faddf850655d18304e2841adb8363b1706e342caf3f7760046b8516fbaeaba1f",
+        "receipt_payload": "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+        "reconstructed_root": "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-leaf20-size39",
+      "dir": "v1/inc-leaf20-size39",
+      "kind": "inclusion",
+      "description": "Last leaf (index 38) in MMR(39): single-leaf peak, empty path.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Last leaf (index 38) in MMR(39): single-leaf peak, empty path.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203230",
+        "node_hash": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "index": 38,
+        "tree_size": 39,
+        "inclusion_path": [],
+        "inclusion_proof_cbor": "82182680",
+        "receipt_payload": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "reconstructed_root": "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "inc-interior2-size7",
+      "dir": "v1/inc-interior2-size7",
+      "kind": "inclusion",
+      "description": "Interior node 2 in MMR(7), node value given directly (-03 lets index name any node).",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Interior node 2 in MMR(7), node value given directly (-03 lets index name any node).",
+        "leaf_entry": null,
+        "node_hash": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+        "index": 2,
+        "tree_size": 7,
+        "inclusion_path": [
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+        ],
+        "inclusion_proof_cbor": "8202815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+        "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "fail-inc-tampered-path",
+      "dir": "v1/fail-inc-tampered-path",
+      "kind": "inclusion",
+      "description": "Leaf 0 in MMR(39) with one bit flipped in the first path node. The computed peak no longer matches the signed peak.",
+      "expected_result": "INVALID",
+      "failure_code": "TAMPERED_INCLUSION_PATH",
+      "expected": {
+        "description": "Leaf 0 in MMR(39) with one bit flipped in the first path node. The computed peak no longer matches the signed peak.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+        "node_hash": "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+        "index": 0,
+        "tree_size": 39,
+        "inclusion_path": [
+          "daa0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+          "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+        ],
+        "inclusion_proof_cbor": "8200845820daa0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+        "receipt_payload": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+        "reconstructed_root": null,
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "INVALID",
+        "failure_code": "TAMPERED_INCLUSION_PATH"
+      }
+    },
+    {
+      "id": "fail-inc-wrong-index",
+      "dir": "v1/fail-inc-wrong-index",
+      "kind": "inclusion",
+      "description": "Leaf 1's honest proof presented under leaf 0's index: the position commitment changes every parent hash.",
+      "expected_result": "INVALID",
+      "failure_code": "WRONG_INDEX",
+      "expected": {
+        "description": "Leaf 1's honest proof presented under leaf 0's index: the position commitment changes every parent hash.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792031",
+        "node_hash": "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+        "index": 0,
+        "tree_size": 39,
+        "inclusion_path": [
+          "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+          "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+        ],
+        "inclusion_proof_cbor": "8200845820be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de5820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+        "receipt_payload": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+        "reconstructed_root": null,
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "INVALID",
+        "failure_code": "WRONG_INDEX"
+      }
+    },
+    {
+      "id": "fail-inc-wrong-entry",
+      "dir": "v1/fail-inc-wrong-entry",
+      "kind": "inclusion",
+      "description": "Leaf 0's honest proof with the entry bytes of leaf 1.",
+      "expected_result": "INVALID",
+      "failure_code": "WRONG_ENTRY",
+      "expected": {
+        "description": "Leaf 0's honest proof with the entry bytes of leaf 1.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792031",
+        "node_hash": "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+        "index": 0,
+        "tree_size": 39,
+        "inclusion_path": [
+          "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+          "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+          "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+        ],
+        "inclusion_proof_cbor": "8200845820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc",
+        "receipt_payload": "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+        "reconstructed_root": null,
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "INVALID",
+        "failure_code": "WRONG_ENTRY"
+      }
+    },
+    {
+      "id": "hazard-interior-alias",
+      "dir": "v1/hazard-interior-alias",
+      "kind": "inclusion",
+      "description": "Accepted by -03 as written. The 72 bytes be64(3) || node0 || node1 were never appended, yet H(them) equals interior node 2, so the proof index=2, path=[node5] reaches the signed peak 6 of MMR(7). A verifier that requires index_height(index) == 0 for an entry (not in -03) rejects it.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Accepted by -03 as written. The 72 bytes be64(3) || node0 || node1 were never appended, yet H(them) equals interior node 2, so the proof index=2, path=[node5] reaches the signed peak 6 of MMR(7). A verifier that requires index_height(index) == 0 for an entry (not in -03) rejects it.",
+        "leaf_entry": "0000000000000003be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127dedba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+        "node_hash": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+        "index": 2,
+        "tree_size": 7,
+        "inclusion_path": [
+          "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+        ],
+        "inclusion_proof_cbor": "8202815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+        "receipt_payload": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "reconstructed_root": "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+        "rejected_if_leaf_only_check": true,
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "hazard-empty-path-index-rebind",
+      "dir": "v1/hazard-empty-path-index-rebind",
+      "kind": "inclusion",
+      "description": "Accepted by -03 as written. The honest receipt for leaf 4 (index 7, a peak of MMR(8), empty path) relabelled index 0: with an empty path included_root returns the node hash and never reads the index.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Accepted by -03 as written. The honest receipt for leaf 4 (index 7, a peak of MMR(8), empty path) relabelled index 0: with an empty path included_root returns the node hash and never reads the index.",
+        "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792034",
+        "node_hash": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "index": 0,
+        "tree_size": 8,
+        "inclusion_path": [],
+        "inclusion_proof_cbor": "820080",
+        "receipt_payload": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "reconstructed_root": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "rejected_if_leaf_only_check": false,
+        "repairs_applied": [
+          "R1",
+          "R7",
+          "R8"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-4-to-8-merge",
+      "dir": "v1/con-4-to-8-merge",
+      "kind": "consistency",
+      "description": "MERGE CASE. MMR(4) (3 leaves, peaks [2, 3]) to MMR(8) (5 leaves, peaks [6, 7]). Both origin peaks reach peak 6, so consistent_roots returns one root and right-peaks must be [node 7]. Section 6.1 as printed (discard len(proofs) = 2) gives right-peaks = [] and loses peak 7.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MERGE CASE. MMR(4) (3 leaves, peaks [2, 3]) to MMR(8) (5 leaves, peaks [6, 7]). Both origin peaks reach peak 6, so consistent_roots returns one root and right-peaks must be [node 7]. Section 6.1 as printed (discard len(proofs) = 2) gives right-peaks = [] and loses peak 7.",
+        "tree_size_1": 4,
+        "tree_size_2": 8,
+        "accumulator_from": [
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c"
+        ],
+        "consistency_paths": [
+          [
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+          ],
+          [
+            "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+            "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+          ]
+        ],
+        "right_peaks": [
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_proof_cbor": "84040882815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd82582018f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb52638158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistent_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "path_node_indices": [
+          [
+            5
+          ],
+          [
+            4,
+            2
+          ]
+        ],
+        "right_peaks_section_6_1_as_printed": [],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-3-to-7",
+      "dir": "v1/con-3-to-7",
+      "kind": "consistency",
+      "description": "MMR(3) to MMR(7): peak 2 grows into peak 6.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MMR(3) to MMR(7): peak 2 grows into peak 6.",
+        "tree_size_1": 3,
+        "tree_size_2": 7,
+        "accumulator_from": [
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+        ],
+        "consistency_paths": [
+          [
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+          ]
+        ],
+        "right_peaks": [],
+        "consistency_proof_cbor": "84030781815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd80",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+        ],
+        "consistent_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-7-to-8",
+      "dir": "v1/con-7-to-8",
+      "kind": "consistency",
+      "description": "MMR(7) to MMR(8): peak 6 unchanged (empty path), right-peaks [7].",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MMR(7) to MMR(8): peak 6 unchanged (empty path), right-peaks [7].",
+        "tree_size_1": 7,
+        "tree_size_2": 8,
+        "accumulator_from": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+        ],
+        "consistency_paths": [
+          []
+        ],
+        "right_peaks": [
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_proof_cbor": "84070881808158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistent_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-8-to-15-merge",
+      "dir": "v1/con-8-to-15-merge",
+      "kind": "consistency",
+      "description": "MMR(8) to MMR(15): peaks [6, 7] both reach peak 14.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MMR(8) to MMR(15): peaks [6, 7] both reach peak 14.",
+        "tree_size_1": 8,
+        "tree_size_2": 15,
+        "accumulator_from": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_paths": [
+          [
+            "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050"
+          ],
+          [
+            "e049e3372cbc3b51954ca5b8338896c91384d5d5e53c4239a0a76b89555904dd",
+            "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+            "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d"
+          ]
+        ],
+        "right_peaks": [],
+        "consistency_proof_cbor": "84080f828158207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050835820e049e3372cbc3b51954ca5b8338896c91384d5d5e53c4239a0a76b89555904dd58200182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b35820bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d80",
+        "signed_accumulator": [
+          "3885c9025a2576a525e92e310279d7d3c5a346df0e0817cf0fb15c4742a65666"
+        ],
+        "consistent_accumulator": [
+          "3885c9025a2576a525e92e310279d7d3c5a346df0e0817cf0fb15c4742a65666"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-10-to-39",
+      "dir": "v1/con-10-to-39",
+      "kind": "consistency",
+      "description": "MMR(10) (6 leaves) to MMR(39) (21 leaves): peaks [6, 9] both reach peak 30; right-peaks [37, 38].",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MMR(10) (6 leaves) to MMR(39) (21 leaves): peaks [6, 9] both reach peak 30; right-peaks [37, 38].",
+        "tree_size_1": 10,
+        "tree_size_2": 39,
+        "accumulator_from": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "ea54d2821154708c0ca09413438cc3e5d137e16116a894e40d096874118341d0"
+        ],
+        "consistency_paths": [
+          [
+            "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+            "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+          ],
+          [
+            "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+            "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+            "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+          ]
+        ],
+        "right_peaks": [
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistency_proof_cbor": "840a1827828258207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc8358200182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b35820bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d58205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc825820b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae965820eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "signed_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistent_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-1-to-39",
+      "dir": "v1/con-1-to-39",
+      "kind": "consistency",
+      "description": "MMR(1) to MMR(39): a single leaf carried to peak 30.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "MMR(1) to MMR(39): a single leaf carried to peak 30.",
+        "tree_size_1": 1,
+        "tree_size_2": 39,
+        "accumulator_from": [
+          "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de"
+        ],
+        "consistency_paths": [
+          [
+            "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+            "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+            "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+          ]
+        ],
+        "right_peaks": [
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistency_proof_cbor": "8401182781845820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc825820b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae965820eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "signed_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistent_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "con-39-to-39",
+      "dir": "v1/con-39-to-39",
+      "kind": "consistency",
+      "description": "Same size: every path empty, no right-peaks.",
+      "expected_result": "VALID",
+      "expected": {
+        "description": "Same size: every path empty, no right-peaks.",
+        "tree_size_1": 39,
+        "tree_size_2": 39,
+        "accumulator_from": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistency_paths": [
+          [],
+          [],
+          []
+        ],
+        "right_peaks": [],
+        "consistency_proof_cbor": "84182718278380808080",
+        "signed_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistent_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "VALID"
+      }
+    },
+    {
+      "id": "fail-con-right-peaks-6-1-as-printed",
+      "dir": "v1/fail-con-right-peaks-6-1-as-printed",
+      "kind": "consistency",
+      "description": "The merge case with right-peaks built by Section 6.1 as printed ([]): the accumulator has one peak where MMR(8) has two.",
+      "expected_result": "INVALID",
+      "failure_code": "RIGHT_PEAKS_COUNT",
+      "expected": {
+        "description": "The merge case with right-peaks built by Section 6.1 as printed ([]): the accumulator has one peak where MMR(8) has two.",
+        "tree_size_1": 4,
+        "tree_size_2": 8,
+        "accumulator_from": [
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c"
+        ],
+        "consistency_paths": [
+          [
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+          ],
+          [
+            "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+            "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+          ]
+        ],
+        "right_peaks": [],
+        "consistency_proof_cbor": "84040882815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd82582018f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb526380",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistent_accumulator": null,
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "INVALID",
+        "failure_code": "RIGHT_PEAKS_COUNT"
+      }
+    },
+    {
+      "id": "fail-con-tampered-path",
+      "dir": "v1/fail-con-tampered-path",
+      "kind": "consistency",
+      "description": "The merge case with one bit flipped in the second origin peak's path: its root no longer equals the first, so two roots plus one right peak exceed MMR(8)'s two peaks.",
+      "expected_result": "INVALID",
+      "failure_code": "TAMPERED_CONSISTENCY_PATH",
+      "expected": {
+        "description": "The merge case with one bit flipped in the second origin peak's path: its root no longer equals the first, so two roots plus one right peak exceed MMR(8)'s two peaks.",
+        "tree_size_1": 4,
+        "tree_size_2": 8,
+        "accumulator_from": [
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+          "5100a1f647cba46dbabb3da8187fd78905068093894f839bbecb71132d46121c"
+        ],
+        "consistency_paths": [
+          [
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+          ],
+          [
+            "19f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+            "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+          ]
+        ],
+        "right_peaks": [
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_proof_cbor": "84040882815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd82582019f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb52638158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistent_accumulator": null,
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "INVALID",
+        "failure_code": "TAMPERED_CONSISTENCY_PATH"
+      }
+    },
+    {
+      "id": "fail-con-wrong-accumulator-from",
+      "dir": "v1/fail-con-wrong-accumulator-from",
+      "kind": "consistency",
+      "description": "con-10-to-39 with a wrong trusted origin accumulator (first peak bit-flipped): the computed accumulator differs from the signed one.",
+      "expected_result": "INVALID",
+      "failure_code": "ACCUMULATOR_MISMATCH",
+      "expected": {
+        "description": "con-10-to-39 with a wrong trusted origin accumulator (first peak bit-flipped): the computed accumulator differs from the signed one.",
+        "tree_size_1": 10,
+        "tree_size_2": 39,
+        "accumulator_from": [
+          "bab386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "ea54d2821154708c0ca09413438cc3e5d137e16116a894e40d096874118341d0"
+        ],
+        "consistency_paths": [
+          [
+            "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+            "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+          ],
+          [
+            "0182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b3",
+            "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+            "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+          ]
+        ],
+        "right_peaks": [
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistency_proof_cbor": "840a1827828258207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc8358200182325b57adbf2e5bdfc809700e38db0e21856f7b37be0ebf892d9dc7ca72b35820bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d58205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc825820b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae965820eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+        "signed_accumulator": [
+          "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+          "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+          "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+        ],
+        "consistent_accumulator": null,
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "INVALID",
+        "failure_code": "ACCUMULATOR_MISMATCH"
+      }
+    },
+    {
+      "id": "fail-con-cardinality",
+      "dir": "v1/fail-con-cardinality",
+      "kind": "consistency",
+      "description": "The merge case with only one origin peak value supplied for MMR(4), which has two (R6).",
+      "expected_result": "INVALID",
+      "failure_code": "CARDINALITY_MISMATCH",
+      "expected": {
+        "description": "The merge case with only one origin peak value supplied for MMR(4), which has two (R6).",
+        "tree_size_1": 4,
+        "tree_size_2": 8,
+        "accumulator_from": [
+          "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+        ],
+        "consistency_paths": [
+          [
+            "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd"
+          ],
+          [
+            "18f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf",
+            "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263"
+          ]
+        ],
+        "right_peaks": [
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_proof_cbor": "84040882815820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd82582018f37564370849b58bd9abf2cdb928d3abff898f118d8531e9e106fde9dc8dbf5820c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb52638158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "signed_accumulator": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistent_accumulator": null,
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "INVALID",
+        "failure_code": "CARDINALITY_MISMATCH"
+      }
+    },
+    {
+      "id": "fail-con-incomplete-size-2",
+      "dir": "v1/fail-con-incomplete-size-2",
+      "kind": "consistency",
+      "description": "tree-size-2 = 9 is not a complete MMR size (index_height(9) != 0) and must be rejected (R7). Without R7, peaks(8) returns [6, 7, 8].",
+      "expected_result": "INVALID",
+      "failure_code": "INCOMPLETE_TREE_SIZE",
+      "expected": {
+        "description": "tree-size-2 = 9 is not a complete MMR size (index_height(9) != 0) and must be rejected (R7). Without R7, peaks(8) returns [6, 7, 8].",
+        "tree_size_1": 8,
+        "tree_size_2": 9,
+        "accumulator_from": [
+          "bbb386ad828bc665ed7fc7748b21dddd97f062f5e9ae13b6dfdc56bc2bfcb43d",
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_paths": [
+          [],
+          []
+        ],
+        "right_peaks": [
+          "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163"
+        ],
+        "consistency_proof_cbor": "8408098280808158208e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+        "signed_accumulator": null,
+        "consistent_accumulator": null,
+        "peaks_as_printed_for_size_9": [
+          6,
+          7,
+          8
+        ],
+        "repairs_applied": [
+          "R1",
+          "R3",
+          "R4",
+          "R5",
+          "R6",
+          "R7"
+        ],
+        "result": "INVALID",
+        "failure_code": "INCOMPLETE_TREE_SIZE"
+      }
+    }
+  ]
+}

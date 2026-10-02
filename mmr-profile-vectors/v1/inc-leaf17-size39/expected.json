@@ -1,0 +1,20 @@
+{
+  "description": "Leaf 17 (index 32) in MMR(39): path to peak 37.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e747279203137",
+  "node_hash": "87428aaea88f1ce5f39499a6c8661684a728ae2ec020d851bda5f6851614e591",
+  "index": 32,
+  "tree_size": 39,
+  "inclusion_path": [
+    "3a1addf533b4445832aaf5d3fff6adace36076b1e829297dcda9ec189433e949",
+    "faddf850655d18304e2841adb8363b1706e342caf3f7760046b8516fbaeaba1f"
+  ],
+  "inclusion_proof_cbor": "8218208258203a1addf533b4445832aaf5d3fff6adace36076b1e829297dcda9ec189433e9495820faddf850655d18304e2841adb8363b1706e342caf3f7760046b8516fbaeaba1f",
+  "receipt_payload": "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+  "reconstructed_root": "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

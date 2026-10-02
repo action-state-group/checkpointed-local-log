@@ -1,0 +1,19 @@
+{
+  "description": "Leaf 0 in MMR(3): one-step path to peak 2.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792030",
+  "node_hash": "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de",
+  "index": 0,
+  "tree_size": 3,
+  "inclusion_path": [
+    "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5"
+  ],
+  "inclusion_proof_cbor": "8200815820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+  "receipt_payload": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+  "reconstructed_root": "c10b32837143993e25669a6a1d575b8c44109ed8a2a543abd63d4f9b99bb5263",
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}

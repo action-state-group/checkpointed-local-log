@@ -57,8 +57,10 @@ bytes.
 
 ## Files and use
 
-- `vectors.json` contains 26 cases: 7 root, 8 inclusion, 6 consistency, and 5
-  range. Four are negatives (`expect: false`): a flipped witness sibling for each
+- `vectors.json` contains 27 cases: 7 root, 8 inclusion, 7 consistency, and 5
+  range. `consistency-3-to-5-leaves` (size 4 to 8) is the merge case: both old
+  peaks fold into the same new peak, and the new right peak must still be
+  carried. Four are negatives (`expect: false`): a flipped witness sibling for each
   of inclusion, consistency, and range, plus one **interior-leaf** tamper
   (`neg-range-interior-leaf-altered`) — a replaced interior body digest that only
   the every-leaf range binding rejects (a two-endpoint check would miss it).

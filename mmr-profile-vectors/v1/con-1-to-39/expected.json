@@ -1,0 +1,40 @@
+{
+  "description": "MMR(1) to MMR(39): a single leaf carried to peak 30.",
+  "tree_size_1": 1,
+  "tree_size_2": 39,
+  "accumulator_from": [
+    "be5526d28bc0f2840f618f0047285b6c1a656a9cc73b183655a88cb4efe127de"
+  ],
+  "consistency_paths": [
+    [
+      "dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde5",
+      "df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd",
+      "7f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd230901050",
+      "5c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc"
+    ]
+  ],
+  "right_peaks": [
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistency_proof_cbor": "8401182781845820dba0869abaee71b285360cfea6037b493eee60cd9b93bbd8e079ff87f391dde55820df5a1dd048ae945693057eda7846351c1c63ce767f663627e5002bd9021e03bd58207f5ddab0716b89b659014ef384b4f4488f448fd9accf3ee6f4f8dfd23090105058205c174054084ee5c2a5a348bb04e07edc923a64964e1516065d6d8bf99ec5f6fc825820b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae965820eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4",
+  "signed_accumulator": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "consistent_accumulator": [
+    "4b0c953c70353431b65a88663b62a7192a5949a9f0d6d6f7cc211a549e201a04",
+    "b8c587d1acfefcd497f3ff085fc7661d208124abb5ea754615f31c2108a3ae96",
+    "eec2e2a2e13db73f3b0dd635d12bd2450cb1c90d8facd1dbfd3f067552cab8d4"
+  ],
+  "repairs_applied": [
+    "R1",
+    "R3",
+    "R4",
+    "R5",
+    "R6",
+    "R7"
+  ],
+  "result": "VALID"
+}

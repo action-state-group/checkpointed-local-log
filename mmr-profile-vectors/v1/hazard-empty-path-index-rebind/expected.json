@@ -1,0 +1,18 @@
+{
+  "description": "Accepted by -03 as written. The honest receipt for leaf 4 (index 7, a peak of MMR(8), empty path) relabelled index 0: with an empty path included_root returns the node hash and never reads the index.",
+  "leaf_entry": "64726166742d62727963652d636f73652d72656365697074732d6d6d722d70726f66696c652d303320766563746f7220656e7472792034",
+  "node_hash": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "index": 0,
+  "tree_size": 8,
+  "inclusion_path": [],
+  "inclusion_proof_cbor": "820080",
+  "receipt_payload": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "reconstructed_root": "8e0703ae87eab8bdc0b0f53bc6c836a2d0f11d6ba1ea3a5696aea743424f0163",
+  "rejected_if_leaf_only_check": false,
+  "repairs_applied": [
+    "R1",
+    "R7",
+    "R8"
+  ],
+  "result": "VALID"
+}
