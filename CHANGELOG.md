@@ -7,6 +7,12 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Changed — requires agent-action-capsule 0.6.0
+
+The `agent-action-capsule` floor is now `>=0.6.0`, the release the format-4 tests are written
+against (the reference verifier refuses format-2 capsules from 0.4 on). `uv.lock` is refreshed for
+it (it still pinned 0.2.0, below the previous floor).
+
 ### Fixed — `LedgerStore.scan` compares time bounds as instants, not strings
 
 `ScanQuery.since`/`until` were compared as SQL strings (`timestamp >= ?`/`<= ?`). Record times come
