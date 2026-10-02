@@ -68,9 +68,9 @@ def _independent_postorder(leaves):
         nodes.append(leaf)
         stack.append((0, len(nodes) - 1))
         while len(stack) >= 2 and stack[-1][0] == stack[-2][0]:
-            (h, r), (_, l) = stack.pop(), stack.pop()
+            (h, right), (_, left) = stack.pop(), stack.pop()
             pos = len(nodes) + 1
-            nodes.append(hashlib.sha256(pos.to_bytes(8, "big") + nodes[l] + nodes[r]).digest())
+            nodes.append(hashlib.sha256(pos.to_bytes(8, "big") + nodes[left] + nodes[right]).digest())
             stack.append((h + 1, len(nodes) - 1))
     return nodes, [i for _, i in stack]
 
