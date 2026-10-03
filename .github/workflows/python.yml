@@ -35,3 +35,8 @@ jobs:
 
       - name: pytest
         run: python -m pytest -q
+
+      # The leak-lint tests live next to the lint in .github/, outside the test paths. They use
+      # synthetic terms only, so this pull_request job needs no secret.
+      - name: leak-lint tests
+        run: python -m pytest -q .github/test_leak_lint.py
