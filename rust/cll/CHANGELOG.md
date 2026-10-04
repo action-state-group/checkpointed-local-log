@@ -5,6 +5,12 @@
 - **BREAKING: no default witness.** `impl Default for WitnessClient` and
   `witness::DEFAULT_TS_URL` are removed: build a client with
   `WitnessClient::new(url)` and the URL you choose.
+- **`WitnessClient` follows no redirect and caps response bodies.** It is
+  built with `redirects(0)`: a 3xx is returned as `WitnessError::Status`, so
+  a request never reaches a host the caller did not name. Every response body
+  is read up to `witness::MAX_RESPONSE_BYTES` (1 MiB); a larger one is
+  `WitnessError::TooLarge` (a new variant). An error body is read under the
+  same cap and kept to 4096 characters in the error.
 
 ## 0.2.1
 
