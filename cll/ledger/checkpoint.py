@@ -85,6 +85,8 @@ __all__ = [
     "DEFAULT_TS_URL",
 ]
 
+#: Deprecated, used by nothing in this module: kept only so code written
+#: against 0.4 still imports. There is no default Transparency Service.
 DEFAULT_TS_URL = "https://anchor.agentactioncapsule.org"
 _CHECKPOINT_DIR_NAME = "checkpoints"
 _CONFIG_FILE = "config.json"
@@ -102,7 +104,8 @@ class RollbackError(RuntimeError):
 class CheckpointConfig:
     """Operator-declared checkpointing policy (persisted as checkpoints/config.json)."""
 
-    ts_urls: list[str] = field(default_factory=lambda: [DEFAULT_TS_URL])
+    # No default Transparency Service: registration is with the ones named here.
+    ts_urls: list[str] = field(default_factory=list)
     cadence_entries: int = 100
     max_lag_entries: int = 200
 
@@ -116,7 +119,7 @@ class CheckpointConfig:
     @classmethod
     def from_dict(cls, d: dict) -> CheckpointConfig:
         return cls(
-            ts_urls=d.get("ts_urls", [DEFAULT_TS_URL]),
+            ts_urls=list(d.get("ts_urls", [])),
             cadence_entries=int(d.get("cadence_entries", 100)),
             max_lag_entries=int(d.get("max_lag_entries", 200)),
         )
@@ -360,7 +363,7 @@ def _raw_ed25519_to_pem(raw: bytes) -> bytes:
 
 def register_checkpoint(
     cp: CheckpointRecord,
-    ts_url: str = DEFAULT_TS_URL,
+    ts_url: str,
     *,
     timeout: float = 30.0,
 ) -> WitnessRecord:
