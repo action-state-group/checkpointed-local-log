@@ -1,7 +1,10 @@
 {
-  "$comment": "The closed value set of record.epistemic_type, as a machine-readable list. Tests read this file instead of a second hand-typed enum, so the two cannot drift apart; a change to the set is made here first.",
+  "$comment": "Vendored, not owned here. The closed value set of record.epistemic_type is owned by the Internet-Draft draft-mih-agent-evidence-layer-00 (Evidence Layer, posted to the IETF datatracker as revision 00), section 4.1 'Epistemic Type' (\"epistemic_type is closed and is this document's\"). Until IANA creates the 'Evidence Layer Epistemic Types' registry, the interim registry is agent-action-capsule spec/REGISTRY.md section 17. This file lists the same eight values, as a machine-readable list, so tests read it instead of a second hand-typed enum. The draft's tokens are lower case; the upper-case spelling here is this library's own convention. A change to the set is made in the draft first and re-vendored here.",
   "source": {
-    "section": "Record header",
+    "document": "draft-mih-agent-evidence-layer-00",
+    "section": "4.1 Epistemic Type",
+    "url": "https://datatracker.ietf.org/doc/draft-mih-agent-evidence-layer/",
+    "interim_registry": "https://github.com/action-state-group/agent-action-capsule/blob/main/spec/REGISTRY.md (section 17)",
     "owning_field": "record.epistemic_type"
   },
   "values": [
