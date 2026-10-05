@@ -322,7 +322,13 @@ mod tests {
             Err(WitnessError::Status { status: 302, .. }) => {}
             other => panic!("expected the 302 as an error, got {other:?}"),
         }
-        assert_eq!(hits.load(Ordering::SeqCst), 2);
+        // check_inclusion reads only a 404 as "not yet included"; a 302 is an
+        // error, never Ok(None) and never followed.
+        match client.check_inclusion(&"ab".repeat(32)) {
+            Err(WitnessError::Status { status: 302, .. }) => {}
+            other => panic!("expected the 302 as an error, got {other:?}"),
+        }
+        assert_eq!(hits.load(Ordering::SeqCst), 3);
         assert_eq!(
             elsewhere_hits.load(Ordering::SeqCst),
             0,
