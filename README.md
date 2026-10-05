@@ -53,8 +53,10 @@ from this spec to the package's modules.
 
 ### The `cll` Rust crate
 
-`rust/cll/` (crates.io: `cll`) is a Rust sibling of the Python package,
-covering the same substrate scope as the Go and TypeScript ports below: the
+`rust/cll/` (crates.io: [`checkpointed-local-log`](https://crates.io/crates/checkpointed-local-log);
+the name `cll` there belongs to an unrelated crate, but the library is imported
+as `cll`) is a Rust sibling of the Python package, covering the same substrate
+scope as the Go and TypeScript implementations (see the next section): the
 Merkle Mountain Range (leaf/interior hashing, peaks, root, inclusion and
 consistency proofs), the MMRIVER-conformant peak-list commitment, per-record
 range-membership proofs, signed COSE_Sign1 checkpoints (byte-for-byte port
@@ -97,7 +99,7 @@ closing and manifests, the rebuildable lookup index, the append-only capsule
 store) and `cll.revocation` (the key-validity timeline) — is **not ported to Go
 or TypeScript, and this is a decision rather than a gap.** That layer is the
 business logic of *who may write and how records are admitted, archived,
-queried, and key-checked*; it was folded into this Python package by the W3
+queried, and key-checked*; it was folded into this Python package by the
 "one neutral library per spec" extraction of `capsule-ledger`
 (2026-09-01), and nothing downstream in the AAC ecosystem requires it in Go or
 TypeScript. Cross-language byte-parity is therefore required for the substrate
@@ -105,6 +107,61 @@ TypeScript. Cross-language byte-parity is therefore required for the substrate
 layer. Should a Go or TS consumer ever need admission or revocation semantics,
 adding them is a new, separately-scoped decision, not a matter of "catching up"
 to the reference.
+
+## The `evidencebook` Rust crate
+
+`rust/evidencebook/` (crates.io: [`evidencebook`](https://crates.io/crates/evidencebook),
+0.0.1) implements the store-level semantics of the Evidence Layer
+Internet-Draft, [`draft-mih-agent-evidence-layer-00`](https://github.com/action-state-group/agent-action-capsule/blob/main/spec/draft-mih-agent-evidence-layer-00.md)
+(kept in `agent-action-capsule`, not here). It is a second layer on top of
+this repository's log: evidencebook owns records, their epistemic types and
+links, retention, disclosure, index classes, request answers, and reconcile
+and close; the embedded `cll` crate owns append order, the MMR, checkpoints,
+inclusion and consistency. `cll` is embedded, never exposed:
+`tests/public_api.rs` fails if a public item names a `cll` type. Each public
+item names the I-D section it implements, and the I-D is
+implementation-independent: a store conforms by meeting its requirements, not
+by using this crate.
+
+| Module | I-D section | What it does |
+|---|---|---|
+| `record` | Record header, Epistemic Type, Typed Links | The record header and its validation, the eight epistemic types (read from the vendored schema shared with the Go and Python implementations), the six link types. |
+| `retention` | Record/Payload Separation; Retention States | Folds lifecycle records into a retention state per record and payload; a move to `DELETED` is a tombstone. |
+| `disclosure` | Disclosure Records | The store's own statement of what it revealed, with each withheld field listed under its committed digest. |
+| `index` | Index Classes | Operational, authenticated and discovery index traits; a discovery result cannot be used as proof input (a `compile_fail` doctest pins this). |
+| `substrate` | The Commitment-Substrate Interface | The `Substrate` and `Signer` traits and `CllSubstrate`, the reference implementation: a file-backed MMR plus `checkpoints.jsonl`. |
+| `request` | Answering a Request; Three Kinds of "No" | Request subjects, outcomes, the kinds of "no", the registered refusal reasons, and verification of a signed refusal (tokens from the companion `draft-mih-agent-evidence-request-00`). |
+| `reconcile` | Reconcile and Close | Pairs halves from two independently held accounts into one of six states, under the profile's join policy and comparator; one unavailable half is not counted as disagreement. |
+| `padding` | Privacy Considerations (what a checkpoint reveals) | Padding records with a fresh store nonce, so the leaf count reaches a bucket boundary before a checkpoint. |
+| `canonical` | Record identity | RFC 8785 JCS and `JSON-DIGEST`; a record's `record_id` is its capsule's `capsule_id`. |
+
+`tests/refusal_interop.rs` verifies a refusal signed by the Python
+implementation (the same vector the Go implementation checks). Its own CI,
+`.github/workflows/evidencebook.yml`, runs on changes under
+`rust/evidencebook/` or `rust/cll/`: a vocabulary gate, `cargo fmt`,
+`cargo clippy -D warnings`, `cargo test --all-features`, and `cargo doc` with
+warnings denied.
+
+```sh
+cd rust/evidencebook && cargo test && ./scripts/check-vocabulary.sh
+```
+
+See [`rust/evidencebook/README.md`](rust/evidencebook/README.md).
+
+## Conformance vectors
+
+| Directory | What it pins | Checked by |
+|---|---|---|
+| `mmr-conformance-vectors/` | MMR roots and inclusion, consistency and range proofs, byte for byte (the Python package is the reference). | `rust/cll/tests/`, the Python tests |
+| `checkpoint-conformance-vectors/` | `CheckpointRecord` signing bodies, digests and Ed25519 signatures, and COSE checkpoint vectors. | `rust/cll/tests/`, the Python tests |
+| `commitment-conformance-vectors/` | The byte encoding of a checkpoint's MMR accumulator: a deterministic CBOR array of 32-byte peaks, tallest first. 7 positive and 5 must-fail cases, with a standalone `reference_verifier.py`. | `rust/cll/tests/mmr_conformance_vectors.rs`, `tests/checkpoint/test_commitment_object.py`, CI (`rust.yml`) |
+| `mmr-profile-vectors/` | 30 known-answer vectors for `draft-bryce-cose-receipts-mmr-profile-03`, derived from that draft's text alone. They are the draft's values, not this repository's: CLL uses a different leaf hash and proof format, so they do **not** test CLL; one test checks that CLL's node array equals the draft's tree when the leaf preimage is `0x00 || body_digest`. `STATUS-03.md` records which review findings -03 fixed. | `tests/checkpoint/test_mmr_profile_vectors.py`, CI (`generate.py --check` in `rust.yml`) |
+
+```sh
+python3 commitment-conformance-vectors/reference_verifier.py
+python3 mmr-profile-vectors/generate.py --check
+python3 -m pytest tests/checkpoint
+```
 
 ## Building the draft
 
@@ -121,6 +178,7 @@ make DRAFT=draft-mih-scitt-checkpointed-local-log-00 \
      draft-mih-scitt-checkpointed-local-log-00.txt
 ```
 
+`spec/` holds `-00`, `-01` and `-02`; set `DRAFT` to the one you want.
 `spec/.refcache/` is committed so the build never depends on `bib.ietf.org`
 being reachable. See comments in `spec/Makefile` for `rebuild` and
 `refresh-refs` targets.
