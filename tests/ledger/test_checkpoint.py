@@ -12,7 +12,7 @@ Covers:
 
 Live network tests (off by default; opt-in via CAPSULE_TEST_LIVE_TS=1).
 
-**Ported from capsule-ledger per the W3.1 CLL extraction (2026-09-01).**
+**Ported from capsule-ledger in the CLL extraction (2026-09-01).**
 ``LocalSigner`` and the synthetic-capsule builder below are minimal,
 self-contained test helpers -- deliberately independent of
 ``capsule_ledger.guards.*`` (guard/policy-layer product code, the wrong

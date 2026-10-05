@@ -2,8 +2,8 @@
 """Time-fenced key revocation, reconstructed from the ledger's own rotation
 history.
 
-**Ported from ``capsule-ledger``'s ``guards/revocation.py`` per the W3
-CLL-revocation reconciliation (2026-09-02).** The W3.1 CLL extraction
+**Ported from ``capsule-ledger``'s ``guards/revocation.py`` in the
+CLL-revocation reconciliation (2026-09-02).** The CLL extraction
 originally left this check out of :class:`~cll.ledger.store.LedgerStore`
 on the theory that it was guard/policy-layer product code; the 2026-09-01
 dependency-trace ruling reclassified it as a verify-primitive that belongs

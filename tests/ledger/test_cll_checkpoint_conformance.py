@@ -4,7 +4,7 @@
 The signing body ``cll.ledger.checkpoint``'s emit path produces must be
 byte-identical to the canonical CLL shape scitt-cose's ``cll.Checkpoint``
 parses and verifies -- both are ports of the same original
-``CheckpointRecord.signing_body`` (Amendment E). They diverged once: this
+``CheckpointRecord.signing_body``. They diverged once: this
 module's ``CheckpointRecord`` shipped an 8-field body with no ``log_id``
 while the canonical shape (capsule-emit 0.4.0, scitt-cose 0.2.2) is 9 fields
 with ``log_id`` (empty string for single-node). This test is the guard that
@@ -12,7 +12,7 @@ stops that recurring: it runs a checkpoint this module actually emitted
 through scitt-cose's own parser and digest function and demands both a
 clean parse and a byte-identical digest.
 
-**Ported from capsule-ledger per the W3.1 CLL extraction (2026-09-01).**
+**Ported from capsule-ledger in the CLL extraction (2026-09-01).**
 ``scitt-cose`` is not optional here the way it is for
 ``TestVerifyReceiptOffline`` in ``test_checkpoint.py``: this package's own
 ``dependencies`` require ``scitt-cose>=0.2.0`` directly -- so any environment

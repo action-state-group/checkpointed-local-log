@@ -220,7 +220,7 @@ def test_digest_changes_with_log_id():
     assert cp_a.signature != cp_b.signature  # signer covers the digest, so this must differ too
 
 
-# -- grade: the self-attested -> witnessed ladder transition (O16 item 11) --
+# -- grade: the self-attested -> witnessed ladder transition --
 
 
 def _genuine_witness_record(cp, ts_url: str = "https://witness.example") -> WitnessRecord:
@@ -281,7 +281,7 @@ def test_grade_is_witnessed_once_a_single_stamp_lands(monkeypatch):
 
 
 def test_grade_is_any_of_not_all_of_across_multiple_witnesses(monkeypatch):
-    # Multi-witness any-of (frozen surface §2a.3): the first stamp already
+    # Multi-witness any-of: the first stamp already
     # flips the grade; a second, independently-operated (here: unpinned,
     # shape-valid-but-identity-unverified -- item D) witness compounds
     # independence without gating the grade back down.
@@ -543,7 +543,7 @@ def test_due_for_checkpoint_and_lag_exceeded():
     assert lag_exceeded(cfg, 201)
 
 
-# -- O16 audit item 5: the age-based cadence leg (+ idle-silence guard) -----
+# -- the age-based cadence leg (+ idle-silence guard) -----
 
 
 def test_checkpoint_config_defaults_cadence_seconds_to_15_minutes():
@@ -739,8 +739,8 @@ def test_register_checkpoint_never_dispatches_to_register_route(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# register_checkpoint_stub -- the in-process stub witness (0.5.0 migration
-# audit item 6, frozen surface §1a.4). Zero network, exercises the real
+# register_checkpoint_stub -- the in-process stub witness (0.5.0
+# migration). Zero network, exercises the real
 # checkpoint-build path, and the grade must never leave self-attested no
 # matter how many stub stamps land.
 # ---------------------------------------------------------------------------
@@ -767,7 +767,7 @@ def test_register_checkpoint_stub_grade_stays_self_attested():
 
     assert cp.witnesses, "stub registration should still produce a WitnessRecord"
     assert cp.grade() == Grade.SELF_ATTESTED, (
-        "frozen surface §1a.4: stub stamps never reach rung 2 -- the grade "
+        "stub stamps never reach rung 2 -- the grade "
         "must never leave self-attested"
     )
 

@@ -10,7 +10,7 @@ capsule-anchor ``/v1/digest`` generic-digest-anchoring endpoint (not the
 checkpoint-aware ``/checkpoints`` COSE route ``cll.checkpoint.emit.
 register_checkpoint`` posts to — part of the two-stage
 witness rollout). The two are wire-COMPATIBLE in field shape (both are the
-Amendment E CLL checkpoint shape) but not the same object, the same
+CLL checkpoint shape) but not the same object, the same
 signature scheme, or the same registration protocol — so their same-named
 classes (``CheckpointRecord`` etc.) intentionally live at a different module
 path (``cll.ledger.checkpoint.*`` vs ``cll.checkpoint.*``) rather than being
@@ -20,7 +20,7 @@ reimplemented) plus the on-disk checkpoint storage layout described below.
 
 A *checkpoint* is a signed, tamper-evident snapshot of the MMR's current peak
 set: ``{v, kind, log_id, mmr_size, root, prev_size, prev_root, key_id,
-timestamp}`` — the CLL shape ratified in Amendment E, wire-identical to
+timestamp}`` — the CLL checkpoint shape, wire-identical to
 ``cll.checkpoint.CheckpointRecord`` and scitt-cose's
 ``cll.Checkpoint``. ``log_id`` identifies which log a checkpoint belongs to
 in a multi-log/multi-peer deployment; single-node ``capsule-ledger`` always
@@ -164,7 +164,7 @@ class CheckpointRecord:
     after registration with one or more Transparency Services.
 
     Wire-identical to ``cll.checkpoint.CheckpointRecord`` and
-    scitt-cose's ``cll.Checkpoint`` (Amendment E CLL shape). ``log_id``
+    scitt-cose's ``cll.Checkpoint`` (the CLL checkpoint shape). ``log_id``
     defaults to ``""``: single-node ``capsule-ledger`` never multiplexes
     logs, so every checkpoint it emits carries the empty log id.
     """

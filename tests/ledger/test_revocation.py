@@ -3,7 +3,7 @@
 a revoked key's signature is trusted for records dated at-or-before its
 revocation timestamp, and rejected for anything claiming to postdate it.
 
-**Ported from ``capsule-ledger``'s ``tests/test_key_rotation.py`` per the W3
+**Ported from ``capsule-ledger``'s ``tests/test_key_rotation.py`` in the
 CLL-revocation reconciliation (2026-09-02).** The CLI-facing tests (``capsule
 key rotate``/``status``) stayed behind -- cll ships no CLI. The capsule
 builder below is a minimal, self-contained stand-in for

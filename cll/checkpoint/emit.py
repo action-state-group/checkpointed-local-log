@@ -7,9 +7,8 @@ Registering its digest with a SCITT Transparency Service (TS)
 yields a COSE Receipt that provides third-party freshness evidence up to that
 checkpoint.
 
-This is the CLL (Checkpointed Local Log) checkpoint shape ratified in
-Amendment E: the ``capsule-ledger`` shape shipped in ``ldg-peaks-checkpoint-
-emit`` (2026-08-18), plus ``log_id`` -- the field a multi-log or multi-peer
+This is the CLL (Checkpointed Local Log) checkpoint shape: the
+``capsule-ledger`` checkpoint shape (2026-08-18), plus ``log_id`` -- the field a multi-log or multi-peer
 deployment (e.g. a mesh node checkpointing several independent streams) needs
 to tell checkpoints apart. ``key_id`` doubles as a peer identifier in that
 setting: it is whatever label the signer's own key is registered under, and a
@@ -31,7 +30,7 @@ Verification chain (all links must hold):
 
 These four links are still four separate, caller-composed primitives here --
 this module never assembles them itself. ``capsule_emit.bundle.bundle()``
-(O16 audit item 14) is what assembles all of them, plus the record's own
+is what assembles all of them, plus the record's own
 receipt and the prior checkpoint's consistency proof, into ONE
 standalone-verifiable artifact for one record; ``capsule_emit.bundle
 .verify_bundle()`` is the composed offline check. Reach for the primitives
@@ -216,7 +215,7 @@ def due_for_checkpoint(
 ) -> bool:
     """True once ``entries_since_last`` reaches the declared cadence, or
     ``seconds_since_last`` reaches ``cfg.cadence_seconds`` -- whichever comes
-    first ("100 entries or 15 minutes", frozen surface §0, both configurable).
+    first ("100 entries or 15 minutes", both configurable).
 
     The age leg only ever applies when there is at least one unwitnessed
     entry: with ``entries_since_last == 0`` this is always ``False``
@@ -240,7 +239,7 @@ def lag_exceeded(cfg: CheckpointConfig, entries_since_last: int) -> bool:
 
 
 class Grade(str, Enum):
-    """A checkpoint's position on the ladder (frozen surface §4):
+    """A checkpoint's position on the ladder:
     ``self-attested`` until at least one REAL witness stamp lands, then
     ``witnessed`` -- an any-of transition (§2a.3): the first stamp flips the
     grade, additional stamps only ever compound independence, never gate it.
@@ -273,7 +272,7 @@ class StampVerdict(str, Enum):
     NOT evidence of forgery, just evidence we cannot check. A self-hosted/
     zero-egress TS a caller has not (yet) pinned lands here, never
     ``INVALID`` -- conflating the two false-accused exactly the deployments
-    frozen §1a.2 promises zero-egress operation to."""
+    promised zero-egress operation."""
 
     INVALID = "invalid"
     """Either not even a well-formed, checkpoint-bound stamp (garbage bytes,
@@ -286,8 +285,7 @@ class WitnessRecord:
     """Evidence that a checkpoint's digest was seen by one Transparency Service.
 
     ``is_stub`` marks a record produced by the in-process stub witness
-    (``CAPSULE_WITNESS=stub`` -- see ``capsule_emit.witness`` and frozen
-    dev-surface §1a.4) rather than a real Transparency Service. It is a
+    (``CAPSULE_WITNESS=stub`` -- see ``capsule_emit.witness``) rather than a real Transparency Service. It is a
     convenience flag for this codebase's own grade computation
     (:meth:`CheckpointRecord.grade`) and rendering -- **not** the normative
     stub marker itself. The normative marker's name and value (``cll-stub``
@@ -416,7 +414,7 @@ class CheckpointRecord:
         are excluded from this any-of explicitly, by design -- not merely
         as an incidental effect of their placeholder ``receipt_b64`` failing
         COSE-shape verification. The stub proves the mechanics work, never
-        that a third party saw anything (frozen surface §1a.4); a future
+        that a third party saw anything; a future
         real COSE-wire stub encoding that happened to parse structurally
         must still never grade WITNESSED.
 
@@ -759,8 +757,7 @@ def register_checkpoint_stub(cp: CheckpointRecord, ts_url: str | None = None) ->
     special case to display it. ``is_stub=True`` is always set; grading
     (:meth:`CheckpointRecord.grade`) excludes stub records from the
     witnessed any-of, so a checkpoint registered only via this function stays
-    ``Grade.SELF_ATTESTED`` -- frozen surface §1a.4: "the grade never leaves
-    self-attested."
+    ``Grade.SELF_ATTESTED``: the grade never leaves self-attested.
     """
     digest = cp.digest()
     entry_hash = hashlib.sha256(bytes.fromhex(digest)).hexdigest()
@@ -907,7 +904,7 @@ def verify_witness_stamp_tristate(
     not two (supersedes an earlier two-state collapse that reported this
     same case as an unqualified failure -- fatal to a bundle when the ts_url
     happened to be unpinned, which false-accused every self-hosted/
-    zero-egress TS deployment frozen §1a.2 promises, indistinguishable at
+    zero-egress TS deployment, indistinguishable at
     the wire from this forger):
 
     With ``ts_pubkey_pem`` (a caller-pinned/cached TS public key): the TS

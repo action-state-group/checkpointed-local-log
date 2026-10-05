@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """A minimal signing-key abstraction for local, application-attested records.
 
-**Ported from ``capsule-ledger``'s ``guards/signing.py`` per the W3
+**Ported from ``capsule-ledger``'s ``guards/signing.py`` in the
 CLL-revocation reconciliation (2026-09-02).** Content-neutral: nothing here
 names a product, a company, or a capsule format. It exists to give
 :mod:`cll.revocation`'s time-fenced key-revocation check a real,
