@@ -26,8 +26,8 @@ retains — this module never caches or persists one; every call re-derives
 the MMR fresh from the caller-supplied ``entries`` (each raw log line is one
 leaf, in append order).
 
-**Content-agnostic by design (ported from ``capsule_emit.bundle`` per the
-W3.1 CLL extraction, 2026-09).** This module knows nothing about capsules:
+**Content-agnostic by design (ported from ``capsule_emit.bundle`` in the
+CLL extraction, 2026-09).** This module knows nothing about capsules:
 ``entries`` is a plain list of dicts, the leaf-identifying field defaults to
 ``"capsule_id"`` (the historical name) but is a caller-supplied parameter
 (``id_field``), and record filtering (skipping non-leaf bookkeeping entries

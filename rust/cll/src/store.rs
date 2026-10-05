@@ -1,6 +1,6 @@
 //! `checkpoints.jsonl` reader/writer -- the exact on-disk shape
 //! `capsule-emit-mesh/checkpointing.py`'s `CheckpointState` reads and
-//! writes (which is itself wire-identical to the Amendment E CLL
+//! writes (which is itself wire-identical to the CLL
 //! checkpoint shape this crate's `checkpoint::CheckpointRecord` carries):
 //! one JSON object per line, each line `CheckpointRecord::canonical_json()`
 //! (i.e. `CheckpointRecord.to_dict()`) with an ADDITIVE `checkpoint_cose`

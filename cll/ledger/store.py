@@ -12,10 +12,10 @@ Field mapping note: the ``agent-action-capsule`` envelope has no literal
 field and ``scan(counterparty=...)`` matches ``operator`` — the closest available
 mapping. Flagged as an open question in STATUS.md rather than guessed silently.
 
-**Ported from ``capsule-ledger`` per the W3.1 CLL extraction (2026-09-01).**
+**Ported from ``capsule-ledger`` in the CLL extraction (2026-09-01).**
 :meth:`verify` runs base capsule verification PLUS a time-fenced
 key-revocation check (:mod:`cll.revocation`) by DEFAULT — zero caller
-configuration required. The W3.1 extraction originally left that check out
+configuration required. The extraction originally left that check out
 on the theory that it was guard/policy-layer product code; the 2026-09-01
 dependency-trace ruling reclassified it as a verify-primitive that belongs
 in this package (a counterparty verifying a log needs a complete verify out

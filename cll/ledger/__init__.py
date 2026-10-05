@@ -11,7 +11,7 @@ capsule-ledger's own checkpoint/registration protocol, layered on top of the
 shared MMR core (``cll.checkpoint.core``); see that module's docstring for
 how and why it differs from ``cll.checkpoint``'s own checkpoint/emit path.
 
-**Ported from ``capsule-ledger/capsule_ledger/ledger/*.py`` per the W3.1 CLL
+**Ported from ``capsule-ledger/capsule_ledger/ledger/*.py`` in the CLL
 extraction (2026-09-01).** ``capsule-ledger`` now depends on this package
 and re-exports these symbols as thin compatibility wrappers. ``LedgerStore
 .verify`` carries the time-fenced key-revocation check (:mod:`cll.revocation`)

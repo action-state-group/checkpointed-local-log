@@ -15,11 +15,10 @@ A caller identifies leaves by whatever field name its own record shape uses
 not a capsule-specific binding.
 
 **History.** Originally built inside ``capsule-emit`` (ported there from
-``capsule-ledger/capsule_ledger/mmr/{core,index,store}.py`` per Amendment E,
-2026-08-21, on the reasoning that the CLL core is substrate a counterparty
+``capsule-ledger/capsule_ledger/mmr/{core,index,store}.py`` on 2026-08-21, on the reasoning that the CLL core is substrate a counterparty
 needs to verify a log, so it should live where any consumer can depend on
 it without forking). Graduated to this repo as the ``cll`` package per the
-W3 one-neutral-library-per-spec decision (2026-09-01): the log layer is
+one-neutral-library-per-spec decision (2026-09-01): the log layer is
 deliberately NOT capsule-specific -- that is its adoption story (e.g. a
 trace registry running this exact mechanism over TRACE records) -- so it
 does not live under a ``capsule-*``-branded name. ``capsule-emit`` now

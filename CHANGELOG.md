@@ -179,8 +179,8 @@ unaffected until they opt in.
 ### Added — the `cll` package: spec + reference library + vectors
 
 Initial release of the `cll` Python package, extracted from `capsule-emit`
-(`capsule_emit.checkpoint`) and `capsule-ledger`'s surviving ledger core per
-the W3 one-neutral-library-per-spec decision. `cll` ships:
+(`capsule_emit.checkpoint`) and `capsule-ledger`'s surviving ledger core under
+the one-neutral-library-per-spec decision. `cll` ships:
 
 - **Append-only log store + hash chains** (`cll.ledger`) — JSONL segments
   plus a derived SQLite index, the three-state admission contract, and
