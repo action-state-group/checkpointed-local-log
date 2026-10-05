@@ -8,6 +8,10 @@
 //! same response shape) so this client and that one -- and the Python
 //! ones -- are interchangeable against the same service.
 //!
+//! There is no default witness: a client is built with the URL its caller
+//! chose (`WitnessClient::new`). A public witness is, for example,
+//! `https://witness.agentactioncapsule.org`.
+//!
 //! Deliberately a thin client only: no I/O policy, no cadence, no retry
 //! loop. A caller (e.g. a checkpointer task) decides when/whether to
 //! anchor and how to react to a failed call -- this module never lets a
@@ -15,8 +19,6 @@
 
 use serde::Deserialize;
 use std::time::Duration;
-
-pub const DEFAULT_TS_URL: &str = "https://witness.agentactioncapsule.org";
 
 #[derive(Debug, thiserror::Error)]
 pub enum WitnessError {
@@ -139,12 +141,6 @@ impl WitnessClient {
             }),
             Err(e) => Err(WitnessError::Transport(e.to_string())),
         }
-    }
-}
-
-impl Default for WitnessClient {
-    fn default() -> Self {
-        Self::new(DEFAULT_TS_URL)
     }
 }
 

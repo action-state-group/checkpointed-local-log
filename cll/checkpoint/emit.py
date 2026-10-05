@@ -54,15 +54,12 @@ see ``capsule_emit.witness``. That is a caller of this module, not a change
 to it: everything above stays true for direct/manual use — nothing here
 reaches for a signing key, a schedule, or the network on its own.
 
-The free public-good witness tier lives at ``DEFAULT_TS_URL``
-(``witness.agentactioncapsule.org`` -- semantically a witness, not the
-anchor; see ``_PENDING_CNAME_TARGETS`` below for its current DNS status)
--- prefilled as the config default so a caller who wants it need not look it
-up, but never contacted unless ``register_checkpoint``/``verify_receipt_offline``
-is actually called, and freely substitutable with any conforming Transparency
-Service. A generated config file should show it commented out (see
-``EXAMPLE_CONFIG_TOML``), so opting in is an explicit uncomment, not a silent
-default.
+There is no default witness: a checkpoint is registered only with a URL
+the caller passes (``register_checkpoint``) or lists (``CheckpointConfig
+.ts_urls``, empty by default), and a witness stamp is trusted only under a key
+the caller supplies (``verify_witness_stamp_tristate``). A public witness is,
+for example, ``https://witness.agentactioncapsule.org``; a generated config
+shows such a line commented out (``EXAMPLE_CONFIG_TOML``).
 
 ``register_checkpoint`` POSTs the checkpoint to the TS's ``/checkpoints``
 route (single-host ruling, 2026-08-27) -- never ``/register``, the opt-in
@@ -113,72 +110,26 @@ __all__ = [
     "EXAMPLE_CONFIG_TOML",
 ]
 
+#: Deprecated, used by nothing in this library: a public witness's URL and
+#: key, kept only so code written against 0.4 still imports. Nothing is sent
+#: to this URL unless a caller passes it, and no stamp is verified under this
+#: key unless a caller passes it. Removed in a later release.
 DEFAULT_TS_URL = "https://witness.agentactioncapsule.org"
-
-#: The default free public-good witness's Ed25519 public key, PINNED so the
-#: DEFAULT read path (``verify_witness_stamp_offline``/``grade()`` called
-#: with no caller-supplied ``ts_pubkey_pem``) can tell "a stamp this exact
-#: witness actually signed" apart from "a receipt shape that merely
-#: reconstructs a root, from any key at all" -- closing the sophisticated
-#: file-forger the naive presence-only fix left
-#: open (a forger with the *public* ``scitt_cose.build_receipt`` mints a
-#: well-formed single-leaf receipt over the correct ``entry_hash``, signed
-#: with a key of their own choosing; without a pin, structural root
-#: reconstruction alone is key-independent and cannot tell that apart from
-#: the real thing). Only ``WitnessRecord``s whose ``ts_url`` equals
-#: ``DEFAULT_TS_URL`` exactly are matched against this pin -- an attacker
-#: cannot make an unrelated stamp match it just by relabelling ``ts_url``,
-#: since the pinned key itself is fixed here, not derived from the record.
-#:
-#: Fetched 2026-08-24 from the live ``GET /anchor/authority-pubkey`` endpoint
-#: (``anchor.agentactioncapsule.org`` -- the host ``DEFAULT_TS_URL`` currently
-#: dispatches to per ``_PENDING_CNAME_TARGETS``) over HTTPS, and cross-checked
-#: against that same response's ``key_id`` (``sha256(pubkey)[:16]``, matching
-#: capsule-anchor's own ``StaticKeyProvider.active_key_id()`` derivation --
-#: see capsule-anchor's ``deploy/KEY-MANAGEMENT.md``) before being committed
-#: here -- self-consistency the response could not fake without also holding
-#: the private key.
-#:
-#: Rotates only on an operator-announced capsule-anchor key rotation
-#: (KEY-MANAGEMENT.md's rotation procedure). A stale pin fails CLOSED: a
-#: checkpoint witnessed under a rotated key demotes to "TS identity
-#: unverified" (self-attested) rather than silently accepting the wrong key
-#: -- update both constants below together when that happens.
 DEFAULT_TS_PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAObtlTJ3Ar+HA7e8N7/qmkJm4UYg2ybom4EkVNYQPlrU=
 -----END PUBLIC KEY-----
 """
-
-#: ``sha256(<raw 32-byte pubkey>)[:16]`` for :data:`DEFAULT_TS_PUBLIC_KEY_PEM`
-#: -- matches the ``key_id`` capsule-anchor's own ``/anchor/authority-pubkey``
-#: and ``/health`` endpoints publish for the current signing key. Not used
-#: for verification itself (the PEM is); kept alongside it so a future
-#: rotation editing one constant without the other is easy to catch by eye
-#: or a test, rather than silently pinning a key whose recorded id lies.
 DEFAULT_TS_PUBLIC_KEY_ID = "19a9ab3e02fad55c"
 
-#: [currently anchor., domain mapping pending] ``witness.agentactioncapsule.org``
-#: is the checkpoint-primary name for the SAME capsule-anchor service
-#: ``anchor.agentactioncapsule.org`` already runs (single-host ruling,
-#: 2026-08-27: one deployment, two routes -- ``/checkpoints`` default,
-#: ``/register`` opt-in) -- but the ``witness.aac`` hostname itself has no DNS
-#: record yet. Until Steven maps the domain, a request to the *default* URL is
-#: dispatched to the anchor host directly (which already answers
-#: ``/checkpoints`` -- same code, same deployment) so registration keeps
-#: working today; an explicit non-default ``ts_url`` is never rewritten.
-#: Remove this indirection once the ``witness.aac`` domain mapping is live.
-_PENDING_CNAME_TARGETS = {DEFAULT_TS_URL: "https://anchor.agentactioncapsule.org"}
-
-#: A generated-config snippet: the witness URL is prefilled with the free
-#: public-good tier but shipped COMMENTED OUT, so registration stays opt-in
-#: even when a caller copies this block verbatim. Any conforming TS may be
-#: substituted for the URL.
-EXAMPLE_CONFIG_TOML = f"""\
+#: A generated-config snippet: the witness line is an example, shipped
+#: COMMENTED OUT, so registration stays opt-in even when a caller copies this
+#: block verbatim. Any conforming TS may be named.
+EXAMPLE_CONFIG_TOML = """\
 [checkpoint]
 cadence_entries = 100
 cadence_seconds = 900  # 15 minutes -- age leg; only fires with unwitnessed entries
 max_lag_entries = 200
-# ts_urls = ["{DEFAULT_TS_URL}"]
+# ts_urls = ["https://witness.agentactioncapsule.org"]  # an example: name the witness(es) you choose
 """
 
 
@@ -469,13 +420,12 @@ class CheckpointRecord:
         real COSE-wire stub encoding that happened to parse structurally
         must still never grade WITNESSED.
 
-        Without ``ts_pubkey_pem``, a stamp from the pinned default witness
-        (``DEFAULT_TS_URL``) is still signature-verified automatically; any
-        other unpinned ``ts_url`` confirms structural + checkpoint-binding
-        authenticity only, which is not enough to grade WITNESSED -- see
-        :func:`verify_witness_stamp_offline` for exactly what each tier does
-        and does not prove. Pass a caller-pinned/cached TS public key for the
-        full identity-bound guarantee against a non-default witness.
+        Without ``ts_pubkey_pem``, a stamp confirms structural +
+        checkpoint-binding authenticity only, which is not enough to grade
+        WITNESSED -- see :func:`verify_witness_stamp_offline` for exactly what
+        each tier does and does not prove. Pass a caller-pinned/cached TS
+        public key for the full identity-bound guarantee; no witness has a
+        built-in key.
 
         Two rungs here is correct, not a truncated ladder: the CLL ladder
         has three (self-attested / witnessed / countersigned), but
@@ -715,7 +665,7 @@ def _continuity_refusal(body: str, message: str) -> WitnessContinuityRefused | N
 
 def register_checkpoint(
     checkpoint_cose: bytes,
-    ts_url: str = DEFAULT_TS_URL,
+    ts_url: str,
     *,
     timeout: float = 30.0,
 ) -> WitnessRecord:
@@ -738,15 +688,13 @@ def register_checkpoint(
     checkpoint layer directly may also call it explicitly with its own
     ``checkpoint_to_cose()`` output.
 
-    ``ts_url`` is what's recorded on the returned ``WitnessRecord`` (the
-    semantic identity of the witness); the actual HTTP request may be
-    dispatched elsewhere for the *default* URL only -- see
-    ``_PENDING_CNAME_TARGETS``.
+    ``ts_url`` is the witness the caller chose: the request goes to exactly
+    that URL (never rewritten), and it is recorded on the returned
+    ``WitnessRecord``. There is no default.
     """
     from .cose_wire import CLL_CHECKPOINT_CONTENT_TYPE
 
-    dispatch_url = _PENDING_CNAME_TARGETS.get(ts_url, ts_url)
-    url = dispatch_url.rstrip("/") + _CHECKPOINT_ROUTE
+    url = ts_url.rstrip("/") + _CHECKPOINT_ROUTE
     req = urllib.request.Request(
         url,
         data=checkpoint_cose,
@@ -962,15 +910,15 @@ def verify_witness_stamp_tristate(
     zero-egress TS deployment frozen §1a.2 promises, indistinguishable at
     the wire from this forger):
 
-    With ``ts_pubkey_pem`` (a caller-pinned/cached TS public key) -- OR no
-    ``ts_pubkey_pem`` but ``witness.ts_url == DEFAULT_TS_URL``, which
-    auto-pins to :data:`DEFAULT_TS_PUBLIC_KEY_PEM`: the TS is KNOWN. The
+    With ``ts_pubkey_pem`` (a caller-pinned/cached TS public key): the TS
+    is KNOWN. The
     Receipt's COSE_Sign1 signature is checked under that specific key --
     verifies -> :attr:`StampVerdict.WITNESSED` (the full identity-bound
     guarantee); fails -> :attr:`StampVerdict.INVALID` (a KNOWN TS's
     signature not matching is forgery, not ambiguity).
 
-    Without a pin, and any other ``ts_url``: the TS is UNKNOWN -- this
+    Without a pin, whatever the ``ts_url``: the TS is UNKNOWN (no witness
+    has a built-in key) -- this
     function proves only that the stamp is a genuine, checkpoint-bound
     Receipt SHAPE, not a fabrication; it does NOT and cannot prove which
     Transparency Service produced it. That is :attr:`StampVerdict.UNVERIFIED`,
@@ -1002,9 +950,6 @@ def verify_witness_stamp_tristate(
         return StampVerdict.INVALID, [
             "scitt-cose is not installed; run: pip install 'capsule-emit[checkpoint]'"
         ]
-
-    if ts_pubkey_pem is None and witness.ts_url == DEFAULT_TS_URL:
-        ts_pubkey_pem = DEFAULT_TS_PUBLIC_KEY_PEM
 
     if ts_pubkey_pem is not None:
         try:

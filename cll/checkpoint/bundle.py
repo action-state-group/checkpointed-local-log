@@ -306,10 +306,9 @@ def verify_bundle_log_integrity(
     it itself and merge the result with this function's.
 
     ``trust_anchor`` is an optional caller-supplied mapping of
-    ``ts_url -> pubkey_pem`` — one or several pins for Transparency Services
-    the caller trusts beyond the built-in pinned default witness
-    (``cll.checkpoint.DEFAULT_TS_URL`` / ``DEFAULT_TS_PUBLIC_KEY_PEM``,
-    always consulted regardless of ``trust_anchor``). Confirms every link
+    ``ts_url -> pubkey_pem`` — the Transparency Services the caller trusts,
+    and the only keys a stamp is verified under (no witness has a built-in
+    key). Confirms every link
     the two-sided append bracket depends on:
 
       1. inclusion — the receipt is genuinely a leaf under the covering

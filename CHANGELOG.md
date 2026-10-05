@@ -7,6 +7,26 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Changed — BREAKING: no default witness, no built-in witness key
+
+The library no longer sends to, or trusts, a particular witness its caller did not name.
+
+- **No built-in key.** `verify_witness_stamp_tristate` (and `verify_witness_stamp_offline`,
+  `CheckpointRecord.grade()`, `verify_bundle_log_integrity`) verify a stamp only under a key the
+  caller supplies (`ts_pubkey_pem` / `trust_anchor`). Before, a stamp at
+  `https://witness.agentactioncapsule.org` was verified under a key built into the library; it now
+  reads `UNVERIFIED` like any other stamp with no key.
+- **No host alias.** `cll.checkpoint.register_checkpoint` sends to exactly the URL it is given.
+  Before, `https://witness.agentactioncapsule.org` was sent to
+  `https://anchor.agentactioncapsule.org` (`_PENDING_CNAME_TARGETS`, removed); the witness host
+  serves `/checkpoints` itself.
+- **No default URL.** `register_checkpoint` (in `cll.checkpoint` and `cll.ledger.checkpoint`)
+  requires `ts_url`. `cll.ledger.checkpoint.CheckpointConfig.ts_urls` defaults to `[]` (it named
+  `https://anchor.agentactioncapsule.org`), so nothing is registered until one is configured.
+- `DEFAULT_TS_URL`, `DEFAULT_TS_PUBLIC_KEY_PEM` and `DEFAULT_TS_PUBLIC_KEY_ID` (and
+  `cll.ledger.checkpoint.DEFAULT_TS_URL`) are deprecated and used by nothing; they stay importable
+  for code written against 0.4 and will be removed in a later release.
+
 ## 0.4.1 — 2026-10-02
 
 ### Changed — requires agent-action-capsule 0.6.0
