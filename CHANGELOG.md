@@ -7,6 +7,8 @@ are documented here. The format follows
 
 ## Unreleased
 
+## 0.5.0 — 2026-10-05
+
 ### Changed — BREAKING: no default witness, no built-in witness key
 
 The library no longer sends to, or trusts, a particular witness its caller did not name.

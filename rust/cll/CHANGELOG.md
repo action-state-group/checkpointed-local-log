@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0
+
 - **BREAKING: no default witness.** `impl Default for WitnessClient` and
   `witness::DEFAULT_TS_URL` are removed: build a client with
   `WitnessClient::new(url)` and the URL you choose.
