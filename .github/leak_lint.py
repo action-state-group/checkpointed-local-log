@@ -40,8 +40,9 @@ Design:
   - **Lockfile URL and hash values are not term-matched** (`package-lock.json`, `yarn.lock`,
     `pnpm-lock.yaml`) when they are what a public registry or a hash looks like: an https URL
     on a host in `PUBLIC_REGISTRY_HOSTS` (its #fragment is still matched), an SRI integrity
-    value, a hex checksum. A URL on any other host, or a file:, git+ssh:, link: or workspace:
-    value, is matched as usual, and so is the rest of a lockfile (see `exempt_remainder`).
+    value whose digest is its algorithm's length, a hex checksum. A URL on any other host, or
+    a file:, git+ssh:, link: or workspace: value, is matched as usual, and so is the rest of a
+    lockfile (see `exempt_remainder`).
   - **Excludes this script, its allowlist, its CI workflow and its tests by filename.**
   - **Scans the COMMITTED tree** (`git ls-files -z`) of ROOT, and never follows a symbolic link
     or reads outside ROOT: on a fork run ROOT is untrusted content.
@@ -51,6 +52,7 @@ Exit 0 = clean; 1 = leak(s) found; 2 = misconfiguration (no term list).
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
@@ -99,8 +101,23 @@ BRACKET_CLASS = "bracketed-id"
 #: GitHub tarball dependency is matched as usual.
 PUBLIC_REGISTRY_HOSTS = frozenset({"registry.npmjs.org", "registry.yarnpkg.com", "crates.io", "static.crates.io"})
 
-#: A Subresource Integrity value: `<algorithm>-<base64 digest>`.
-SRI = re.compile(r"(?:sha1|sha256|sha384|sha512)-[A-Za-z0-9+/]+={0,2}")
+#: A Subresource Integrity value: `<algorithm>-<base64 digest>`, the digest exactly as long as
+#: its algorithm's (sha1 20 bytes, sha256 32, sha384 48, sha512 64), so text that only looks
+#: like base64 is not taken for a digest unless it is that long.
+SRI = re.compile(r"(sha1|sha256|sha384|sha512)-([A-Za-z0-9+/]+={0,2})")
+SRI_DIGEST_BYTES = {"sha1": 20, "sha256": 32, "sha384": 48, "sha512": 64}
+
+
+def sri_digest(part: str) -> bool:
+    """Whether `part` is an SRI value whose digest decodes to its algorithm's length."""
+    m = SRI.fullmatch(part)
+    if m is None:
+        return False
+    try:
+        digest = base64.b64decode(m.group(2), validate=True)
+    except ValueError:
+        return False
+    return len(digest) == SRI_DIGEST_BYTES[m.group(1)]
 #: A yarn 2+ checksum: hex, after an optional cache-key prefix (`10c0/`).
 YARN_CHECKSUM = re.compile(r"(?:[0-9]+[a-z][0-9]*/)?[0-9a-f]{32,}")
 #: A yarn 2+ resolution from the npm registry: `<package>@npm:<version>`.
@@ -145,7 +162,7 @@ def exempt_remainder(field: str, value: str) -> str | None:
     if field in ("resolved", "tarball"):
         return fragment if public_registry_url(value) else None
     if field == "integrity":
-        return "" if value.split() and all(SRI.fullmatch(part) for part in value.split()) else None
+        return "" if value.split() and all(sri_digest(part) for part in value.split()) else None
     if field == "checksum":
         return "" if YARN_CHECKSUM.fullmatch(value) else None
     if field == "resolution":
