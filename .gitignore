@@ -10,3 +10,6 @@ coverage.out
 task_plan.md
 findings.md
 progress.md
+
+# Local secrets: never commit an env file.
+.env.*
