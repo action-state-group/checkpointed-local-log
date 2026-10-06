@@ -14,7 +14,6 @@ name: crates-package
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 permissions:
