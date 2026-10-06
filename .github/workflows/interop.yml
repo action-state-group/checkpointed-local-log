@@ -1,0 +1,103 @@
+name: Same-revision interoperability
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checkpoint-interop:
+    name: Checkpoint interoperability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Build destination TypeScript
+        run: npm ci && npm run build
+        working-directory: ts
+      - name: Install destination Python
+        run: python -m pip install ./python
+      - name: Verify Go, TypeScript, and Python checkpoint bytes
+        shell: bash
+        run: bash .github/scripts/check_checkpoint_interop.sh
+
+  storage-interop:
+    name: Storage interoperability (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [jsonl, sqlite]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Build destination TypeScript
+        run: npm ci && npm run build
+        working-directory: ts
+      - name: Verify bidirectional continuation
+        run: bash go/scripts/check-storage-interop.sh "${{ matrix.backend }}"
+
+  mysql-interop:
+    name: Storage interoperability (mysql)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: interop
+          MYSQL_DATABASE: cll
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pinterop --silent"
+          --health-interval=2s
+          --health-timeout=5s
+          --health-retries=30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Build destination TypeScript
+        run: npm ci && npm run build
+        working-directory: ts
+      - name: Verify bidirectional continuation
+        env:
+          CLL_MYSQL_DSN: root:interop@tcp(127.0.0.1:3306)/cll
+          CLL_MYSQL_URL: mysql://root:interop@127.0.0.1:3306/cll
+        run: bash go/scripts/check-storage-interop.sh mysql

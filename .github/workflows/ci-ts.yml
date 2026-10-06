@@ -1,0 +1,100 @@
+name: TypeScript CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: ts
+env:
+  CLL_ROOT: ..
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+
+  unit-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci
+        working-directory: ts
+      - run: npm run build
+        working-directory: ts
+      - run: npx vitest run --coverage --exclude test/mysql.test.ts
+        working-directory: ts
+
+  mysql:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci
+      - run: npx vitest run test/mysql.test.ts
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci && npm run build
+      - name: Install packed artifact and import every entry point
+        shell: bash
+        run: |
+          package_dir=$(mktemp -d)
+          consumer_dir=$(mktemp -d)
+          trap 'rm -rf "$package_dir" "$consumer_dir"' EXIT
+          npm pack --pack-destination "$package_dir"
+          cd "$consumer_dir"
+          npm init -y
+          npm install "$package_dir"/*.tgz
+          node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql")'
+          node --conditions=browser -e 'await import("@action-state-group/cll")'

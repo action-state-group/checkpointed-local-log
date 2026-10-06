@@ -15,15 +15,7 @@ name: crates-package
 on:
   push:
     branches: [main]
-    paths:
-      - "rust/**"
-      - ".github/workflows/crates-package.yml"
-      - ".github/scripts/check_crate_metadata.py"
   pull_request:
-    paths:
-      - "rust/**"
-      - ".github/workflows/crates-package.yml"
-      - ".github/scripts/check_crate_metadata.py"
 
 permissions:
   contents: read
@@ -37,34 +29,34 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - name: crates.io metadata (keywords, categories, required fields)
-        run: python3 .github/scripts/check_crate_metadata.py rust/cll/Cargo.toml rust/evidencebook/Cargo.toml
+        run: python3 .github/scripts/check_crate_metadata.py rust/Cargo.toml evidencebook/Cargo.toml
 
       - name: package file lists
         run: |
           set -euo pipefail
-          for crate in cll evidencebook; do
-            (cd "rust/$crate" && cargo package --list --allow-dirty) > "/tmp/$crate.list"
-            echo "== rust/$crate"; cat "/tmp/$crate.list"
+          for crate in rust evidencebook; do
+            (cd "$crate" && cargo package --list --allow-dirty) > "/tmp/$crate.list"
+            echo "== $crate"; cat "/tmp/$crate.list"
             if grep -E '^(tests|examples|scripts|target)/|vectors|\.(pem|key|env)$' "/tmp/$crate.list"; then
-              echo "::error::rust/$crate packages a file it must not ship"; exit 1
+              echo "::error::$crate packages a file it must not ship"; exit 1
             fi
           done
 
       - name: checkpointed-local-log dry run
-        working-directory: rust/cll
+        working-directory: rust
         run: cargo publish --dry-run --allow-dirty
 
       - name: evidencebook dry run
         run: |
           set -euo pipefail
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/cll/Cargo.toml | head -1)
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)
           if curl -fsS "https://index.crates.io/ch/ec/checkpointed-local-log" | grep -q "\"vers\":\"$version\""; then
-            (cd rust/evidencebook && cargo publish --dry-run --allow-dirty)
+            (cd evidencebook && cargo publish --dry-run --allow-dirty)
           else
             echo "checkpointed-local-log $version is not on crates.io yet: packaging both crates together."
             ws=$(mktemp -d)
-            cp -R rust/cll rust/evidencebook "$ws/"
-            rm -f "$ws/cll/Cargo.lock" "$ws/evidencebook/Cargo.lock"
-            printf '[workspace]\nmembers = ["cll", "evidencebook"]\nresolver = "2"\n' > "$ws/Cargo.toml"
+            cp -R rust evidencebook "$ws/"
+            rm -f "$ws/rust/Cargo.lock" "$ws/evidencebook/Cargo.lock"
+            printf '[workspace]\nmembers = ["rust", "evidencebook"]\nresolver = "2"\n' > "$ws/Cargo.toml"
             (cd "$ws" && cargo package --workspace --allow-dirty)
           fi

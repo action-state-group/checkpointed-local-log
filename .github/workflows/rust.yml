@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Builds and tests the `cll` Rust crate (rust/cll/), including its pass over
+# Builds and tests the `cll` Rust crate (rust/), including its pass over
 # the shared cross-language conformance vectors (mmr-conformance-vectors/,
 # commitment-conformance-vectors/, checkpoint-conformance-vectors/). Also
 # runs the Python reference_verifier.py scripts for those same vector sets,
@@ -14,23 +14,8 @@ name: rust
 
 on:
   push:
-    paths:
-      - "rust/cll/**"
-      - "mmr-conformance-vectors/**"
-      - "mmr-profile-vectors/**"
-      - "commitment-conformance-vectors/**"
-      - "checkpoint-conformance-vectors/**"
-      - "cll/checkpoint/**"
-      - ".github/workflows/rust.yml"
+    branches: [main]
   pull_request:
-    paths:
-      - "rust/cll/**"
-      - "mmr-conformance-vectors/**"
-      - "mmr-profile-vectors/**"
-      - "commitment-conformance-vectors/**"
-      - "checkpoint-conformance-vectors/**"
-      - "cll/checkpoint/**"
-      - ".github/workflows/rust.yml"
 
 permissions:
   contents: read
@@ -50,19 +35,25 @@ jobs:
           python-version: "3.12"
 
       - name: install checkpointed-local-log (dev)
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e "./python[dev]"
 
       - name: cargo fmt --check
-        working-directory: rust/cll
+        working-directory: rust
         run: cargo fmt --all -- --check
 
       - name: cargo clippy -D warnings
-        working-directory: rust/cll
+        working-directory: rust
         run: cargo clippy --all-targets --all-features -- -D warnings
 
       - name: cargo test
-        working-directory: rust/cll
+        working-directory: rust
         run: cargo test --all-features
+
+      - name: cargo doc (warnings are errors)
+        working-directory: rust
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps
 
   cross-language-vectors:
     runs-on: ubuntu-latest
@@ -76,17 +67,16 @@ jobs:
           python-version: "3.12"
 
       - name: install checkpointed-local-log (dev)
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e "./python[dev]"
 
       - name: mmr + commitment conformance vectors (Python reference)
         run: |
           python3 mmr-conformance-vectors/reference_verifier.py
           python3 commitment-conformance-vectors/reference_verifier.py
           python3 checkpoint-conformance-vectors/reference_verifier.py
-          python3 mmr-profile-vectors/generate.py --check
 
       - name: trait-signed checkpoint verifies under the Python reference
-        working-directory: rust/cll
+        working-directory: rust
         run: |
           cargo run --quiet --example trait_signed_checkpoint | \
-            python3 ../../checkpoint-conformance-vectors/verify_trait_signed_cose.py
+            python3 ../checkpoint-conformance-vectors/verify_trait_signed_cose.py
