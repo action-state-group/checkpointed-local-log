@@ -275,30 +275,40 @@ See [DESIGN.md](DESIGN.md) for state and durability invariants.
 ## Release
 
 Releases are published from `main` with the manual
-[Publish npm package](https://github.com/action-state-group/cll-ts/actions/workflows/publish.yml)
+[Publish npm package](https://github.com/action-state-group/checkpointed-local-log/actions/workflows/publish-ts.yml)
 GitHub Action:
 
-1. Update `version` in `package.json` and `package-lock.json`, commit the change,
+1. Update `version` in `ts/package.json` and `ts/package-lock.json`, commit the change,
    and wait for `main` CI to pass.
 2. In GitHub, open the workflow, choose **Run workflow**, and select `main`.
 3. Verify the workflow published `@action-state-group/cll` and created the
-   `v<version>` GitHub release and tag on the published commit.
+   `ts/v<version>` GitHub release and tag on the published commit.
 
 The npm package must have a GitHub Actions trusted publisher configured for
-the `action-state-group/cll-ts` repository and
-`.github/workflows/publish.yml`. No long-lived npm token is required. Re-running
-the workflow is safe: it skips an existing npm version and verifies that its
-Git tag points to the `gitHead` recorded by npm.
+organization `action-state-group`, repository `checkpointed-local-log`, and
+workflow filename `publish-ts.yml` (the root `.github/workflows/publish-ts.yml`).
+Leave the environment field blank; this job has no GitHub environment.
+Configuration changes and publication each require separate maintainer
+authorization; this migration does not authorize either. Select a new immutable
+package version and wait for the workflow to land on `main` before publishing.
+No long-lived npm token is required. Re-running the workflow skips an existing
+npm version only when its recorded `gitHead` matches the selected current-main
+commit, then verifies the `ts/v<version>` tag against that same commit.
 
 If npm contains the version but its tag is missing after this workflow has
 changed, GitHub may reject recovery with the workflow's `GITHUB_TOKEN`. A
 maintainer with `workflow` scope must create the tag at the npm `gitHead`, then
-rerun the workflow to verify the tag and create any missing GitHub release:
+rerun the workflow to verify the tag and create any missing GitHub release.
+This recovery also requires separate authorization. Run from the destination
+repository at the published commit, which must still be current `main` for the
+workflow rerun; historical releases and their tags remain unchanged:
 
 ```sh
-version=0.1.1
+version="<published-version>"
 git_head=$(npm view "@action-state-group/cll@$version" gitHead)
-git fetch origin --tags
-git tag -a "v$version" "$git_head" -m "Release v$version"
-git push origin "refs/tags/v$version"
+git fetch origin main --tags
+test "$(git rev-parse HEAD)" = "$git_head"
+test "$(git rev-parse origin/main)" = "$git_head"
+git tag -a "ts/v$version" "$git_head" -m "Release ts/v$version"
+git push origin "refs/tags/ts/v$version"
 ```
