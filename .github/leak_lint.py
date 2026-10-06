@@ -37,6 +37,9 @@ Design:
   - **Exact-text allowlist**, `leak_lint_allowlist.txt` next to this script, for genuine
     historical record. Never line numbers -- the exact stripped line text.
   - **Scans generated artifacts too** (`.txt`, `.xml`), not just sources.
+  - **Lockfile URL and hash values are not term-matched** (`package-lock.json`, `yarn.lock`,
+    `pnpm-lock.yaml`): a registry URL can contain any substring. Only those values are exempt;
+    the rest of a lockfile is scanned as usual (see `LOCKFILE_EXEMPT_VALUES`).
   - **Excludes this script, its allowlist, its CI workflow and its tests by filename.**
   - **Scans the COMMITTED tree** (`git ls-files -z`) of ROOT, and never follows a symbolic link
     or reads outside ROOT: on a fork run ROOT is untrusted content.
@@ -68,6 +71,9 @@ SCAN_SUFFIXES = (
     ".html", ".sh",
 )
 
+#: Files scanned by name whose suffix is not in SCAN_SUFFIXES.
+SCAN_NAMES = {"yarn.lock"}
+
 # Lowercase-alnum segments only (excludes uppercase citation tags structurally), each segment
 # 2+ chars (excludes a hex regex character class like `[0-9a-f]`, which the hyphen-as-range
 # operator would otherwise fake as hyphen-separated segments), 3+ segments (excludes 2-segment
@@ -75,6 +81,35 @@ SCAN_SUFFIXES = (
 BRACKET_ID = re.compile(r"\[[a-z0-9]{2,}(?:-[a-z0-9]{2,}){2,}\]")
 
 BRACKET_CLASS = "bracketed-id"
+
+# Lockfiles: the values of their dependency URL and hash fields are not prose (a registry URL
+# can contain any substring), so they are exempt from term matching. Only those values, and only
+# in these files: every other field of a lockfile, and every other file whatever its keys, is
+# matched as usual, and the bracketed-id rule still sees the whole line.
+LOCKFILE_EXEMPT_VALUES = {
+    # npm: `"resolved": "<url>",` and `"integrity": "<hash>",`
+    "package-lock.json": (
+        re.compile(r'^(\s*"(?:resolved|integrity)"\s*:\s*)"(?:[^"\\]|\\.)*"'),
+    ),
+    # yarn 1: `  resolved "<url>"`, `  integrity <hash>`;
+    # yarn 2+: `  resolution: "<package>@npm:<version>"`, `  checksum: <hash>`
+    "yarn.lock": (
+        re.compile(r"^(\s+(?:resolved|integrity)\s+)\S.*$"),
+        re.compile(r"^(\s+(?:resolution|checksum):\s*)\S.*$"),
+    ),
+    # pnpm: `integrity: <hash>` and `tarball: <url>`, in a block or in the inline
+    # `resolution: {integrity: ..., tarball: ...}` map
+    "pnpm-lock.yaml": (re.compile(r"(\b(?:integrity|tarball):\s*)[^\s,{}][^,{}]*"),),
+}
+
+
+def term_text(name: str, line: str) -> str:
+    """`line` as term matching sees it: when the file named `name` is a lockfile, with the
+    values of its URL and hash fields removed (see LOCKFILE_EXEMPT_VALUES); otherwise as is."""
+    for pattern in LOCKFILE_EXEMPT_VALUES.get(name, ()):
+        line = pattern.sub(lambda m: m.group(1), line)
+    return line
+
 
 UNTRUSTED_VERDICT = (
     "leak-lint: content check failed. Details are withheld on fork runs; a maintainer can "
@@ -217,10 +252,13 @@ def _has_bracket_id_leak(line: str) -> bool:
     return False
 
 
-def classify(line: str, terms: dict[str, tuple[str, ...]]) -> tuple[bool, list[str]]:
-    """(bracketed-id hit?, the term classes that match) for one line."""
+def classify(
+    line: str, terms: dict[str, tuple[str, ...]], file_name: str = ""
+) -> tuple[bool, list[str]]:
+    """(bracketed-id hit?, the term classes that match) for one line of the file `file_name`."""
+    matched = term_text(file_name, line)
     return _has_bracket_id_leak(line), [
-        name for name, words in terms.items() if any(w in line for w in words)
+        name for name, words in terms.items() if any(w in matched for w in words)
     ]
 
 
@@ -230,7 +268,9 @@ def scan(root: Path, terms: dict[str, tuple[str, ...]]) -> tuple[list[str], list
     bracket_only: list[str] = []
     term_hits: list[str] = []
     for f in _tracked_files(root):
-        if f.name in SELF_NAMES or f.suffix not in SCAN_SUFFIXES:
+        if f.name in SELF_NAMES:
+            continue
+        if f.suffix not in SCAN_SUFFIXES and f.name not in SCAN_NAMES:
             continue
         text = _read_regular_file(root, f)
         if text is None:
@@ -241,7 +281,7 @@ def scan(root: Path, terms: dict[str, tuple[str, ...]]) -> tuple[list[str], list
             stripped = line.strip()
             if stripped in allow:
                 continue
-            bracket, classes = classify(line, terms)
+            bracket, classes = classify(line, terms, f.name)
             if not bracket and not classes:
                 continue
             labels = ([BRACKET_CLASS] if bracket else []) + classes
