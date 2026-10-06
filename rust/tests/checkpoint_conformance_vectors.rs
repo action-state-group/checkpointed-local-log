@@ -21,11 +21,11 @@ use sha2::{Digest, Sha256};
 use std::path::Path;
 
 fn load_vectors() -> Value {
-    // CARGO_MANIFEST_DIR is rust/cll; the vectors live at the repo root,
-    // two levels up.
+    // CARGO_MANIFEST_DIR is rust; the vectors live at the repo root,
+    // one level up.
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let path = manifest_dir
-        .join("../..")
+        .join("..")
         .join("checkpoint-conformance-vectors/vectors.json");
     let text =
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));

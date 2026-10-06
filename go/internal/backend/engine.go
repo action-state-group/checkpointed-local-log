@@ -6,9 +6,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/internal/portable"
-	"github.com/action-state-group/cll-go/mmr"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/portable"
+	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 )
 
 // Engine owns the generic in-memory representation and transition rules.

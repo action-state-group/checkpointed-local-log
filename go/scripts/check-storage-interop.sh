@@ -10,7 +10,7 @@ backend=$1
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 go_dir=$(cd -- "$script_dir/.." && pwd)
 workspace_root=$(cd -- "$go_dir/.." && pwd)
-export CLL_TS_DIST=${CLL_TS_DIST:-"$workspace_root/cll-ts/dist"}
+export CLL_TS_DIST=${CLL_TS_DIST:-"$workspace_root/ts/dist"}
 
 if [[ ! -f "$CLL_TS_DIST/index.js" ]]; then
   echo "built cll-ts dist not found at $CLL_TS_DIST" >&2

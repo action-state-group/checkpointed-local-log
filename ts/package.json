@@ -6,11 +6,12 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/action-state-group/cll-ts.git"
+    "url": "git+https://github.com/action-state-group/checkpointed-local-log.git",
+    "directory": "ts"
   },
-  "homepage": "https://github.com/action-state-group/cll-ts#readme",
+  "homepage": "https://github.com/action-state-group/checkpointed-local-log/tree/main/ts#readme",
   "bugs": {
-    "url": "https://github.com/action-state-group/cll-ts/issues"
+    "url": "https://github.com/action-state-group/checkpointed-local-log/issues"
   },
   "exports": {
     ".": {

@@ -33,10 +33,10 @@ fn hex32(s: &str) -> Hash {
 }
 
 fn load_vectors(repo_relative: &str) -> Value {
-    // CARGO_MANIFEST_DIR is rust/cll; the vectors live at the repo root,
-    // two levels up.
+    // CARGO_MANIFEST_DIR is rust; the vectors live at the repo root,
+    // one level up.
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path = manifest_dir.join("../..").join(repo_relative);
+    let path = manifest_dir.join("..").join(repo_relative);
     let text =
         std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path:?}: {e}"));
     serde_json::from_str(&text).unwrap()

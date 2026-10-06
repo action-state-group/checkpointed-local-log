@@ -16,7 +16,7 @@ import {
 const vectors = JSON.parse(
   readFileSync(
     resolve(
-      process.env.CLL_ROOT ?? "../checkpointed-local-log",
+      process.env.CLL_ROOT ?? "..",
       "commitment-conformance-vectors/vectors.json",
     ),
     "utf8",

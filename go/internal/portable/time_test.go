@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
 	"github.com/stretchr/testify/require"
 )
 

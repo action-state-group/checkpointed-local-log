@@ -8,7 +8,7 @@ delivers checkpoints to external witnesses. Record formats, record bodies,
 verification, authorization, and application persistence stay outside this
 module.
 
-The Go module is `github.com/action-state-group/cll-go`.
+The Go module is `github.com/action-state-group/checkpointed-local-log/go`.
 
 ## Source grounding
 

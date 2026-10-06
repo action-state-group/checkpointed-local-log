@@ -1,7 +1,7 @@
 // Package backend implements the shared in-memory transition and wire engine.
 package backend
 
-import "github.com/action-state-group/cll-go/cll"
+import "github.com/action-state-group/checkpointed-local-log/go/cll"
 
 func CloneEntry(value cll.Entry) cll.Entry {
 	value.Value = append([]byte(nil), value.Value...)

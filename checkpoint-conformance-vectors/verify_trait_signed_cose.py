@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
-"""Cross-language check for `rust/cll`'s `checkpoint::CheckpointSigner` SPI
+"""Cross-language check for `rust`'s `checkpoint::CheckpointSigner` SPI
 (2026-09-22): verifies a checkpoint COSE_Sign1 statement that
-`rust/cll/examples/trait_signed_checkpoint.rs` produced through the new
+`rust/examples/trait_signed_checkpoint.rs` produced through the new
 signer trait (a `&dyn CheckpointSigner` call site, not a direct
 `ed25519_dalek::SigningKey` one) -- proving the trait indirection changed
 nothing about the wire bytes a stranger verifies. Uses the same

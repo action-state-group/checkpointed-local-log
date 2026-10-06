@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/action-state-group/cll-go/checkpoint"
-	"github.com/action-state-group/cll-go/mmr"
+	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
+	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 )
 
 const timestamp = "2026-08-27T12:34:56Z"

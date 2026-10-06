@@ -1,4 +1,4 @@
-module github.com/action-state-group/cll-go
+module github.com/action-state-group/checkpointed-local-log/go
 
 go 1.27.0
 

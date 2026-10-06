@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/internal/storetest"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/storetest"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
 )

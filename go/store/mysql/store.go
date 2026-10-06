@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/internal/backend"
-	"github.com/action-state-group/cll-go/internal/portable"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/backend"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/portable"
 	mysqldriver "github.com/go-sql-driver/mysql"
 )
 

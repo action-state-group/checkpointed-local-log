@@ -99,7 +99,7 @@ async function advance(store) {
 
   const state = await store.loadCll();
   const tree = new core.MmrTree(state.nodes);
-  tree.append(identity);
+  await tree.append(identity);
   const checkpoint = checkpointFor(sequence);
   const previousSize = state.checkpointSize;
   const next = {
@@ -166,7 +166,7 @@ async function verify(store, expected) {
       entry.appendedAt.toISOString() !== timeFor(sequence).toISOString()
     )
       throw new Error(`entry ${sequence} disagrees with portable fixture`);
-    tree.append(entry.value);
+    await tree.append(entry.value);
     sizes.push(tree.size);
   }
 

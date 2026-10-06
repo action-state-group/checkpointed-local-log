@@ -24,7 +24,7 @@ scope".
 Requires Go 1.27 or newer.
 
 ```bash
-go get github.com/action-state-group/cll-go@latest
+go get github.com/action-state-group/checkpointed-local-log/go@latest
 ```
 
 ## Append identities
@@ -40,8 +40,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/store/memory"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/store/memory"
 )
 
 func main() {

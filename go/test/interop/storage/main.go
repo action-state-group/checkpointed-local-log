@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/mmr"
-	"github.com/action-state-group/cll-go/store/jsonl"
-	"github.com/action-state-group/cll-go/store/mysql"
-	"github.com/action-state-group/cll-go/store/sqlite"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/mmr"
+	"github.com/action-state-group/checkpointed-local-log/go/store/jsonl"
+	"github.com/action-state-group/checkpointed-local-log/go/store/mysql"
+	"github.com/action-state-group/checkpointed-local-log/go/store/sqlite"
 )
 
 const witnessID = "interop-witness"

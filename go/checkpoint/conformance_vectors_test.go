@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/action-state-group/cll-go/mmr"
+	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 	"github.com/stretchr/testify/require"
 )
 

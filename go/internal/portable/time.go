@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
 )
 
 // NormalizeTime converts a time to UTC with ECMAScript millisecond precision.

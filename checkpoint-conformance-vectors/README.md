@@ -50,7 +50,7 @@ encoding, and the signed checkpoint record that wraps a root.
   producers (its map order is each COSE library's own), so a producer's own
   statement is checked by verifying it and comparing its payload with
   `claims_hex`. `reference_verifier.py` regenerates both byte-for-byte;
-  `rust/cll/tests/checkpoint_cose_vectors.rs` checks the Rust crate.
+  `rust/tests/checkpoint_cose_vectors.rs` checks the Rust crate.
 
 - `vectors.json` contains 2 cases: `checkpoint-first-2-leaves` (a log's
   first checkpoint, `prev_size=0`, no consistency proof) and
@@ -65,10 +65,10 @@ encoding, and the signed checkpoint record that wraps a root.
 Run `python3 checkpoint-conformance-vectors/reference_verifier.py` in an
 installed development environment. Rust, Go, and TypeScript consumers
 should parse the JSON, reconstruct the record fields, and reproduce
-`digest_hex`/`entry_digest_hex`/`signature` exactly -- see `rust/cll/tests/
+`digest_hex`/`entry_digest_hex`/`signature` exactly -- see `rust/tests/
 checkpoint_conformance_vectors.rs` for this crate's own pass over the same
 file, including offline COSE-wire verification of the chained case, and
-`rust/cll/tests/scitt_cose_receipt_interop.rs` (`cargo test --features
+`rust/tests/scitt_cose_receipt_interop.rs` (`cargo test --features
 python-interop-tests`) for the witness-receipt boundary check -- no Rust
 scitt-cose verifier exists yet, so it drives that check by invoking this
 same `reference_verifier.py` as a subprocess.

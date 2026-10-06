@@ -1,0 +1,8 @@
+include pyproject.toml README.md LICENSE LICENSE-APACHE
+include __init__.py cli.py revocation.py signing.py
+recursive-include checkpoint *.py
+recursive-include ledger *.py
+prune tests
+prune build
+prune dist
+global-exclude __pycache__ *.py[cod] *.egg-info

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/internal/storetest"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/storetest"
 	mysqldriver "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"

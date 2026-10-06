@@ -30,10 +30,10 @@ use std::process::Command;
 
 #[test]
 fn checkpoint_digests_receipt_through_scitt_cose_in_both_languages() {
-    // CARGO_MANIFEST_DIR is rust/cll; the vectors and reference verifier
-    // live at the repo root, two levels up.
+    // CARGO_MANIFEST_DIR is rust; the vectors and reference verifier
+    // live at the repo root, one level up.
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let repo_root = manifest_dir.join("../..");
+    let repo_root = manifest_dir.join("..");
     let script = repo_root.join("checkpoint-conformance-vectors/reference_verifier.py");
     assert!(
         script.exists(),

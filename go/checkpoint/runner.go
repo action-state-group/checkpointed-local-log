@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/action-state-group/cll-go/cll"
-	"github.com/action-state-group/cll-go/internal/portable"
-	"github.com/action-state-group/cll-go/mmr"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/portable"
+	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 )
 
 // Signer signs canonical checkpoint payloads.
