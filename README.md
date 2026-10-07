@@ -202,11 +202,17 @@ being reachable. See comments in `spec/Makefile` for `rebuild` and
 
 ## License
 
-- **Code** (the Python package in `python/`, the Rust crates under `rust/`, tests and
-  tooling unless a file's SPDX header says otherwise) is licensed under the
-  Apache License 2.0: see [LICENSE-APACHE](LICENSE-APACHE). The crates publish
-  to crates.io as `Apache-2.0`.
+- **Implementation code** in `python/`, `go/`, `ts/`, `rust/` and the separate
+  `evidencebook/` crate, plus tests and tooling, is licensed under Apache-2.0
+  unless a file-specific notice says otherwise: see [LICENSE-APACHE](LICENSE-APACHE)
+  and the component license files. The Rust crate manifests declare `Apache-2.0`.
 - **The specification text** under `spec/` is under the Revised BSD License:
   see [LICENSE](LICENSE). As an Internet-Draft it is also governed by
   [BCP 78](https://www.rfc-editor.org/info/bcp78) and the IETF Trust's Legal
   Provisions.
+
+- **Extracted code, vectors and third-party material** retain their file-specific
+  licenses and provenance notices. For example, `mmr-profile-vectors/draft03.py`
+  declares BSD-3-Clause and carries IETF Trust attribution. A directory name
+  does not determine a file's license, and the presence of BSD and Apache license
+  files does not grant a choice of either license for every file.
