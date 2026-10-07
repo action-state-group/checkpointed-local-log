@@ -1,6 +1,6 @@
-# cll-go
+# Go CLL
 
-`cll-go` is an embeddable Go implementation of a Checkpointed Local Log
+Go CLL is an embeddable Go implementation of a Checkpointed Local Log
 (CLL). It stores a dense sequence of opaque 32-byte identities, commits those
 identities to an MMR, signs checkpoints, and can submit checkpoints to external
 witnesses.
@@ -10,14 +10,13 @@ signatures, authorization, application indexes, or business workflows. An
 application verifies and stores its complete record first, then appends the
 record's 32-byte identity to CLL.
 
-This neutrality is by decision, not omission. The Python reference
-(`checkpointed-local-log`) additionally ships a **ledger layer** — three-state
+This neutrality is by decision, not omission. The [Python reference](../python/)
+additionally ships a **ledger layer** — three-state
 admission control, segment manifests, a lookup index, and a key-revocation
-timeline — that is intentionally **not** part of the Go implementation. `cll-go`
+timeline — that is intentionally **not** part of the Go implementation. Go CLL
 is the checkpoint + MMR + storage substrate only; admission and revocation
 semantics are Python-only unless a Go consumer's demonstrated need reopens that
-as a separate decision. See `checkpointed-local-log`'s README, "Cross-language
-scope".
+as a separate decision. See the [root README's cross-language scope](../README.md#cross-language-scope-the-ledger-layer-is-python-only-by-decision).
 
 ## Install
 
@@ -250,9 +249,9 @@ backends, and crash recovery.
 
 GitHub Actions exposes separate checks for quality, unit tests, race tests,
 checkpoint wire interoperability, JSONL continuation, SQLite continuation, and
-MySQL continuation. Interoperability jobs build `cll-ts/main` and the Python
-CLL `main` at run time. The checkout SHAs in each job log make the moving-main
-comparison traceable.
+MySQL continuation. The root [interoperability workflow](../.github/workflows/interop.yml)
+builds `ts/`, installs `python/`, and runs the Go drivers from `go/` at the same
+checked-out repository revision.
 
 ## Development
 

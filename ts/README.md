@@ -264,7 +264,7 @@ export class PostgresBackend implements CllBackend {
 ```
 
 Run the repository's
-[backend contract](https://github.com/action-state-group/cll-ts/blob/main/test/backend-contract.ts)
+[backend contract](test/backend-contract.ts)
 unchanged against the new backend. Durable implementations must persist every mutation, return defensive
 copies, allocate dense sequences transactionally, provide consistent reads,
 enforce checkpoint and witness compare-and-swap, detect corrupt state, and make

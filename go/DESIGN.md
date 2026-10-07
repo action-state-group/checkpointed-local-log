@@ -1,10 +1,10 @@
-# cll-go design
+# Go CLL design
 
 Status: implementation contract for the generic core.
 
 ## Purpose
 
-`cll-go` is an embeddable Go implementation of a Checkpointed Local Log. It
+Go CLL is an embeddable Go implementation of a Checkpointed Local Log. It
 stores an ordered sequence of opaque identities whose width is `EntryBytes`,
 maintains an MMR over those identities, signs periodic checkpoints, and
 optionally delivers the checkpoints to external witnesses.
@@ -15,8 +15,8 @@ application that owns them.
 
 ## Required boundaries
 
-- `cll-go` and `capsule-emit-go` do not depend on each other.
-- `cll-go` contains no AAC, Capsule, Producer Envelope, admission,
+- Go CLL and `capsule-emit-go` do not depend on each other.
+- Go CLL contains no AAC, Capsule, Producer Envelope, admission,
   authenticity, chain-gap, or application-verification behavior.
 - `capsule-emit-go` remains a deterministic, persistence-free AAC format-4
   construction and verification library.
@@ -50,7 +50,7 @@ module. Python participates in MMR and checkpoint wire verification only.
 ## Package ownership
 
 ```text
-cll-go/
+go/
 ├── cll/                 public entry, state, error, and backend contracts
 ├── checkpoint/          checkpoint wire format, signing, parsing, runner
 ├── mmr/                 MMR construction and proof verification
@@ -91,14 +91,14 @@ mysql.Open(ctx context.Context, dsn, logID string) (*mysql.Store, error)
 ```
 
 Relational constructors require an explicit log ID. Passing `"default"` opens
-the row selected by the default `cll-ts` constructor. A different ID is a
+the row selected by the default TypeScript CLL constructor. A different ID is a
 different log, even in the same database. JSONL represents one log per file,
 so it has no storage-level log ID argument.
 
 ## Public Go contract
 
-The public contract is intentionally parallel to `cll-ts`, expressed in
-idiomatic Go. Byte slices returned by public methods are defensive copies.
+The public contract is intentionally parallel to TypeScript CLL in `ts/`,
+expressed in idiomatic Go. Byte slices returned by public methods are defensive copies.
 
 ```go
 package cll
@@ -216,7 +216,7 @@ Backends return `ErrContention` for failed compare-and-set operations. Witness
 HTTP retry classification remains in `witness.IsRetryable`; it is not a
 storage error class.
 
-Shared limits and validation match `cll-ts`:
+Shared limits and validation match TypeScript CLL:
 
 ```go
 EntryBytes              = 32
@@ -238,7 +238,7 @@ are non-empty, and match the ASCII subset `^[A-Za-z0-9._:/-]+$`.
 Pending-witness and entry-scan query limits use `MaxWitnesses` and
 `MaxScanLimit`. Dense entry sequences and receipt positions do not exceed
 `MaxPortableInteger`. This is required even though most state counters use
-decimal JSON strings, because `cll-ts` receives SQLite entry sequences and
+decimal JSON strings, because TypeScript CLL receives SQLite entry sequences and
 receipt positions as JavaScript numbers.
 
 ## State transition contract
@@ -358,7 +358,7 @@ tolerated for compatibility.
 ## Relational schema
 
 The table and column names, keys, value encodings, and initial metadata JSON
-match `cll-ts`. The schema deliberately has no additional version table.
+match TypeScript CLL. The schema deliberately has no additional version table.
 The initial state is
 `{"size":"0","indexedSeq":"0","nodes":[],"witnesses":[]}`.
 
@@ -479,7 +479,7 @@ generic format.
   backend initialization does not establish either. Failed initialization may
   leave CLL tables already created before validation fails.
 - No compatibility alias, automatic copy, or dual-write path remains in
-  `cll-go`.
+  Go CLL.
 
 Migration is application-owned because the application must decide where full
 record bodies and signer evidence live. A migration tool should read through
@@ -535,14 +535,14 @@ application store
   atomically persist exact Capsule/Envelope bytes and enqueue CLL delivery
                  │
                  ▼
-cll-go
+Go CLL (`go/`)
   append verified 32-byte Capsule ID only
   build checkpoint
   deliver checkpoint to witness
 ```
 
 `capsule-emit-go` documentation will show this composition through a
-caller-owned storage interface. It will not import `cll-go` in production code
+caller-owned storage interface. It will not import Go CLL in production code
 or add SQLite/MySQL dependencies.
 
 ## Verification matrix
@@ -570,8 +570,9 @@ The same Go test suite runs against Memory, JSONL, SQLite, and MySQL and covers:
 
 ### Cross-runtime storage
 
-The `cll-go` CI owns bidirectional continuation tests without changing
-`cll-ts`:
+The root [interoperability workflow](../.github/workflows/interop.yml) runs
+bidirectional continuation tests between `go/` and `ts/` at the same
+checked-out repository revision:
 
 | Backend | Go creates, TS continues, Go verifies | TS creates, Go continues, TS verifies |
 | --- | --- | --- |
@@ -624,7 +625,7 @@ Independent GitHub checks should remain parallel:
 3. `race`: race-enabled Go tests.
 4. `mysql`: MySQL backend contract against a real MySQL 8 service.
 5. `storage-interop`: bidirectional JSONL, SQLite, and MySQL continuation with
-   `cll-ts/main`.
+   `ts/` at the same checked-out repository revision.
 6. `checkpoint-interop`: Go, TypeScript, and Python checkpoint compatibility.
 
 `capsule-emit-go` keeps its existing independent quality, coverage, race, and
