@@ -1,6 +1,6 @@
 # cll-go design
 
-Status: implementation contract for the generic-core refactor.
+Status: implementation contract for the generic core.
 
 ## Purpose
 
@@ -41,11 +41,11 @@ written:
 | `action-state-group/capsule-anchor` | `8207b79ce2dd3eb1fce105d52162959e1d5aa680` | `/checkpoints` request and RFC 9162 receipt behavior |
 | `action-state-group/capsule-emit-ts` | `984471ac310f249d5b3d0594a64db97f98adec17` | AAC application integration boundary |
 | `action-state-group/capsule-emit-go` | `dda3a7451b3841237eba89c981c07bddd8f60b6f` | Go AAC application integration boundary |
-| `action-state-group/cll-go` | `e13e718d83c21fc9159a5a87268eb90d407281fc` | Existing Go MMR, checkpoint, and witness implementation being refactored |
+| `action-state-group/cll-go` | `e13e718d83c21fc9159a5a87268eb90d407281fc` | Earlier Go MMR, checkpoint, and witness implementation this module succeeds |
 
 The Python package still includes application-shaped reference code and a
 separate legacy checkpoint path. It is not the storage architecture for this
-refactor. Python participates in MMR and checkpoint wire verification only.
+module. Python participates in MMR and checkpoint wire verification only.
 
 ## Package ownership
 
@@ -488,14 +488,8 @@ storage, append its decoded 32-byte identity to a fresh generic backend in the
 original order, and then establish the application's desired checkpoint
 continuity. The old files or tables remain untouched for rollback and audit.
 
-The private Alchemy `main` branch at
-`3464a020f20022398e10ab8c19afd8b8c45bffa8` currently imports the removed
-`cll-go/ledger` API and pins commit `e13e718d83c2`. It continues to build at
-that pin. Alchemy must complete the application-owned migration before it
-upgrades to this breaking release; Alchemy changes are outside this task.
-
 The old operator-only `Rebaseline` operation is removed. Neither the generic
-TypeScript contract nor the compatibility lane defines it. A future generic
+TypeScript contract nor the compatibility layer defines it. A future generic
 continuity-reset design requires a separate cross-language contract before any
 implementation is added.
 

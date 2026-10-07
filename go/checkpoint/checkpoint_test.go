@@ -20,7 +20,7 @@ func TestCheckpointCanonicalSignAndVerify(t *testing.T) {
 	signer, err := NewEd25519Signer(private)
 	require.NoError(t, err)
 	payload, err := (Payload{
-		LogID: "alchemy", KeyID: signer.KeyID(), MMRSize: 7,
+		LogID: "test-log", KeyID: signer.KeyID(), MMRSize: 7,
 		Root:      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		Timestamp: time.Date(2026, 8, 25, 0, 0, 0, 0, time.UTC),
 	}).CanonicalJSON()
@@ -41,7 +41,7 @@ func TestCheckpointCanonicalSignAndVerify(t *testing.T) {
 	require.Nil(t, record.Cadence)
 	require.NoError(t, record.VerifySignature())
 	require.NoError(t, signer.VerifyCheckpoint(payload, statement))
-	tampered := bytes.Replace(payload, []byte("alchemy"), []byte("changed"), 1)
+	tampered := bytes.Replace(payload, []byte("test-log"), []byte("changed"), 1)
 	require.Error(t, signer.VerifyCheckpoint(tampered, statement))
 }
 

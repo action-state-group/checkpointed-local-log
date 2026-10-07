@@ -5,8 +5,8 @@ Backs the ``core`` module's ``NodeReader``/``NodeAppender`` protocols. No
 persistence/segment format is built here -- the MMR is rebuilt by replaying
 the wrapped log source (see ``index.MmrLedger.sync``), which is already that
 source's own durable record. A segment/blob format is real future work if
-resuming without a full replay becomes a performance concern, but that's out
-of this task's scope.
+resuming without a full replay becomes a performance concern; this module does
+not define one.
 """
 from __future__ import annotations
 
