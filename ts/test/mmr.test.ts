@@ -234,7 +234,7 @@ describe("CLL MMR", () => {
     ).toBe(false);
   }, 4000);
 
-  // The refactor's hard requirement is that the arithmetic verifiers stay
+  // A hard requirement: the arithmetic verifiers stay
   // byte-identical to the O(size) shape()-based producers for every input.
   // Cross-check the two independent code paths across tree shapes up to 48
   // leaves (multi-peak, mountains up to height 5) — far past the <=11-leaf
