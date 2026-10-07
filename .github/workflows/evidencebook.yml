@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Builds and tests the `evidencebook` Rust crate (rust/evidencebook/), which
+# Builds and tests the `evidencebook` Rust crate (evidencebook/), which
 # embeds the `cll` crate beside it, so a change to either triggers it. Also
 # runs the crate's vocabulary gate: the crate carries no deployment
 # vocabulary, and scripts/check-vocabulary.sh fails the build if any appears.
@@ -7,15 +7,7 @@ name: evidencebook
 
 on:
   push:
-    paths:
-      - "rust/evidencebook/**"
-      - "rust/cll/**"
-      - ".github/workflows/evidencebook.yml"
   pull_request:
-    paths:
-      - "rust/evidencebook/**"
-      - "rust/cll/**"
-      - ".github/workflows/evidencebook.yml"
 
 permissions:
   contents: read
@@ -25,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: rust/evidencebook
+        working-directory: evidencebook
     steps:
       - uses: actions/checkout@v4
 

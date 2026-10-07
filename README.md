@@ -1,3 +1,20 @@
+# Checkpointed Local Log implementations
+
+| Directory | Package |
+| --- | --- |
+| `python/` | PyPI `checkpointed-local-log`, import `cll` |
+| `rust/` | Cargo `checkpointed-local-log`, library `cll` |
+| `go/` | `github.com/action-state-group/checkpointed-local-log/go` |
+| `ts/` | npm `@action-state-group/cll` |
+| `evidencebook/` | Separate evidence-layer crate `evidencebook` |
+
+Install Python from the repository root with `pip install ./python`, or
+`pip install -e './python[dev]'` for development. Run Go commands in `go/`,
+npm commands in `ts/`, and Cargo commands in the relevant crate directory.
+Future release tags are language-specific: `python/v*`, `go/v*`, `ts/v*`;
+existing `crates/checkpointed-local-log-v*` and `crates/evidencebook-v*` remain.
+Historical tags and package versions retain their original layouts.
+
 # checkpointed-local-log
 
 **The Checkpointed Local Log (CLL)** — an IETF Internet-Draft specifying a
@@ -53,7 +70,7 @@ from this spec to the package's modules.
 
 ### The `cll` Rust crate
 
-`rust/cll/` (crates.io: [`checkpointed-local-log`](https://crates.io/crates/checkpointed-local-log);
+`rust/` (crates.io: [`checkpointed-local-log`](https://crates.io/crates/checkpointed-local-log);
 the name `cll` there belongs to an unrelated crate, but the library is imported
 as `cll`) is a Rust sibling of the Python package, covering the same substrate
 scope as the Go and TypeScript implementations (see the next section): the
@@ -71,15 +88,15 @@ RFC 8032), so a change only one side's tests catch is a real divergence, not
 a passing build.
 
 ```sh
-cd rust/cll && cargo test
+cd rust && cargo test
 ```
 
 See [`checkpoint-conformance-vectors/README.md`](checkpoint-conformance-vectors/README.md)
 for how the checkpoint-record vectors pin cross-language digest/signature
-parity, and `rust/cll/tests/` for this crate's own pass over all three
+parity, and `rust/tests/` for this crate's own pass over all three
 vector sets. The witness-receipt boundary -- a checkpoint `digest_hex`
 round-tripping through scitt-cose's own `cll`-agnostic COSE Receipt
-build/verify path -- is verified in both languages: `rust/cll/tests/
+build/verify path -- is verified in both languages: `rust/tests/
 scitt_cose_receipt_interop.rs` (opt in with `cargo test --features
 python-interop-tests`; no Rust scitt-cose verifier exists yet, so it
 drives the check by invoking the Python reference's `reference_verifier.py`
@@ -110,7 +127,7 @@ to the reference.
 
 ## The `evidencebook` Rust crate
 
-`rust/evidencebook/` (crates.io: [`evidencebook`](https://crates.io/crates/evidencebook),
+`evidencebook/` (crates.io: [`evidencebook`](https://crates.io/crates/evidencebook),
 0.0.1) implements the store-level semantics of the Evidence Layer
 Internet-Draft, [`draft-mih-agent-evidence-layer-00`](https://github.com/action-state-group/agent-action-capsule/blob/main/spec/draft-mih-agent-evidence-layer-00.md)
 (kept in `agent-action-capsule`, not here). It is a second layer on top of
@@ -138,29 +155,29 @@ by using this crate.
 `tests/refusal_interop.rs` verifies a refusal signed by the Python
 implementation (the same vector the Go implementation checks). Its own CI,
 `.github/workflows/evidencebook.yml`, runs on changes under
-`rust/evidencebook/` or `rust/cll/`: a vocabulary gate, `cargo fmt`,
+`evidencebook/` or `rust/`: a vocabulary gate, `cargo fmt`,
 `cargo clippy -D warnings`, `cargo test --all-features`, and `cargo doc` with
 warnings denied.
 
 ```sh
-cd rust/evidencebook && cargo test && ./scripts/check-vocabulary.sh
+cd evidencebook && cargo test && ./scripts/check-vocabulary.sh
 ```
 
-See [`rust/evidencebook/README.md`](rust/evidencebook/README.md).
+See [`evidencebook/README.md`](evidencebook/README.md).
 
 ## Conformance vectors
 
 | Directory | What it pins | Checked by |
 |---|---|---|
-| `mmr-conformance-vectors/` | MMR roots and inclusion, consistency and range proofs, byte for byte (the Python package is the reference). | `rust/cll/tests/`, the Python tests |
-| `checkpoint-conformance-vectors/` | `CheckpointRecord` signing bodies, digests and Ed25519 signatures, and COSE checkpoint vectors. | `rust/cll/tests/`, the Python tests |
-| `commitment-conformance-vectors/` | The byte encoding of a checkpoint's MMR accumulator: a deterministic CBOR array of 32-byte peaks, tallest first. 7 positive and 5 must-fail cases, with a standalone `reference_verifier.py`. | `rust/cll/tests/mmr_conformance_vectors.rs`, `tests/checkpoint/test_commitment_object.py`, CI (`rust.yml`) |
-| `mmr-profile-vectors/` | 30 known-answer vectors for `draft-bryce-cose-receipts-mmr-profile-03`, derived from that draft's text alone. They are the draft's values, not this repository's: CLL uses a different leaf hash and proof format, so they do **not** test CLL; one test checks that CLL's node array equals the draft's tree when the leaf preimage is `0x00 || body_digest`. `STATUS-03.md` records which review findings -03 fixed. | `tests/checkpoint/test_mmr_profile_vectors.py`, CI (`generate.py --check` in `rust.yml`) |
+| `mmr-conformance-vectors/` | MMR roots and inclusion, consistency and range proofs, byte for byte (the Python package is the reference). | `rust/tests/`, the Python tests |
+| `checkpoint-conformance-vectors/` | `CheckpointRecord` signing bodies, digests and Ed25519 signatures, and COSE checkpoint vectors. | `rust/tests/`, the Python tests |
+| `commitment-conformance-vectors/` | The byte encoding of a checkpoint's MMR accumulator: a deterministic CBOR array of 32-byte peaks, tallest first. 7 positive and 5 must-fail cases, with a standalone `reference_verifier.py`. | `rust/tests/mmr_conformance_vectors.rs`, `python/tests/checkpoint/test_commitment_object.py`, CI (`rust.yml`) |
+| `mmr-profile-vectors/` | 30 known-answer vectors for `draft-bryce-cose-receipts-mmr-profile-03`, derived from that draft's text alone. They are the draft's values, not this repository's: CLL uses a different leaf hash and proof format, so they do **not** test CLL; one test checks that CLL's node array equals the draft's tree when the leaf preimage is `0x00 || body_digest`. `STATUS-03.md` records which review findings -03 fixed. | `python/tests/checkpoint/test_mmr_profile_vectors.py`, CI (`research-vectors.yml`) |
 
 ```sh
 python3 commitment-conformance-vectors/reference_verifier.py
 python3 mmr-profile-vectors/generate.py --check
-python3 -m pytest tests/checkpoint
+cd python && python3 -m pytest tests/checkpoint
 ```
 
 ## Building the draft
@@ -185,7 +202,7 @@ being reachable. See comments in `spec/Makefile` for `rebuild` and
 
 ## License
 
-- **Code** (the Python package `cll/`, the Rust crates under `rust/`, tests and
+- **Code** (the Python package in `python/`, the Rust crates under `rust/`, tests and
   tooling unless a file's SPDX header says otherwise) is licensed under the
   Apache License 2.0: see [LICENSE-APACHE](LICENSE-APACHE). The crates publish
   to crates.io as `Apache-2.0`.

@@ -6,7 +6,7 @@ from scratch using `cll.checkpoint.emit.CheckpointRecord` and the pinned
 Ed25519 fixture seed, and demands byte-identical output against the pinned
 values -- the same "regenerate and verify" convention as
 `mmr-conformance-vectors/reference_verifier.py`. A non-Python implementation
-(this crate's `rust/cll`, or any future port) reproduces the SAME pinned
+(this crate's `rust`, or any future port) reproduces the SAME pinned
 values from nothing but this file's field list and RFC 8032 Ed25519 --
 Ed25519 signing is fully deterministic, so `signature_hex` is not just a
 self-consistency check, it is a genuine cross-language pin.

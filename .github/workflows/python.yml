@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    working-directory: python
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -39,4 +43,12 @@ jobs:
       # The leak-lint tests live next to the lint in .github/, outside the test paths. They use
       # synthetic terms only, so this pull_request job needs no secret.
       - name: leak-lint tests
-        run: python -m pytest -q .github/test_leak_lint.py
+        run: python -m pytest -q ../.github/test_leak_lint.py
+
+      - name: Python release guard tests
+        run: python ../.github/scripts/test_python_release.py
+
+      - name: Source, editable, wheel and sdist package checks
+        run: |
+          python -m pip install build
+          bash ../.github/scripts/check_python_package.sh
