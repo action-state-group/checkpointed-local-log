@@ -13,7 +13,7 @@ import (
 )
 
 // vectors.json is a pinned copy of
-// /Users/ezhang/GitHub/checkpointed-local-log/mmr-conformance-vectors/vectors.json.
+// mmr-conformance-vectors/vectors.json at the repository root.
 // Do not read across repositories at test time.
 type conformanceVectors struct {
 	Cases []conformanceCase `json:"cases"`
