@@ -20,7 +20,8 @@ Before reading a peer repository or making a compatibility claim:
 3. Record a compatibility-critical revision in `DESIGN.md` only when the exact
    revision is part of the durable contract.
 
-Peer checkouts normally live beside this repository under `~/GitHub`.
+The other implementations live in this repository beside `go/`: `python/`,
+`rust/`, `ts/` and `evidencebook/`.
 
 ## Architecture invariants
 
@@ -44,9 +45,8 @@ Peer checkouts normally live beside this repository under `~/GitHub`.
 Before a protocol, persistence, or state-transition change, refresh and inspect
 the relevant implementations:
 
-- `action-state-group/cll-ts` for generic APIs and persistent backends;
-- `action-state-group/checkpointed-local-log` for Python MMR/checkpoint wire
-  verification;
+- `ts/` in this repository for generic APIs and persistent backends;
+- `python/` in this repository for Python MMR/checkpoint wire verification;
 - the configured external witness implementation for request and receipt
   behavior.
 

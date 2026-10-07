@@ -104,7 +104,7 @@ as a subprocess) alongside that same script's own direct check.
 
 ### Cross-language scope: the ledger layer is Python-only, by decision
 
-The Go (`cll-go`), TypeScript (`@action-state-group/cll`), and Rust (`cll`,
+The Go (`go/`), TypeScript (`@action-state-group/cll`), and Rust (`cll`,
 above) implementations are the **checkpoint + MMR + storage substrate
 only**: the append-only log, the Merkle Mountain Range with
 inclusion/consistency proofs, signed COSE checkpoints, witness delivery, and
