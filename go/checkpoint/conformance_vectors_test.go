@@ -16,7 +16,7 @@ import (
 )
 
 // testdata/vectors.json is a pinned copy of
-// /Users/ezhang/GitHub/checkpointed-local-log/checkpoint-conformance-vectors/vectors.json.
+// checkpoint-conformance-vectors/vectors.json at the repository root.
 // Do not read across repositories at test time.
 //
 // This suite pins the Python reference's JSON `CheckpointRecord` model

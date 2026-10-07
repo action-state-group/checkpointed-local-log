@@ -10,7 +10,7 @@ import (
 )
 
 // testdata/commitment_vectors.json is a pinned copy of
-// /Users/ezhang/GitHub/checkpointed-local-log/commitment-conformance-vectors/vectors.json.
+// commitment-conformance-vectors/vectors.json at the repository root.
 // Do not read across repositories at test time.
 type commitmentVectors struct {
 	Count int                `json:"count"`
