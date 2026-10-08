@@ -128,7 +128,7 @@ describe("pinned Python MMR proof vectors", () => {
       const tree = await buildTree(m);
       for (const c of vectors.cases) {
         const expected = c.expect === undefined ? true : (c.expect as boolean);
-        // cll-ts's verifyConsistency rejects the empty-to-empty MMR (leafCount
+        // verifyConsistency rejects the empty-to-empty MMR (leafCount
         // 0 is falsy); its generator still emits the empty proof. This is a
         // pre-existing boundary unrelated to the range port, so skip verifying
         // only that edge (matching the original test's `sizeA > 0` guard) while

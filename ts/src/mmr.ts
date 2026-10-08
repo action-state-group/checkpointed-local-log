@@ -97,8 +97,8 @@ function path(
 }
 // Arithmetic MMR geometry — O(log size) peak and path derivation used by the
 // pure verifiers, mirroring the Python reference (cll.checkpoint.core: peaks,
-// height_at, node_count, _find_containing_peak, _locate_path) and cll-go
-// (peakPositions / containingPeak / pathToPeak). shape() above stays O(size)
+// height_at, node_count, _find_containing_peak, _locate_path) and the Go
+// module in go/ (peakPositions / containingPeak / pathToPeak). shape() above stays O(size)
 // but only runs producer-side over a tree that already holds every node; a
 // verifier must never allocate O(size) from an attacker-supplied `size`, so it
 // derives just the peaks and the single fold path it needs from these instead.

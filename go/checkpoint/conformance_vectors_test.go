@@ -22,7 +22,7 @@ import (
 // This suite pins the Python reference's JSON `CheckpointRecord` model
 // (digest_hex/entry_digest_hex/signature over a canonical-JSON signing
 // body), which is a DIFFERENT wire representation from this package's own
-// COSE_Sign1 checkpoint statement -- cll-go signs a CBOR claims map, not the
+// COSE_Sign1 checkpoint statement -- this package signs a CBOR claims map, not the
 // raw digest_hex ASCII bytes the vectors' `signature` field pins. The two
 // representations meet at Payload: its canonicalFields() field order and
 // DigestHex() are deliberately built to reproduce the vectors' digest_hex

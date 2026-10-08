@@ -492,7 +492,8 @@ pub fn encode_checkpoint_claims(
 /// at every depth, sorted by the bytewise order of their keys' encodings
 /// (for the short text keys here: shorter first, then lexical). The claims
 /// map is the signed payload, so its bytes must be the same in every
-/// implementation; verifiers that require deterministic encoding (cll-ts)
+/// implementation; verifiers that require deterministic encoding (the
+/// TypeScript one in `ts/`)
 /// refuse any other order. Integers and lengths are already encoded in
 /// their shortest form by the serializer.
 fn canonical(value: CborValue) -> Result<CborValue, CheckpointError> {

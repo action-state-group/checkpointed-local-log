@@ -76,7 +76,7 @@ describe("CLL MMR", () => {
     );
   });
 
-  it("supports canonical hexadecimal identities like cll-go", async () => {
+  it("supports canonical hexadecimal identities like the Go module", async () => {
     const identity = "ab".repeat(32);
     const tree = new MmrTree();
     await tree.appendHexIdentity(identity);
