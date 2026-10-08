@@ -8,8 +8,8 @@
 #
 # evidencebook depends on checkpointed-local-log by version. Until that version
 # is on crates.io, its dry run cannot resolve it, so the two crates are instead
-# packaged together in a temporary workspace: cargo then verifies evidencebook
-# against the just-packaged checkpointed-local-log, as it would after publish.
+# packaged together in a temporary workspace for local compatibility coverage.
+# That fallback does not establish registry resolution or publication readiness.
 name: crates-package
 
 on:
@@ -26,6 +26,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+
+      - name: Registry availability guard tests
+        run: bash .github/scripts/test_crate_availability.sh
 
       - name: crates.io metadata (keywords, categories, required fields)
         run: python3 .github/scripts/check_crate_metadata.py rust/Cargo.toml evidencebook/Cargo.toml
@@ -49,13 +52,16 @@ jobs:
         run: |
           set -euo pipefail
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)
-          if curl -fsS "https://index.crates.io/ch/ec/checkpointed-local-log" | grep -q "\"vers\":\"$version\""; then
-            (cd evidencebook && cargo publish --dry-run --allow-dirty)
-          else
-            echo "checkpointed-local-log $version is not on crates.io yet: packaging both crates together."
+          if bash .github/scripts/check_crate_availability.sh checkpointed-local-log "$version"; then
+            echo "Registry-backed EvidenceBook verification BLOCKED: checkpointed-local-log $version is absent."
+            echo "Packaging both crates only for local compatibility coverage."
             ws=$(mktemp -d)
             cp -R rust evidencebook "$ws/"
             rm -f "$ws/rust/Cargo.lock" "$ws/evidencebook/Cargo.lock"
             printf '[workspace]\nmembers = ["rust", "evidencebook"]\nresolver = "2"\n' > "$ws/Cargo.toml"
             (cd "$ws" && cargo package --workspace --allow-dirty)
+          else
+            status=$?
+            [ "$status" -eq 2 ] || exit "$status"
+            (cd evidencebook && cargo publish --dry-run --allow-dirty)
           fi

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 import tempfile
+import sys
 import unittest
 import zipfile
 from pathlib import Path
@@ -67,7 +68,8 @@ class InventoryGuard(unittest.TestCase):
 
     def test_python39_stdlib_fallback(self):
         # Exercise the fallback even when the test interpreter is newer.
-        with patch("check_python_inventory.sys", builtin_module_names=("sys",)):
+        # Some distributions compile math into the interpreter.
+        with patch("check_python_inventory.sys", builtin_module_names=sys.builtin_module_names):
             # Mock has arbitrary attributes; explicitly remove the modern one.
             import check_python_inventory
             del check_python_inventory.sys.stdlib_module_names
