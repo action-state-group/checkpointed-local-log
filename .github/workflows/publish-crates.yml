@@ -9,8 +9,8 @@
 # exchanges GitHub's short-lived identity token for a crates.io token that is
 # scoped to this repository, this workflow file and the `crates-io`
 # environment, and is revoked when the job ends. No crates.io token is stored
-# in this repository. The `crates-io` environment requires a reviewer, so
-# nothing is uploaded until a maintainer approves the run.
+# in this repository. Environment protection is configured separately; do not
+# assume a reviewer gate. Pushing a matching tag can trigger an upload.
 #
 # Actions are pinned to full commit SHAs (tag in the trailing comment).
 name: publish-crates
@@ -55,7 +55,7 @@ jobs:
 
       # The tag is read from the environment, never interpolated into the
       # script. Only the crates listed here can be published; each is its own
-      # package under rust/, with its own Cargo.lock.
+      # package directory, with its own Cargo.lock.
       - name: The tag names a crate of this repository, on main
         id: tag
         run: |
@@ -91,10 +91,7 @@ jobs:
           if [ "$manifest" != "$VERSION" ]; then
             echo "::error::tag says $CRATE $VERSION, Cargo.toml says ${manifest:-nothing}"; exit 1
           fi
-          if curl -fsS -A "publish-crates (github.com/${GITHUB_REPOSITORY})" \
-              "https://crates.io/api/v1/crates/$CRATE/$VERSION" > /dev/null 2>&1; then
-            echo "::error::$CRATE $VERSION is already on crates.io"; exit 1
-          fi
+          bash ../.github/scripts/check_crate_availability.sh "$CRATE" "$VERSION"
 
       # crates.io checks keywords, categories, description, license and
       # repository at upload; `cargo publish --dry-run` does not.
