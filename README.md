@@ -15,6 +15,29 @@ Future release tags are language-specific: `python/v*`, `go/v*`, `ts/v*`;
 existing `crates/checkpointed-local-log-v*` and `crates/evidencebook-v*` remain.
 Historical tags and package versions retain their original layouts.
 
+## Python publication
+
+`.github/workflows/publish-python.yml` publishes only the Python package,
+using PyPI Trusted Publishing. A published GitHub Release with a `python/v*`
+tag triggers it; it can also be dispatched at that same tag with the `tag`
+input. The tag must match `python/pyproject.toml`, and its commit must be on
+main. A tag push alone does not trigger this workflow.
+
+Before merging the workflow rename, a PyPI project Owner must add a GitHub
+Trusted Publisher for `checkpointed-local-log` with these fields:
+
+| Field | Value |
+| --- | --- |
+| Owner | `action-state-group` |
+| Repository | `checkpointed-local-log` |
+| Workflow filename | `publish-python.yml` |
+| Environment | Empty, matching the job's current configuration |
+
+Keep the existing `release.yml` publisher during the cutover. Remove that
+publisher only after the new workflow has successfully published an authorized
+successor version. API upload tokens do not configure Trusted Publishers.
+The manual `rehearse-python.yml` workflow publishes to TestPyPI separately.
+
 # checkpointed-local-log
 
 **The Checkpointed Local Log (CLL)** — an IETF Internet-Draft specifying a

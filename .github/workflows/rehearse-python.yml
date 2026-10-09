@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Manual TestPyPI rehearsal only. Production publication uses release.yml.
+# Manual TestPyPI rehearsal only. Production publication uses publish-python.yml.
 name: rehearse-python
 on:
   workflow_dispatch:
