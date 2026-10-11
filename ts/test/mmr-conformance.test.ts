@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import * as node from "../src/mmr-node.js";
 import * as browser from "../src/browser.js";
 
@@ -138,6 +138,26 @@ describe("pinned Python MMR proof vectors", () => {
           expect(await verifyCase(m, tree, c), c.name as string).toBe(expected);
         if (expected) await regenerate(m, tree, c);
       }
+    }
+  });
+  // A page outside a secure context has no SubtleCrypto; the browser path
+  // then hashes with the plain SHA-256 and must still meet every vector.
+  it("mirrors the reference verifier in the browser MMR path without SubtleCrypto", async () => {
+    vi.stubGlobal("crypto", undefined);
+    try {
+      expect(globalThis.crypto).toBeUndefined();
+      const tree = await buildTree(browser);
+      for (const c of vectors.cases) {
+        const expected = c.expect === undefined ? true : (c.expect as boolean);
+        const skipVerify = c.kind === "consistency" && Number(c.size_a) === 0;
+        if (!skipVerify)
+          expect(await verifyCase(browser, tree, c), c.name as string).toBe(
+            expected,
+          );
+        if (expected) await regenerate(browser, tree, c);
+      }
+    } finally {
+      vi.unstubAllGlobals();
     }
   });
   it("rejects a flipped pinned root", async () => {

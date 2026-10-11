@@ -17,6 +17,7 @@ import {
   type MmrRangeProof,
   type MmrStructuredConsistencyProof,
 } from "./mmr.js";
+import { sha256 } from "./sha256.js";
 
 const join = (...parts: readonly Uint8Array[]): Uint8Array => {
   const value = new Uint8Array(
@@ -29,21 +30,20 @@ const join = (...parts: readonly Uint8Array[]): Uint8Array => {
   }
   return value;
 };
-const hash: MmrHash = async (...parts) =>
-  new Uint8Array(
-    await (
-      globalThis as typeof globalThis & {
-        crypto: {
-          subtle: {
-            digest(
-              algorithm: "SHA-256",
-              data: Uint8Array,
-            ): Promise<ArrayBuffer>;
-          };
-        };
-      }
-    ).crypto.subtle.digest("SHA-256", join(...parts)),
-  );
+type Subtle = {
+  digest(algorithm: "SHA-256", data: Uint8Array): Promise<ArrayBuffer>;
+};
+// WebCrypto's digest where the page has it; SubtleCrypto exists only in a
+// secure context, so a page in a non-secure or opaque origin (an http: or
+// data: page, some apps' attachment viewers) hashes with the plain
+// implementation instead. Both are SHA-256.
+const hash: MmrHash = async (...parts) => {
+  const subtle = (globalThis as { crypto?: { subtle?: Subtle } }).crypto
+    ?.subtle;
+  return typeof subtle?.digest === "function"
+    ? new Uint8Array(await subtle.digest("SHA-256", join(...parts)))
+    : sha256(join(...parts));
+};
 
 export {
   commitmentObject,
