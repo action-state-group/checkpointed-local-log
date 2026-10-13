@@ -275,7 +275,7 @@ See [DESIGN.md](DESIGN.md) for state and durability invariants.
 ## Release
 
 Releases are published from `main` with the manual
-[Publish npm package](https://github.com/action-state-group/checkpointed-local-log/actions/workflows/publish-ts.yml)
+[Publish TypeScript package](https://github.com/action-state-group/checkpointed-local-log/actions/workflows/publish-ts.yml)
 GitHub Action:
 
 1. Update `version` in `ts/package.json` and `ts/package-lock.json`, commit the change,

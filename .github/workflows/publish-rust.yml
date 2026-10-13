@@ -13,7 +13,7 @@
 # assume a reviewer gate. Pushing a matching tag can trigger an upload.
 #
 # Actions are pinned to full commit SHAs (tag in the trailing comment).
-name: publish-crates
+name: Publish Rust crates
 
 on:
   push:
@@ -22,7 +22,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: publish-crates-${{ github.ref }}
+  group: publish-rust-${{ github.ref }}
   cancel-in-progress: false
 
 defaults:
