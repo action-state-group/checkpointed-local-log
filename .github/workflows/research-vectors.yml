@@ -14,5 +14,6 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install './python[dev]'
       - run: python mmr-profile-vectors/generate.py --check
+      - run: python cll-02-vectors/generate.py --check
       - run: python -m pytest tests/checkpoint/test_mmr_profile_vectors.py
         working-directory: python
