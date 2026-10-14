@@ -15,7 +15,7 @@ python -m ruff check .
 python -m pytest -q
 python -m pytest -q ../.github/test_release.py     # release helper
 
-# rust/  and  evidencebook/
+# rust/  (the workspace: checkpointed-local-log and evidencebook)
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
@@ -31,7 +31,7 @@ CLL_ROOT=.. npm run check
 npm run build
 ```
 
-`evidencebook/` also runs `./scripts/check-vocabulary.sh`. Cross-language
+`rust/evidencebook/` also runs `./scripts/check-vocabulary.sh`. Cross-language
 interop checks live in `.github/scripts/` and `go/scripts/`.
 
 ## Layout
@@ -39,10 +39,10 @@ interop checks live in `.github/scripts/` and `go/scripts/`.
 | Directory | Package |
 |---|---|
 | `python/` | PyPI `checkpointed-local-log`, import `cll` |
-| `rust/` | crate `checkpointed-local-log`, library `cll` |
+| `rust/checkpointed-local-log/` | crate `checkpointed-local-log`, library `cll` |
 | `go/` | `github.com/action-state-group/checkpointed-local-log/go` |
 | `ts/` | npm `@action-state-group/cll` |
-| `evidencebook/` | crate `evidencebook`, which depends on `rust/` by path |
+| `rust/evidencebook/` | crate `evidencebook`, which depends on `checkpointed-local-log` by path |
 | `spec/` | the Internet-Draft source |
 
 The conformance vector directories (`*-vectors/`) are shared by every
@@ -54,6 +54,13 @@ implementation; change them only with all implementations agreeing.
   (`git commit -s`). Do not add AI attribution trailers; the `dco` check
   rejects both an unsigned commit and an AI co-author trailer.
 - New behavior needs tests in the same change, including error paths.
+- One top-level directory per language. In `rust/`, `Cargo.toml` is the
+  workspace, each crate is `rust/<crate-name>/` (here
+  `rust/checkpointed-local-log/` and `rust/evidencebook/`), and all crates
+  share `rust/Cargo.lock`. Add a Rust crate as another workspace member, never
+  at `rust/` itself or outside it; its `.github/releases.json` entry names
+  `rust/<crate-name>/Cargo.toml` and `rust/Cargo.lock`. The other
+  action-state-group repositories use the same Rust layout.
 
 ## Releases
 

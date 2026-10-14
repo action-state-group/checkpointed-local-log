@@ -8,8 +8,8 @@
 #
 # evidencebook depends on checkpointed-local-log by version. Until that version
 # is on crates.io, its dry run cannot resolve it, so the two crates are instead
-# packaged together in a temporary workspace for local compatibility coverage.
-# That fallback does not establish registry resolution or publication readiness.
+# packaged together as the workspace for local compatibility coverage. That
+# fallback does not establish registry resolution or publication readiness.
 name: Crate packaging
 
 on:
@@ -33,13 +33,14 @@ jobs:
         run: bash .github/scripts/test_crate_availability.sh
 
       - name: crates.io metadata (keywords, categories, required fields)
-        run: python3 .github/scripts/check_crate_metadata.py rust/Cargo.toml evidencebook/Cargo.toml
+        run: python3 .github/scripts/check_crate_metadata.py rust/checkpointed-local-log/Cargo.toml rust/evidencebook/Cargo.toml
 
       - name: package file lists
+        working-directory: rust
         run: |
           set -euo pipefail
-          for crate in rust evidencebook; do
-            (cd "$crate" && cargo package --list --allow-dirty) > "/tmp/$crate.list"
+          for crate in checkpointed-local-log evidencebook; do
+            cargo package --list --allow-dirty -p "$crate" > "/tmp/$crate.list"
             echo "== $crate"; cat "/tmp/$crate.list"
             if grep -E '^(tests|examples|scripts|target)/|vectors|\.(pem|key|env)$' "/tmp/$crate.list"; then
               echo "::error::$crate packages a file it must not ship"; exit 1
@@ -48,22 +49,19 @@ jobs:
 
       - name: checkpointed-local-log dry run
         working-directory: rust
-        run: cargo publish --dry-run --allow-dirty
+        run: cargo publish --dry-run --allow-dirty -p checkpointed-local-log
 
       - name: evidencebook dry run
+        working-directory: rust
         run: |
           set -euo pipefail
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/Cargo.toml | head -1)
-          if bash .github/scripts/check_crate_availability.sh checkpointed-local-log "$version"; then
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' checkpointed-local-log/Cargo.toml | head -1)
+          if bash ../.github/scripts/check_crate_availability.sh checkpointed-local-log "$version"; then
             echo "Registry-backed EvidenceBook verification BLOCKED: checkpointed-local-log $version is absent."
             echo "Packaging both crates only for local compatibility coverage."
-            ws=$(mktemp -d)
-            cp -R rust evidencebook "$ws/"
-            rm -f "$ws/rust/Cargo.lock" "$ws/evidencebook/Cargo.lock"
-            printf '[workspace]\nmembers = ["rust", "evidencebook"]\nresolver = "2"\n' > "$ws/Cargo.toml"
-            (cd "$ws" && cargo package --workspace --allow-dirty)
+            cargo package --workspace --allow-dirty
           else
             status=$?
             [ "$status" -eq 2 ] || exit "$status"
-            (cd evidencebook && cargo publish --dry-run --allow-dirty)
+            cargo publish --dry-run --allow-dirty -p evidencebook
           fi

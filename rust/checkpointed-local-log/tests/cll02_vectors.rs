@@ -14,7 +14,7 @@ use serde_json::Value;
 use std::path::Path;
 
 fn vectors() -> Value {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../cll-02-vectors/vectors.json");
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../cll-02-vectors/vectors.json");
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 

@@ -244,6 +244,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "evidencebook"
+version = "0.0.2"
+dependencies = [
+ "checkpointed-local-log",
+ "ed25519-dalek",
+ "hex",
+ "rand_core",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
