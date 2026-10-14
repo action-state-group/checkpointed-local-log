@@ -12,10 +12,11 @@ on:
 permissions:
   contents: read
 
-# One group per tag: a shared group keeps only one pending run and would
-# cancel a queued publish for another version.
+# One publish at a time for this package, so the dist-tag choice below sees
+# npm as the previous publish left it. GitHub keeps one pending run per group,
+# so a third release queued behind two is cancelled; re-run it.
 concurrency:
-  group: npm-publish-${{ github.event.release.tag_name || github.ref_name }}
+  group: npm-publish-ts
   cancel-in-progress: false
 
 jobs:
@@ -85,13 +86,21 @@ jobs:
       - name: Build package
         run: npm run build
 
-      - name: Keep prereleases off the latest dist-tag
-        # npm refuses a prerelease without an explicit dist-tag.
+      - name: Choose the dist-tag
+        # npm refuses a prerelease without an explicit dist-tag, and `latest`
+        # must never move backward: a stable version older than npm's current
+        # `latest` (a backport, or a release that finished out of order)
+        # publishes under `backport` instead.
         run: |
-          case "$(node -p "require('./package.json').version")" in
-            *-*) echo "DIST_TAG=next" >> "$GITHUB_ENV" ;;
-            *) echo "DIST_TAG=latest" >> "$GITHUB_ENV" ;;
-          esac
+          version=$(node -p "require('./package.json').version")
+          latest=$(npm view "$(node -p "require('./package.json').name")" dist-tags.latest 2>/dev/null || true)
+          dist_tag=$(node -e '
+            const [version, latest] = process.argv.slice(1);
+            const core = (v) => v.split("-")[0].split(".").map(Number);
+            const older = (a, b) => { for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] < b[i]; return false; };
+            console.log(version.includes("-") ? "next" : latest && older(core(version), core(latest)) ? "backport" : "latest");
+          ' "$version" "$latest")
+          echo "DIST_TAG=$dist_tag" >> "$GITHUB_ENV"
 
       - name: Publish package if needed
         run: |

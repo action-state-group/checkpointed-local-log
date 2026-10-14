@@ -282,7 +282,8 @@ on it. The workflow checks the tag against `ts/package.json`, the lockfile and
 that the commit is on `main`, runs `npm ci`, the package check and the build,
 and publishes `@action-state-group/cll` from the `npm` environment. A re-run
 skips a version npm already has from the same commit and fails if npm has it
-from another commit. Prerelease versions publish under the `next` dist-tag.
+from another commit. Prerelease versions publish under the `next` dist-tag, and a stable version older than npm's current `latest` under
+`backport`, so `latest` never moves backward.
 
 The npm package's trusted publisher names organization `action-state-group`,
 repository `checkpointed-local-log`, workflow filename `publish-ts.yml`, and

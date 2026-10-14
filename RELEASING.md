@@ -41,6 +41,10 @@ merges.
 crate also updates its entry in `evidencebook/Cargo.lock`. A `minor` or
 `major` bump of the crate also needs `evidencebook/Cargo.toml`'s requirement
 raised on the release branch; CI's `--locked` builds fail until it is.
+Release the two crates in separate merges, `checkpointed-local-log` first: if
+one merge bumps both, `evidencebook` may upload before crates.io serves the new
+`checkpointed-local-log` and fail; re-run its publish once that version is
+live.
 
 If a publish fails after the tag exists:
 
