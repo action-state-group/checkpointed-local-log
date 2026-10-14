@@ -10,7 +10,7 @@ if [[ ! "$crate" =~ ^[a-z0-9_-]+$ || ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 fi
 status=$(curl --silent --show-error --connect-timeout 10 --max-time 30 \
   --output /dev/null --write-out '%{http_code}' \
-  -A "publish-crates (github.com/${GITHUB_REPOSITORY:-action-state-group/checkpointed-local-log})" \
+  -A "publish-rust (github.com/${GITHUB_REPOSITORY:-action-state-group/checkpointed-local-log})" \
   "https://crates.io/api/v1/crates/$crate/$version") || {
   echo "could not establish registry availability for $crate $version" >&2; exit 1
 }
