@@ -1,4 +1,4 @@
-name: python
+name: Python CI
 
 # The Python reference's own tests. Runs on every push and pull request: the
 # package is the reference the conformance vectors are generated from, and its

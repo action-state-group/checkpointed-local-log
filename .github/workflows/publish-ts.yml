@@ -1,7 +1,7 @@
 # Publishes ts/ (@action-state-group/cll) to npm via OIDC trusted publishing
 # for a ts/v<version> tag, which tag-release.yml creates when a version bump
 # merges. See RELEASING.md.
-name: Publish TypeScript package
+name: Release · Publish TypeScript
 
 on:
   release:
