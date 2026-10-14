@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+# DCO sign-off enforcement — replaces the hosted probot DCO app with a
+# self-contained Actions job that is outage-proof and pinned.
+#
+# Merge commits are out of scope (--no-merges). A merge commit introduces no
+# authored content of its own — its parents each carry their own sign-off, and
+# those parents are inside the range this job already checks. Without the flag
+# the gate fails on merge commits written by GitHub's own UI, which never adds
+# a trailer: both the "Merge pull request" and "Update branch" buttons produce
+# one. Since `dco` is a required status check here, that turns a required gate
+# red for a reason unrelated to any contribution — and it cannot be repaired by
+# adding a sign-off commit on top, because the job reports the offending commit
+# rather than the absence of a trailer overall. The offending commit has to be
+# rewritten, which means a force-push and a fresh review of a branch whose
+# content nobody changed.
+#
+# Branch protection: require the "DCO / dco" check (Settings → Branches →
+# Require status checks → search "dco"). Drop the "DCO" probot app entry.
+name: DCO
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check all commits carry a DCO Signed-off-by line
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=()
+          while IFS= read -r sha; do
+            msg=$(git log --format=%B -n 1 "$sha")
+            if ! echo "$msg" | grep -qiE "^Signed-off-by: .+ <.+@.+>"; then
+              missing+=("$(git log --format='%h %s' -n 1 "$sha")")
+            fi
+          done < <(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "ERROR: Missing DCO Signed-off-by on the following commits:"
+            printf '  %s\n' "${missing[@]}"
+            echo
+            echo "Fix: git commit --amend -s  (for last commit)"
+            echo "     git rebase --signoff HEAD~N  (for N commits)"
+            exit 1
+          fi
+          echo "All commits signed off. ✓"
+
+      - name: Reject AI co-author trailers
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Authorship here is human and DCO-signed. A Co-authored-by trailer naming an AI
+          # assistant misstates who is accountable for the commit, so any PR commit carrying
+          # one fails. Merge commits are skipped for the same reason as the sign-off check.
+          pattern='^Co-authored-by: .*(claude|anthropic|copilot|chatgpt|openai|codex|gemini|cursor)'
+          bad=()
+          while IFS= read -r sha; do
+            if git log --format=%B -n 1 "$sha" | grep -qiE "$pattern"; then
+              bad+=("$(git log --format='%h %s' -n 1 "$sha")")
+            fi
+          done < <(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+          if [ ${#bad[@]} -gt 0 ]; then
+            echo "ERROR: AI co-author trailer on the following commits:"
+            printf '  %s\n' "${bad[@]}"
+            echo
+            echo "Fix: remove the Co-authored-by line (git commit --amend / git rebase -i) and force-push."
+            exit 1
+          fi
+          echo "No AI co-author trailers. ✓"
