@@ -11,7 +11,7 @@ The crate is published as `checkpointed-local-log`; the library is named
 
 ```toml
 [dependencies]
-checkpointed-local-log = "0.2"
+checkpointed-local-log = "0.3"
 ```
 
 ```rust

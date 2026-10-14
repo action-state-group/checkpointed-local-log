@@ -19,7 +19,11 @@ export interface WitnessReceipt {
   readonly treeSize?: number;
 }
 export interface ReceiptVerification {
-  verify(checkpoint: Uint8Array, receipt: WitnessReceipt): boolean;
+  /** May be synchronous or async (ReceiptVerifier is async); the runner awaits it. */
+  verify(
+    checkpoint: Uint8Array,
+    receipt: WitnessReceipt,
+  ): boolean | Promise<boolean>;
 }
 export interface WitnessDeliveryRunnerOptions {
   readonly verifiers: ReadonlyMap<string, ReceiptVerification>;
