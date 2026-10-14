@@ -93,7 +93,12 @@ jobs:
         # publishes under `backport` instead.
         run: |
           version=$(node -p "require('./package.json').version")
-          latest=$(npm view "$(node -p "require('./package.json').name")" dist-tags.latest 2>/dev/null || true)
+          # Only a clean answer or an explicit "not found" counts: treating a
+          # registry or network error as "no latest" could move latest backward.
+          if ! latest=$(npm view "$(node -p "require('./package.json').name")" dist-tags.latest 2>"$RUNNER_TEMP/latest-error.txt"); then
+            grep -q E404 "$RUNNER_TEMP/latest-error.txt" || { cat "$RUNNER_TEMP/latest-error.txt" >&2; exit 1; }
+            latest=""
+          fi
           dist_tag=$(node -e '
             const [version, latest] = process.argv.slice(1);
             const core = (v) => v.split("-")[0].split(".").map(Number);
