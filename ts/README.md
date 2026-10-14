@@ -275,9 +275,9 @@ See [DESIGN.md](DESIGN.md) for state and durability invariants.
 ## Release
 
 Releases follow the repository's [RELEASING.md](../RELEASING.md): run
-**Prepare release** for `ts`, and merging its pull request creates the
+**Release · Prepare** for `ts`, and merging its pull request creates the
 `ts/v<version>` tag and dispatches
-[Publish TypeScript package](https://github.com/action-state-group/checkpointed-local-log/actions/workflows/publish-ts.yml)
+[Release · Publish TypeScript](https://github.com/action-state-group/checkpointed-local-log/actions/workflows/publish-ts.yml)
 on it. The workflow checks the tag against `ts/package.json`, the lockfile and
 that the commit is on `main`, runs `npm ci`, the package check and the build,
 and publishes `@action-state-group/cll` from the `npm` environment. A re-run

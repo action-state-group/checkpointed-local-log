@@ -15,7 +15,7 @@
 # >>> IF YOU ADD A STEP THAT RUNS, BUILDS, OR INSTALLS ANYTHING FROM ./pr, YOU HAVE HANDED THE
 # >>> LEAK_LINT_TERMS SECRET TO ANY STRANGER WHO OPENS A PULL REQUEST. The lint's own unit tests
 # >>> run in python.yml, on pull_request, which correctly receives no secrets.
-name: leak-lint
+name: Leak lint
 
 on:
   pull_request_target:

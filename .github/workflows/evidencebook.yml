@@ -3,7 +3,7 @@
 # embeds the `cll` crate beside it, so a change to either triggers it. Also
 # runs the crate's vocabulary gate: the crate carries no deployment
 # vocabulary, and scripts/check-vocabulary.sh fails the build if any appears.
-name: evidencebook
+name: evidencebook CI
 
 on:
   push:
@@ -21,8 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: vocabulary gate
