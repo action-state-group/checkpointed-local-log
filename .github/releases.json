@@ -1,0 +1,28 @@
+{
+  "python": {
+    "kind": "python",
+    "manifest": "python/pyproject.toml",
+    "tag_prefix": "python/v",
+    "workflow": "publish-python.yml"
+  },
+  "ts": {
+    "kind": "npm",
+    "manifest": "ts/package.json",
+    "tag_prefix": "ts/v",
+    "workflow": "publish-ts.yml"
+  },
+  "crates/checkpointed-local-log": {
+    "kind": "cargo",
+    "manifest": "rust/Cargo.toml",
+    "lockfile": "rust/Cargo.lock",
+    "tag_prefix": "crates/checkpointed-local-log-v",
+    "workflow": "publish-rust.yml"
+  },
+  "crates/evidencebook": {
+    "kind": "cargo",
+    "manifest": "evidencebook/Cargo.toml",
+    "lockfile": "evidencebook/Cargo.lock",
+    "tag_prefix": "crates/evidencebook-v",
+    "workflow": "publish-rust.yml"
+  }
+}

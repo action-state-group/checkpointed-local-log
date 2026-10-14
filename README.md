@@ -11,9 +11,10 @@
 Install Python from the repository root with `pip install ./python`, or
 `pip install -e './python[dev]'` for development. Run Go commands in `go/`,
 npm commands in `ts/`, and Cargo commands in the relevant crate directory.
-Future release tags are language-specific: `python/v*`, `go/v*`, `ts/v*`;
-existing `crates/checkpointed-local-log-v*` and `crates/evidencebook-v*` remain.
-Historical tags and package versions retain their original layouts.
+Release tags are language-specific: `python/v*`, `ts/v*`, `go/v*`,
+`crates/checkpointed-local-log-v*` and `crates/evidencebook-v*`. Releases are
+cut through a reviewed version-bump pull request; see
+[RELEASING.md](RELEASING.md).
 
 # checkpointed-local-log
 
