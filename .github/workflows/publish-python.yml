@@ -15,6 +15,9 @@ jobs:
   publish:
     if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'python/v')
     runs-on: ubuntu-latest
+    # The PyPI Trusted Publisher requires this environment, which only
+    # python/v* tags may deploy to.
+    environment: pypi
     permissions:
       id-token: write
     steps:
