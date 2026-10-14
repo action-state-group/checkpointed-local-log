@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<reference anchor="I-D.bryce-cose-receipts-mmr-profile" target="https://datatracker.ietf.org/doc/html/draft-bryce-cose-receipts-mmr-profile-02">
+<reference anchor="I-D.bryce-cose-receipts-mmr-profile" target="https://datatracker.ietf.org/doc/html/draft-bryce-cose-receipts-mmr-profile-03">
    <front>
       <title>COSE Receipts for MMRs</title>
       <author initials="R." surname="Bryce" fullname="Robin Bryce">
          </author>
-      <date month="June" day="14" year="2026" />
+      <author initials="J." surname="Geater" fullname="Jon Geater">
+         </author>
+      <date month="September" day="19" year="2026" />
       <abstract>
 	 <t>   This document defines a new verifiable data structure type for COSE
    Receipts [I-D.ietf-cose-merkle-tree-proofs] specifically for use with
@@ -18,6 +20,6 @@
 	 </t>
       </abstract>
    </front>
-   <seriesInfo name="Internet-Draft" value="draft-bryce-cose-receipts-mmr-profile-02" />
+   <seriesInfo name="Internet-Draft" value="draft-bryce-cose-receipts-mmr-profile-03" />
    
 </reference>
