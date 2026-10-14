@@ -7,6 +7,11 @@ are documented here. The format follows
 
 ## Unreleased
 
+## 0.5.1 — 2026-10-14
+
+No library changes. Adds tests that run the CLL-02 conformance vectors, and is
+the first Python release through the release-PR workflow (see RELEASING.md).
+
 ## 0.5.0 — 2026-10-05
 
 ### Changed — BREAKING: no default witness, no built-in witness key
