@@ -13,15 +13,15 @@
   },
   "crates/checkpointed-local-log": {
     "kind": "cargo",
-    "manifest": "rust/Cargo.toml",
+    "manifest": "rust/checkpointed-local-log/Cargo.toml",
     "lockfile": "rust/Cargo.lock",
     "tag_prefix": "crates/checkpointed-local-log-v",
     "workflow": "publish-rust.yml"
   },
   "crates/evidencebook": {
     "kind": "cargo",
-    "manifest": "evidencebook/Cargo.toml",
-    "lockfile": "evidencebook/Cargo.lock",
+    "manifest": "rust/evidencebook/Cargo.toml",
+    "lockfile": "rust/Cargo.lock",
     "tag_prefix": "crates/evidencebook-v",
     "workflow": "publish-rust.yml"
   }

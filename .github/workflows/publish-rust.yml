@@ -60,8 +60,8 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
 
       # The tag is read from the environment, never interpolated into the
-      # script. Only the crates listed here can be published; each is its own
-      # package directory, with its own Cargo.lock.
+      # script. Only the crates listed here can be published; each is a member
+      # of the rust/ workspace, which shares one Cargo.lock.
       - name: The tag names a crate of this repository, on main
         id: tag
         run: |
@@ -71,8 +71,7 @@ jobs:
           fi
           crate="${BASH_REMATCH[1]}"; version="${BASH_REMATCH[2]}"
           case "$crate" in
-            checkpointed-local-log) dir=rust ;;
-            evidencebook) dir=evidencebook ;;
+            checkpointed-local-log|evidencebook) dir="rust/$crate" ;;
             *) echo "::error::$crate is not a crate this workflow publishes"; exit 1 ;;
           esac
           git fetch --no-tags origin main
@@ -97,7 +96,7 @@ jobs:
           if [ "$manifest" != "$VERSION" ]; then
             echo "::error::tag says $CRATE $VERSION, Cargo.toml says ${manifest:-nothing}"; exit 1
           fi
-          bash ../.github/scripts/check_crate_availability.sh "$CRATE" "$VERSION"
+          bash ../../.github/scripts/check_crate_availability.sh "$CRATE" "$VERSION"
 
       # crates.io checks keywords, categories, description, license and
       # repository at upload; `cargo publish --dry-run` does not.

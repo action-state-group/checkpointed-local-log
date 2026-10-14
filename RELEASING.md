@@ -11,8 +11,8 @@ merging it tags and publishes. The packages are listed in
 |---|---|---|---|---|
 | `python` | `python/pyproject.toml` | `python/v<version>` | `publish-python.yml` | `pypi` (tag rule `python/v*`) |
 | `ts` | `ts/package.json` and `ts/package-lock.json` | `ts/v<version>` | `publish-ts.yml` | `npm` (tag rule `ts/v*`) |
-| `crates/checkpointed-local-log` | `rust/Cargo.toml` and `rust/Cargo.lock` | `crates/checkpointed-local-log-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
-| `crates/evidencebook` | `evidencebook/Cargo.toml` and `evidencebook/Cargo.lock` | `crates/evidencebook-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
+| `crates/checkpointed-local-log` | `rust/checkpointed-local-log/Cargo.toml` and `rust/Cargo.lock` | `crates/checkpointed-local-log-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
+| `crates/evidencebook` | `rust/evidencebook/Cargo.toml` and `rust/Cargo.lock` | `crates/evidencebook-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
 
 The prefix is only on the Git tag. The registry version stays plain (`0.5.1`).
 
@@ -37,9 +37,9 @@ The prefix is only on the Git tag. The registry version stays plain (`0.5.1`).
 Bumping a version by hand in any pull request releases it the same way when it
 merges.
 
-`evidencebook` depends on `checkpointed-local-log` by path, so bumping the
-crate also updates its entry in `evidencebook/Cargo.lock`. A `minor` or
-`major` bump of the crate also needs `evidencebook/Cargo.toml`'s requirement
+Both crates are members of the `rust/` workspace and share `rust/Cargo.lock`.
+`evidencebook` depends on `checkpointed-local-log` by path, so a `minor` or
+`major` bump of that crate also needs `rust/evidencebook/Cargo.toml`'s requirement
 raised on the release branch; CI's `--locked` builds fail until it is.
 Release the two crates in separate merges, `checkpointed-local-log` first: if
 one merge bumps both, `evidencebook` may upload before crates.io serves the new

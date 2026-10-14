@@ -102,7 +102,7 @@ Each implementation runs these vectors in two layers:
 | Python | `python/tests/checkpoint/test_cll02_vectors.py` | strict xfail |
 | Go | `go/mmr/cll02_vectors_test.go` | `go/checkpoint/cll02_wire_test.go` |
 | TypeScript | `ts/test/cll02-vectors.test.ts` (Node and browser paths) | same file |
-| Rust | `rust/tests/cll02_vectors.rs` | same file |
+| Rust | `rust/checkpointed-local-log/tests/cll02_vectors.rs` | same file |
 
 The Python test also checks that `profile_main.py` reproduces the -03 vectors
 in `../mmr-profile-vectors/`, so the two transcriptions of the profile agree
