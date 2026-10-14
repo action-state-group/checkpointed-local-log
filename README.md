@@ -12,8 +12,9 @@ Install Python from the repository root with `pip install ./python`, or
 `pip install -e './python[dev]'` for development. Run Go commands in `go/`,
 npm commands in `ts/`, and Cargo commands in the relevant crate directory.
 Release tags are language-specific: `python/v*`, `ts/v*`, `go/v*`,
-`crates/checkpointed-local-log-v*` and `crates/evidencebook-v*`. Releases are
-cut through a reviewed version-bump pull request; see
+`crates/checkpointed-local-log-v*` and `crates/evidencebook-v*`. Python,
+TypeScript and the two crates are released through a reviewed version-bump
+pull request; a Go release is an admin-pushed `go/v*` tag. See
 [RELEASING.md](RELEASING.md).
 
 # checkpointed-local-log
@@ -155,8 +156,8 @@ by using this crate.
 
 `tests/refusal_interop.rs` verifies a refusal signed by the Python
 implementation (the same vector the Go implementation checks). Its own CI,
-`.github/workflows/evidencebook.yml`, runs on changes under
-`evidencebook/` or `rust/`: a vocabulary gate, `cargo fmt`,
+`.github/workflows/evidencebook.yml`, runs on every push and pull request: a
+vocabulary gate, `cargo fmt`,
 `cargo clippy -D warnings`, `cargo test --all-features`, and `cargo doc` with
 warnings denied.
 
@@ -189,11 +190,11 @@ The build toolchain is [`kramdown-rfc`](https://github.com/cabo/kramdown-rfc)
 
 ```sh
 cd spec
-make DRAFT=draft-mih-scitt-checkpointed-local-log-00 \
+make DRAFT=draft-mih-scitt-checkpointed-local-log-02 \
      KDRFC=kramdown-rfc2629 \
      XML2RFC=xml2rfc \
-     draft-mih-scitt-checkpointed-local-log-00.xml \
-     draft-mih-scitt-checkpointed-local-log-00.txt
+     draft-mih-scitt-checkpointed-local-log-02.xml \
+     draft-mih-scitt-checkpointed-local-log-02.txt
 ```
 
 `spec/` holds `-00`, `-01` and `-02`; set `DRAFT` to the one you want.

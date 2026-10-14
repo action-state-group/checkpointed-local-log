@@ -174,8 +174,8 @@ await tree.appendHexIdentity(identity);
 const proof = await tree.inclusionProof(0n);
 await verifyHexInclusion(await tree.root(), tree.size, 0n, identity, proof);
 
-const metadata = checkpointMetadata(signedCheckpointBytes);
-const witnessEntryHash = checkpointEntryHash(signedCheckpointBytes);
+const metadata = await checkpointMetadata(signedCheckpointBytes);
+const witnessEntryHash = await checkpointEntryHash(signedCheckpointBytes);
 ```
 
 `checkpointMetadata` returns data only after complete checkpoint shape,
