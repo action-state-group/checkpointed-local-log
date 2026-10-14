@@ -1,19 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
+# Publishes python/ to PyPI via OIDC trusted publishing for a python/v<version>
+# tag, which tag-release.yml creates when a version bump merges. See RELEASING.md.
 name: Publish Python package
 on:
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Existing python/v<version> tag to publish
-        required: true
-        type: string
+  # tag-release.yml dispatches this on the python/v<version> tag it creates.
+  # Dispatched on a branch, it does nothing.
+  workflow_dispatch: {}
 permissions:
   contents: read
 jobs:
   publish:
-    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'python/v')
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'python/v')) ||
+      (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/python/v'))
     runs-on: ubuntu-latest
     # The PyPI Trusted Publisher requires this environment, which only
     # python/v* tags may deploy to.
@@ -21,27 +22,17 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
-      - uses: actions/setup-python@v5
+          ref: ${{ github.event.release.tag_name || github.ref_name }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Validate Python tag, metadata and intended ref
+      - name: Require a matching tag on main
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          python .github/scripts/check_python_release.py "$RELEASE_TAG" python/pyproject.toml
-          git fetch --no-tags origin main
-          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
-          git merge-base --is-ancestor HEAD origin/main
-          if [ "$EVENT_NAME" = workflow_dispatch ]; then
-            test "$GITHUB_REF" = "refs/tags/$RELEASE_TAG"
-            test "$GITHUB_SHA" = "$(git rev-parse HEAD)"
-          fi
+          RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+        run: python .github/release.py check python "$RELEASE_TAG"
       - run: python -m pip install build
       - run: python -m build
         working-directory: python
