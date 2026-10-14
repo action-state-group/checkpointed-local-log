@@ -51,7 +51,8 @@ implementation; change them only with all implementations agreeing.
 ## Rules
 
 - Commits use conventional commit messages and a DCO sign-off
-  (`git commit -s`). Do not add AI attribution trailers.
+  (`git commit -s`). Do not add AI attribution trailers; the `dco` check
+  rejects both an unsigned commit and an AI co-author trailer.
 - New behavior needs tests in the same change, including error paths.
 
 ## Releases
