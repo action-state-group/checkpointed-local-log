@@ -104,10 +104,20 @@ func openDatabase(ctx context.Context, dsn, logID string) (*sql.DB, error) {
 	if dsn == "" || cll.ValidateIdentifier(logID) != nil {
 		return nil, fmt.Errorf("%w: DSN and log ID are required", cll.ErrInvalid)
 	}
-	db, err := sql.Open("mysql", dsn)
+	config, err := mysqldriver.ParseDSN(dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: DSN: %v", cll.ErrInvalid, err)
 	}
+	// Compare-and-set updates check the affected-row count. MySQL counts only
+	// changed rows by default, so an update that rewrites a row with identical
+	// values would look like a lost race; count matched rows instead, as the
+	// TypeScript and Python drivers do.
+	config.ClientFoundRows = true
+	connector, err := mysqldriver.NewConnector(config)
+	if err != nil {
+		return nil, fmt.Errorf("%w: DSN: %v", cll.ErrInvalid, err)
+	}
+	db := sql.OpenDB(connector)
 	if err := db.PingContext(ctx); err != nil {
 		return nil, errors.Join(err, db.Close())
 	}

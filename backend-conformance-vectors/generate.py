@@ -384,6 +384,19 @@ def witness_cases() -> list[dict]:
             ],
         },
         {
+            "name": "witness/commit-unchanged",
+            "description": "commitWitness with a row identical to the stored one succeeds; an unchanged row is not a lost race.",
+            "interfaces": ["checkpoint", "witness"],
+            "steps": [
+                commit(0, None, {**base, "witnesses": [w1]}),
+                ok("commitWitness", expectedAttempts=0, next=w1),
+                step("getWitness", {"witnessId": "primary", "checkpointSize": "1"}, w1),
+                ok("commitWitness", expectedAttempts=0, next=w1_tried),
+                ok("commitWitness", expectedAttempts=1, next=w1_tried),
+                step("getWitness", {"witnessId": "primary", "checkpointSize": "1"}, w1_tried),
+            ],
+        },
+        {
             "name": "witness/invalid-rows",
             "description": "commitWitness rejects rows that break the witness rules as invalid.",
             "interfaces": ["checkpoint", "witness"],
