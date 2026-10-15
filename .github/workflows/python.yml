@@ -24,6 +24,23 @@ jobs:
       matrix:
         # The oldest Python the package supports, and a current one.
         python-version: ["3.9", "3.12"]
+    # The cll.log MySQL backend tests run against a real server. They read
+    # CLL_MYSQL_URL and fail rather than skip when CI is set without it.
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: python
+          MYSQL_DATABASE: cll
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppython --silent"
+          --health-interval=2s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      CLL_MYSQL_URL: mysql://root:python@127.0.0.1:3306/cll
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -32,13 +49,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: install checkpointed-local-log (dev)
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e ".[dev,mysql]"
 
       - name: ruff
         run: python -m ruff check .
 
       - name: pytest
         run: python -m pytest -q
+
+      - name: cll and cll.log load no database driver
+        run: >-
+          python -c "import sys, cll, cll.log;
+          loaded = [m for m in ('sqlite3', 'pymysql') if m in sys.modules];
+          assert not loaded, loaded"
 
       # The leak-lint tests live next to the lint in .github/, outside the test paths. They use
       # synthetic terms only, so this pull_request job needs no secret.
