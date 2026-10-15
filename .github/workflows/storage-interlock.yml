@@ -1,0 +1,75 @@
+name: Storage interlock
+# Every language that ships a CLL backend writes each storage format, and every
+# other language opens, continues and verifies it: identical entries, state,
+# witness rows and checkpoint roots. Each language also runs the shared
+# backend conformance vectors (docs/backend-contract.md), so all of them agree
+# on every error code. A pull request that adds a language extends both.
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  interlock:
+    name: Storage interlock (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [jsonl, sqlite, mysql]
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: interop
+          MYSQL_DATABASE: cll
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pinterop --silent"
+          --health-interval=2s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      CLL_MYSQL_DSN: root:interop@tcp(127.0.0.1:3306)/cll
+      CLL_MYSQL_URL: mysql://root:interop@127.0.0.1:3306/cll
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Build TypeScript
+        run: npm ci && npm run build
+        working-directory: ts
+
+      - name: Go conformance vectors
+        working-directory: go
+        run: |
+          case "${{ matrix.backend }}" in
+            mysql) go test -count=1 -run 'TestContractAndCrossHandle' ./store/mysql ;;
+            *) go test -count=1 -run 'TestConformanceVectors' "./store/${{ matrix.backend }}" ;;
+          esac
+      - name: TypeScript conformance vectors
+        working-directory: ts
+        run: |
+          case "${{ matrix.backend }}" in
+            jsonl) npx vitest run test/conformance.test.ts -t "conformance vectors: JSONL" ;;
+            sqlite) npx vitest run test/conformance.test.ts -t "conformance vectors: SQLite" ;;
+            mysql) npx vitest run test/mysql.test.ts -t "conformance vectors" ;;
+          esac
+
+      - name: Every language writes, every other reads and verifies
+        run: bash go/scripts/check-storage-interop.sh "${{ matrix.backend }}"

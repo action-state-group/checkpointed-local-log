@@ -31,32 +31,43 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Every language that ships a backend has a driver with the same modes:
+#   <driver> advance|verify|summary|hold|expect-contention <backend> <target> <log-id> [argument...]
+# CLL_INTEROP_LANGUAGES selects a subset (default: all).
+all_languages=(go ts)
+read -r -a languages <<<"${CLL_INTEROP_LANGUAGES:-${all_languages[*]}}"
+
+driver() {
+  local language=$1
+  shift
+  case "$language" in
+    go) go -C "$go_dir" run ./test/interop/storage "$@" ;;
+    ts) node "$go_dir/test/interop/storage.mjs" "$@" ;;
+    *)
+      echo "unsupported language: $language" >&2
+      return 2
+      ;;
+  esac
+}
+
+# target <language> <name>: the storage location a language opens for one log.
+# Go takes a MySQL DSN; every other driver takes a mysql:// URL.
+target() {
+  case "$backend" in
+    jsonl | sqlite) echo "$work_dir/$2.$backend" ;;
+    mysql)
+      if [[ "$1" == go ]]; then echo "$CLL_MYSQL_DSN"; else echo "$CLL_MYSQL_URL"; fi
+      ;;
+  esac
+}
+
 case "$backend" in
-  jsonl)
-    first_go_target="$work_dir/go-first.jsonl"
-    first_ts_target=$first_go_target
-    second_go_target="$work_dir/ts-first.jsonl"
-    second_ts_target=$second_go_target
-    ;;
-  sqlite)
-    first_go_target="$work_dir/go-first.sqlite"
-    first_ts_target=$first_go_target
-    second_go_target="$work_dir/ts-first.sqlite"
-    second_ts_target=$second_go_target
-    ;;
+  jsonl | sqlite) ;;
   mysql)
-    if [[ -z "${CLL_MYSQL_DSN:-}" ]]; then
-      echo "CLL_MYSQL_DSN is required for mysql" >&2
+    if [[ -z "${CLL_MYSQL_DSN:-}" || -z "${CLL_MYSQL_URL:-}" ]]; then
+      echo "CLL_MYSQL_DSN and CLL_MYSQL_URL are required for mysql" >&2
       exit 1
     fi
-    if [[ -z "${CLL_MYSQL_URL:-}" ]]; then
-      echo "CLL_MYSQL_URL is required for mysql" >&2
-      exit 1
-    fi
-    first_go_target=$CLL_MYSQL_DSN
-    first_ts_target=$CLL_MYSQL_URL
-    second_go_target=$CLL_MYSQL_DSN
-    second_ts_target=$CLL_MYSQL_URL
     ;;
   *)
     echo "unsupported backend: $backend" >&2
@@ -65,31 +76,43 @@ case "$backend" in
 esac
 
 suffix="${GITHUB_RUN_ID:-local}-$$"
-first_log="interop-go-first-$suffix"
-second_log="interop-ts-first-$suffix"
 
-go_driver() {
-  go -C "$go_dir" run ./test/interop/storage "$@"
+canonical() {
+  python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin), sort_keys=True, separators=(",", ":")))'
 }
 
-ts_driver() {
-  node "$go_dir/test/interop/storage.mjs" "$@"
-}
-
-go_driver advance "$backend" "$first_go_target" "$first_log"
-ts_driver advance "$backend" "$first_ts_target" "$first_log"
-go_driver advance "$backend" "$first_go_target" "$first_log"
-ts_driver verify "$backend" "$first_ts_target" "$first_log" 3
-
-ts_driver advance "$backend" "$second_ts_target" "$second_log"
-go_driver advance "$backend" "$second_go_target" "$second_log"
-ts_driver advance "$backend" "$second_ts_target" "$second_log"
-go_driver verify "$backend" "$second_go_target" "$second_log" 3
+# For every ordered pair: the first language creates the log, the second
+# continues it, the first continues again and the second verifies all three
+# entries, checkpoints, nodes and witness rows.
+for first in "${languages[@]}"; do
+  for second in "${languages[@]}"; do
+    [[ "$first" == "$second" ]] && continue
+    name="interop-$first-$second-$suffix"
+    driver "$first" advance "$backend" "$(target "$first" "$name")" "$name"
+    driver "$second" advance "$backend" "$(target "$second" "$name")" "$name"
+    driver "$first" advance "$backend" "$(target "$first" "$name")" "$name"
+    driver "$second" verify "$backend" "$(target "$second" "$name")" "$name" 3
+    # Every language must read the same entries, state, witness rows and
+    # checkpoint root from this log, byte for byte after canonical encoding.
+    for reader in "${languages[@]}"; do
+      driver "$reader" summary "$backend" "$(target "$reader" "$name")" "$name" |
+        canonical >"$work_dir/$name.$reader.summary"
+    done
+    for reader in "${languages[@]}"; do
+      if ! cmp -s "$work_dir/$name.$first.summary" "$work_dir/$name.$reader.summary"; then
+        echo "$backend: $reader reads $first -> $second differently from $first" >&2
+        diff "$work_dir/$name.$first.summary" "$work_dir/$name.$reader.summary" >&2 || true
+        exit 1
+      fi
+    done
+    echo "$backend: $first -> $second passed; root $(sed -n 's/.*"root": *"\([0-9a-f]*\)".*/\1/p' "$work_dir/$name.$first.summary")"
+  done
+done
 
 if [[ "$backend" == "jsonl" ]]; then
   wait_ready() {
     local ready=$1
-    for _ in {1..200}; do
+    for _ in {1..600}; do
       if [[ -f "$ready" ]]; then
         return 0
       fi
@@ -103,26 +126,23 @@ if [[ "$backend" == "jsonl" ]]; then
     return 1
   }
 
-  lock_target="$work_dir/lock.jsonl"
-  ready_path="$work_dir/go.ready"
-  stop_path="$work_dir/go.stop"
-  go_driver hold jsonl "$lock_target" lock-test "$ready_path" "$stop_path" &
-  holder_pid=$!
-  wait_ready "$ready_path"
-  ts_driver expect-contention jsonl "$lock_target" lock-test
-  : >"$stop_path"
-  wait "$holder_pid"
-  holder_pid=""
-
-  ready_path="$work_dir/ts.ready"
-  stop_path="$work_dir/ts.stop"
-  ts_driver hold jsonl "$lock_target" lock-test "$ready_path" "$stop_path" &
-  holder_pid=$!
-  wait_ready "$ready_path"
-  go_driver expect-contention jsonl "$lock_target" lock-test
-  : >"$stop_path"
-  wait "$holder_pid"
-  holder_pid=""
+  # Each writer must lock the journal descriptor itself, so a holder in any
+  # language excludes a writer in every other.
+  for holder in "${languages[@]}"; do
+    lock_target="$work_dir/lock-$holder.jsonl"
+    ready_path="$work_dir/$holder.ready"
+    stop_path="$work_dir/$holder.stop"
+    driver "$holder" hold jsonl "$lock_target" lock-test "$ready_path" "$stop_path" &
+    holder_pid=$!
+    wait_ready "$ready_path"
+    for contender in "${languages[@]}"; do
+      [[ "$contender" == "$holder" ]] && continue
+      driver "$contender" expect-contention jsonl "$lock_target" lock-test
+    done
+    : >"$stop_path"
+    wait "$holder_pid"
+    holder_pid=""
+  done
 fi
 
-echo "$backend Go/TypeScript storage interoperability passed"
+echo "$backend storage interoperability passed: ${languages[*]}"
