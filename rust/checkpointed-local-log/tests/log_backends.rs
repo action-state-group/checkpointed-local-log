@@ -256,6 +256,13 @@ mod jsonl {
                 r#"{{"version":4,"type":"entry.append","entry":{{"seq":"{seq}","value":"AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=","appendedAt":"2026-09-01T12:00:00.000Z"}}}}"#
             )
         };
+        // A one-node commit, with `state_extra` spliced into its state and
+        // `event_extra` into the event.
+        let commit_with = |state_extra: &str, event_extra: &str| {
+            format!(
+                r#"{{"version":4,"type":"cll.commit","expected_size":"0"{event_extra},"state":{{"size":"1","indexedSeq":"1","nodes":["BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc="]{state_extra},"witnesses":[]}}}}"#
+            )
+        };
         let cases = [
             ("not json", vec![init.to_string(), "{".into()]),
             ("v3", vec![r#"{"v":3,"type":"entry"}"#.into()]),
@@ -272,6 +279,18 @@ mod jsonl {
                 vec![
                     init.into(),
                     r#"{"version":4,"type":"cll.commit","expected_size":"0","state":{"size":"2","indexedSeq":"1","nodes":[],"witnesses":[]}}"#.into(),
+                ],
+            ),
+            // The contract encodes an optional value as an absent field,
+            // never null.
+            ("null checkpoint", vec![init.into(), commit_with(r#","checkpoint":null"#, "")]),
+            ("null pending time", vec![init.into(), commit_with(r#","firstPendingAt":null"#, "")]),
+            ("null expected checkpoint", vec![init.into(), commit_with("", r#","expected_checkpoint":null"#)]),
+            (
+                "null receipt",
+                vec![
+                    init.into(),
+                    r#"{"version":4,"type":"cll.commit","expected_size":"0","state":{"size":"1","indexedSeq":"1","nodes":["BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc="],"witnesses":[{"witnessId":"w","checkpointSize":"1","checkpoint":"AQ==","attempts":0,"nextAttemptAt":"2026-09-01T12:00:00.000Z","receipt":null,"permanent":false}]}}"#.into(),
                 ],
             ),
             (
@@ -294,6 +313,10 @@ mod jsonl {
             );
             assert_eq!(std::fs::read_to_string(&path).unwrap(), text, "{name}");
         }
+        // The same commit without the null opens.
+        let path = dir.path().join("valid commit.jsonl");
+        std::fs::write(&path, format!("{init}\n{}\n", commit_with("", ""))).unwrap();
+        assert_eq!(JsonlStore::open(&path).unwrap().load_cll().unwrap().size, 1);
         // Unknown additive fields are accepted.
         let path = dir.path().join("additive.jsonl");
         std::fs::write(
@@ -414,6 +437,16 @@ mod sqlite {
             "UPDATE cll_witnesses SET attempts=9 WHERE log_id='default'",
             "DELETE FROM cll_nodes WHERE log_id='default'",
             "DELETE FROM cll_meta WHERE log_id='default'",
+            // A present null where the contract wants an absent field.
+            r#"UPDATE cll_meta SET state='{"size":"1","indexedSeq":"1","nodes":[],"checkpoint":null,"witnesses":[]}'"#,
+            "UPDATE cll_witnesses SET witness=json_set(CAST(witness AS TEXT),'$.lastError',NULL)",
+            // Values of the wrong SQL type.
+            "UPDATE cll_meta SET state=123",
+            "UPDATE cll_nodes SET node=5",
+            "UPDATE cll_entries SET seq='abc'",
+            "UPDATE cll_witnesses SET attempts='x'",
+            // A dropped table.
+            "DROP TABLE cll_witnesses",
         ];
         for corruption in corruptions {
             let dir = tempfile::tempdir().unwrap();
@@ -433,6 +466,45 @@ mod sqlite {
                 "{corruption}"
             );
         }
+    }
+
+    #[test]
+    fn a_database_without_the_schema_is_corrupt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.sqlite");
+        // An existing, empty database: never initialized.
+        Connection::open(&path)
+            .unwrap()
+            .execute_batch("CREATE TABLE app_records(id INTEGER PRIMARY KEY)")
+            .unwrap();
+        assert_eq!(
+            SqliteStore::open(&path, "default").unwrap_err().code(),
+            ErrorCode::Corrupt
+        );
+        SqliteStore::init(&path, "default").unwrap();
+        SqliteStore::open(&path, "default").unwrap();
+    }
+
+    #[test]
+    fn invalid_pending_arguments_win_over_a_corrupt_row() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.sqlite");
+        SqliteStore::init(&path, "default").unwrap();
+        let store = SqliteStore::open(&path, "default").unwrap();
+        store.commit_cll(0, None, &one_leaf_state()).unwrap();
+        Connection::open(&path)
+            .unwrap()
+            .execute_batch("UPDATE cll_witnesses SET witness='{'")
+            .unwrap();
+        let now = Timestamp::from_unix_millis(0);
+        assert_eq!(
+            store.pending_witnesses(now, 0).unwrap_err().code(),
+            ErrorCode::Invalid
+        );
+        assert_eq!(
+            store.pending_witnesses(now, 1).unwrap_err().code(),
+            ErrorCode::Corrupt
+        );
     }
 
     #[test]
@@ -498,6 +570,118 @@ mod mysql {
         )
     }
 
+    /// A new, empty database on the same server, dropped when it goes out of
+    /// scope, for cases that need a schema no other test shares.
+    struct ScratchDatabase {
+        url: String,
+        name: String,
+        server: ::mysql::Pool,
+    }
+
+    impl ScratchDatabase {
+        fn new(url: &str) -> Self {
+            let server = ::mysql::Pool::new(url).unwrap();
+            let name = log_id("db").replace('-', "_");
+            server
+                .get_conn()
+                .unwrap()
+                .query_drop(format!("CREATE DATABASE `{name}`"))
+                .unwrap();
+            let (base, _) = url.rsplit_once('/').unwrap();
+            Self {
+                url: format!("{base}/{name}"),
+                name,
+                server,
+            }
+        }
+
+        fn exec(&self, statement: &str) {
+            let pool = ::mysql::Pool::new(self.url.as_str()).unwrap();
+            pool.get_conn().unwrap().query_drop(statement).unwrap();
+        }
+    }
+
+    impl Drop for ScratchDatabase {
+        fn drop(&mut self) {
+            if let Ok(mut conn) = self.server.get_conn() {
+                let _ = conn.query_drop(format!("DROP DATABASE `{}`", self.name));
+            }
+        }
+    }
+
+    fn open_code(url: &str, log_id: &str) -> ErrorCode {
+        MysqlStore::open(url, log_id).unwrap_err().code()
+    }
+
+    #[test]
+    fn a_database_without_the_schema_is_corrupt() {
+        let Some(url) = url() else { return };
+        let db = ScratchDatabase::new(&url);
+        assert_eq!(open_code(&db.url, "default"), ErrorCode::Corrupt);
+        MysqlStore::init(&db.url, "default").unwrap();
+        MysqlStore::open(&db.url, "default").unwrap();
+        assert_eq!(open_code(&db.url, "other"), ErrorCode::Corrupt);
+        db.exec("DROP TABLE cll_nodes");
+        assert_eq!(open_code(&db.url, "default"), ErrorCode::Corrupt);
+    }
+
+    #[test]
+    fn values_of_the_wrong_type_are_corrupt() {
+        let Some(url) = url() else { return };
+        for (alter, update) in [
+            (
+                "ALTER TABLE cll_nodes MODIFY position BIGINT NOT NULL",
+                "UPDATE cll_nodes SET position=-1",
+            ),
+            (
+                "ALTER TABLE cll_witnesses MODIFY attempts VARCHAR(10) NOT NULL",
+                "UPDATE cll_witnesses SET attempts='x'",
+            ),
+            (
+                "ALTER TABLE cll_entries MODIFY seq BIGINT NOT NULL",
+                "UPDATE cll_entries SET seq=-1",
+            ),
+        ] {
+            let db = ScratchDatabase::new(&url);
+            MysqlStore::init(&db.url, "default").unwrap();
+            let store = MysqlStore::open(&db.url, "default").unwrap();
+            store.append(&input(1, 0)).unwrap();
+            store.commit_cll(0, None, &one_leaf_state()).unwrap();
+            store.close().unwrap();
+            db.exec(alter);
+            db.exec(update);
+            assert_eq!(
+                open_code(&db.url, "default"),
+                ErrorCode::Corrupt,
+                "{update}"
+            );
+        }
+    }
+
+    #[test]
+    fn invalid_pending_arguments_win_over_a_corrupt_row() {
+        let Some(url) = url() else { return };
+        let (store, id) = fresh(&url, "pending");
+        store.commit_cll(0, None, &one_leaf_state()).unwrap();
+        let pool = ::mysql::Pool::new(url.as_str()).unwrap();
+        pool.get_conn()
+            .unwrap()
+            .exec_drop(
+                "UPDATE cll_witnesses SET witness='{' WHERE log_id=?",
+                (&id,),
+            )
+            .unwrap();
+        let now = Timestamp::from_unix_millis(0);
+        assert_eq!(
+            store.pending_witnesses(now, 0).unwrap_err().code(),
+            ErrorCode::Invalid
+        );
+        assert_eq!(
+            store.pending_witnesses(now, 1).unwrap_err().code(),
+            ErrorCode::Corrupt
+        );
+    }
+
     fn fresh(url: &str, name: &str) -> (MysqlStore, String) {
         let id = log_id(name);
         MysqlStore::init(url, &id).unwrap();
@@ -547,6 +731,9 @@ mod mysql {
             "UPDATE cll_nodes SET position=4 WHERE log_id=?",
             "UPDATE cll_witnesses SET attempts=9 WHERE log_id=?",
             "DELETE FROM cll_nodes WHERE log_id=?",
+            // A present null where the contract wants an absent field.
+            r#"UPDATE cll_meta SET state='{"size":"1","indexedSeq":"1","nodes":[],"firstPendingAt":null,"witnesses":[]}' WHERE log_id=?"#,
+            "UPDATE cll_witnesses SET witness=JSON_SET(CAST(witness AS CHAR),'$.lastError',CAST('null' AS JSON)) WHERE log_id=?",
         ] {
             let (store, id) = fresh(&url, "corrupt");
             store.append(&input(1, 0)).unwrap();

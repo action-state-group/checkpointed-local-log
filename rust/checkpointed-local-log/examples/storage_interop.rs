@@ -8,7 +8,9 @@
 //! ```
 //!
 //! The MySQL target is a `mysql://user:password@host:port/database` URL.
+//! The JSONL backend is Unix-only; elsewhere `jsonl` is an unsupported backend.
 
+#[cfg(unix)]
 use cll::log::jsonl::JsonlStore;
 use cll::log::mysql::MysqlStore;
 use cll::log::sqlite::SqliteStore;
@@ -42,6 +44,7 @@ fn run(args: &[String]) -> Result<(), Failure> {
     };
     if mode == "advance" || mode == "hold" {
         match backend.as_str() {
+            #[cfg(unix)]
             "jsonl" => JsonlStore::init(target)?,
             "sqlite" => SqliteStore::init(target, log_id)?,
             "mysql" => MysqlStore::init(target, log_id)?,
@@ -73,6 +76,7 @@ fn run(args: &[String]) -> Result<(), Failure> {
 
 fn open(backend: &str, target: &str, log_id: &str) -> cll::log::Result<Box<dyn Backend>> {
     Ok(match backend {
+        #[cfg(unix)]
         "jsonl" => Box::new(JsonlStore::open(target)?),
         "sqlite" => Box::new(SqliteStore::open(target, log_id)?),
         "mysql" => Box::new(MysqlStore::open(target, log_id)?),

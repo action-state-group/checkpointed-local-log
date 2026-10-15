@@ -20,9 +20,11 @@ use super::{
     WitnessStateStore,
 };
 use ::mysql::consts::CapabilityFlags;
+use ::mysql::prelude::FromRow;
 use ::mysql::prelude::Queryable;
 use ::mysql::{
-    AccessMode, IsolationLevel, Opts, OptsBuilder, Pool, PoolConstraints, PoolOpts, TxOpts,
+    AccessMode, IsolationLevel, Opts, OptsBuilder, Params, Pool, PoolConstraints, PoolOpts, Row,
+    TxOpts,
 };
 use std::sync::RwLock;
 
@@ -73,6 +75,9 @@ fn classify(error: ::mysql::Error) -> Error {
         ::mysql::Error::MySqlError(e) if matches!(e.code, 1062 | 1205 | 1213) => {
             ErrorCode::Contention
         }
+        // ER_NO_SUCH_TABLE, ER_BAD_FIELD_ERROR: the cll_* tables are missing
+        // or have an incompatible shape.
+        ::mysql::Error::MySqlError(e) if matches!(e.code, 1146 | 1054) => ErrorCode::Corrupt,
         _ => ErrorCode::Storage,
     };
     Error::with_source(code, "MySQL", error)
@@ -120,6 +125,7 @@ impl MysqlStore {
             pool: RwLock::new(Some(pool)),
             log_id: log_id.to_owned(),
         };
+        store.read(|conn, _| check_schema(conn))?;
         store.read(validate_entries)?;
         store.load_cll()?;
         Ok(store)
@@ -167,22 +173,63 @@ impl MysqlStore {
     }
 }
 
+/// Runs a query and converts every row. A row whose values do not convert to
+/// the expected types is durable data of the wrong shape: `corrupt`.
+fn all<T: FromRow>(
+    conn: &mut impl Queryable,
+    query: &str,
+    params: impl Into<Params>,
+) -> Result<Vec<T>> {
+    let rows: Vec<Row> = conn.exec(query, params).map_err(classify)?;
+    rows.into_iter().map(convert).collect()
+}
+
+/// Like [`all`], for at most one row.
+fn first<T: FromRow>(
+    conn: &mut impl Queryable,
+    query: &str,
+    params: impl Into<Params>,
+) -> Result<Option<T>> {
+    conn.exec_first::<Row, _, _>(query, params)
+        .map_err(classify)?
+        .map(convert)
+        .transpose()
+}
+
+fn convert<T: FromRow>(row: Row) -> Result<T> {
+    ::mysql::from_row_opt(row)
+        .map_err(|e| Error::corrupt(format!("stored row has unexpected column types: {e:?}")))
+}
+
+/// Opening requires the four tables; their absence is uninitialized durable
+/// state (`corrupt`), not an operational failure.
+fn check_schema(conn: &mut impl Queryable) -> Result<()> {
+    let present = first::<u64>(
+        conn,
+        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN ('cll_meta','cll_entries','cll_nodes','cll_witnesses')",
+        (),
+    )?;
+    if present != Some(4) {
+        return Err(Error::corrupt("missing CLL schema; call init"));
+    }
+    Ok(())
+}
+
 fn lock_metadata(tx: &mut impl Queryable, log_id: &str) -> Result<Vec<u8>> {
-    tx.exec_first::<Vec<u8>, _, _>(
+    first::<Vec<u8>>(
+        tx,
         "SELECT state FROM cll_meta WHERE log_id=? FOR UPDATE",
         (log_id,),
-    )
-    .map_err(classify)?
+    )?
     .ok_or_else(|| Error::corrupt("missing CLL metadata; call init"))
 }
 
 fn validate_entries(conn: &mut impl Queryable, log_id: &str) -> Result<()> {
-    let rows: Vec<(u64, i64, String)> = conn
-        .exec(
-            "SELECT seq,OCTET_LENGTH(value),appended_at FROM cll_entries WHERE log_id=? ORDER BY seq",
-            (log_id,),
-        )
-        .map_err(classify)?;
+    let rows: Vec<(u64, i64, String)> = all(
+        conn,
+        "SELECT seq,OCTET_LENGTH(value),appended_at FROM cll_entries WHERE log_id=? ORDER BY seq",
+        (log_id,),
+    )?;
     for (expected, (seq, width, at)) in (1u64..).zip(rows) {
         sql::check_entry_row(expected, i128::from(seq), width, &at)?;
     }
@@ -190,12 +237,11 @@ fn validate_entries(conn: &mut impl Queryable, log_id: &str) -> Result<()> {
 }
 
 fn witness_rows(conn: &mut impl Queryable, log_id: &str) -> Result<Vec<WitnessRow>> {
-    let rows: Vec<(String, String, i64, Vec<u8>)> = conn
-        .exec(
-            "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
-            (log_id,),
-        )
-        .map_err(classify)?;
+    let rows: Vec<(String, String, i64, Vec<u8>)> = all(
+        conn,
+        "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
+        (log_id,),
+    )?;
     Ok(rows
         .into_iter()
         .map(|(witness_id, checkpoint_size, attempts, json)| WitnessRow {
@@ -210,26 +256,23 @@ fn witness_rows(conn: &mut impl Queryable, log_id: &str) -> Result<Vec<WitnessRo
 fn load_state(conn: &mut impl Queryable, log_id: &str, metadata: Option<Vec<u8>>) -> Result<State> {
     let metadata = match metadata {
         Some(metadata) => metadata,
-        None => conn
-            .exec_first::<Vec<u8>, _, _>("SELECT state FROM cll_meta WHERE log_id=?", (log_id,))
-            .map_err(classify)?
+        None => first::<Vec<u8>>(conn, "SELECT state FROM cll_meta WHERE log_id=?", (log_id,))?
             .ok_or_else(|| Error::corrupt("missing CLL metadata; call init"))?,
     };
-    let nodes: Vec<(u64, Vec<u8>)> = conn
-        .exec(
-            "SELECT position,node FROM cll_nodes WHERE log_id=? ORDER BY position",
-            (log_id,),
-        )
-        .map_err(classify)?;
+    let nodes: Vec<(u64, Vec<u8>)> = all(
+        conn,
+        "SELECT position,node FROM cll_nodes WHERE log_id=? ORDER BY position",
+        (log_id,),
+    )?;
     sql::state_from_rows(&metadata, nodes, &witness_rows(conn, log_id)?)
 }
 
 fn find_entry(conn: &mut impl Queryable, log_id: &str, value: &[u8]) -> Result<Option<Entry>> {
-    conn.exec_first::<(u64, Vec<u8>, String), _, _>(
+    first::<(u64, Vec<u8>, String)>(
+        conn,
         "SELECT seq,value,appended_at FROM cll_entries WHERE log_id=? AND value=?",
         (log_id, value),
-    )
-    .map_err(classify)?
+    )?
     .map(|(seq, value, at)| sql::entry_from_row(i128::from(seq), value, &at))
     .transpose()
 }
@@ -241,11 +284,11 @@ fn find_witness(
     checkpoint_size: u64,
 ) -> Result<Option<WitnessState>> {
     let size = checkpoint_size.to_string();
-    conn.exec_first::<(i64, Vec<u8>), _, _>(
+    first::<(i64, Vec<u8>)>(
+        conn,
         "SELECT attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?",
         (log_id, witness_id, &size),
-    )
-    .map_err(classify)?
+    )?
     .map(|(attempts, json)| {
         sql::witness_from_row(&WitnessRow {
             witness_id: witness_id.to_owned(),
@@ -261,12 +304,11 @@ impl EntrySource for MysqlStore {
     fn scan_entries(&self, after_seq: u64, limit: usize) -> Result<Vec<Entry>> {
         self.read(|conn, log_id| {
             engine::validate_scan(after_seq, limit)?;
-            let rows: Vec<(u64, Vec<u8>, String)> = conn
-                .exec(
-                    "SELECT seq,value,appended_at FROM cll_entries WHERE log_id=? AND seq>? ORDER BY seq LIMIT ?",
-                    (log_id, after_seq, limit as u64),
-                )
-                .map_err(classify)?;
+            let rows: Vec<(u64, Vec<u8>, String)> = all(
+                conn,
+                "SELECT seq,value,appended_at FROM cll_entries WHERE log_id=? AND seq>? ORDER BY seq LIMIT ?",
+                (log_id, after_seq, limit as u64),
+            )?;
             rows.into_iter()
                 .map(|(seq, value, at)| sql::entry_from_row(i128::from(seq), value, &at))
                 .collect()
@@ -286,13 +328,12 @@ impl EntryStore for MysqlStore {
                 });
             }
             // The next seq comes from the entry rows, never the MMR size.
-            let last: Option<u64> = tx
-                .exec_first::<Option<u64>, _, _>(
-                    "SELECT MAX(seq) FROM cll_entries WHERE log_id=?",
-                    (log_id,),
-                )
-                .map_err(classify)?
-                .flatten();
+            let last: Option<u64> = first::<Option<u64>>(
+                tx,
+                "SELECT MAX(seq) FROM cll_entries WHERE log_id=?",
+                (log_id,),
+            )?
+            .flatten();
             let seq = last.map_or(1, |last| last + 1);
             if seq > super::MAX_PORTABLE_INTEGER {
                 return Err(Error::invalid("entry sequence exceeds the portable range"));
@@ -381,6 +422,7 @@ impl CheckpointStateStore for MysqlStore {
 impl WitnessStateStore for MysqlStore {
     fn pending_witnesses(&self, now: Timestamp, limit: usize) -> Result<Vec<WitnessState>> {
         self.read(|conn, log_id| {
+            engine::validate_pending_query(now, limit)?;
             let rows = sql::witnesses_from_rows(&witness_rows(conn, log_id)?)?;
             engine::pending_witnesses(&rows, now, limit)
         })

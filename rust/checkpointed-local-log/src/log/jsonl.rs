@@ -38,17 +38,41 @@ struct Event {
     version: i64,
     #[serde(rename = "type")]
     kind: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     entry: Option<WireEntry>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     expected_size: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     expected_checkpoint: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     state: Option<WireState>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     expected_attempts: Option<u32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "wire::present",
+        skip_serializing_if = "Option::is_none"
+    )]
     witness: Option<WireWitness>,
 }
 

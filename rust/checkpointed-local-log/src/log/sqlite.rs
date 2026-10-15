@@ -67,6 +67,17 @@ fn classify(error: rusqlite::Error) -> Error {
         Some(rusqlite::ErrorCode::DatabaseBusy | rusqlite::ErrorCode::DatabaseLocked) => {
             ErrorCode::Contention
         }
+        // A stored value of the wrong type is durable data of the wrong
+        // shape, not an operational failure.
+        _ if matches!(
+            error,
+            rusqlite::Error::InvalidColumnType(..)
+                | rusqlite::Error::FromSqlConversionFailure(..)
+                | rusqlite::Error::IntegralValueOutOfRange(..)
+        ) =>
+        {
+            ErrorCode::Corrupt
+        }
         _ => ErrorCode::Storage,
     };
     Error::with_source(code, "SQLite", error)
@@ -126,6 +137,7 @@ impl SqliteStore {
             log_id: log_id.to_owned(),
         };
         store.read(|tx, log_id| {
+            check_schema(tx)?;
             validate_entries(tx, log_id)?;
             load_state(tx, log_id).map(drop)
         })?;
@@ -160,6 +172,22 @@ impl SqliteStore {
     fn write<T>(&self, operation: impl FnOnce(&Transaction<'_>, &str) -> Result<T>) -> Result<T> {
         self.transaction(TransactionBehavior::Immediate, operation)
     }
+}
+
+/// Opening requires the four tables; their absence is uninitialized durable
+/// state (`corrupt`), not an operational failure.
+fn check_schema(tx: &Transaction<'_>) -> Result<()> {
+    let present: i64 = tx
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name IN ('cll_meta','cll_entries','cll_nodes','cll_witnesses')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(classify)?;
+    if present != 4 {
+        return Err(Error::corrupt("missing CLL schema; call init"));
+    }
+    Ok(())
 }
 
 fn validate_entries(tx: &Transaction<'_>, log_id: &str) -> Result<()> {
@@ -393,6 +421,7 @@ impl CheckpointStateStore for SqliteStore {
 impl WitnessStateStore for SqliteStore {
     fn pending_witnesses(&self, now: Timestamp, limit: usize) -> Result<Vec<WitnessState>> {
         self.read(|tx, log_id| {
+            engine::validate_pending_query(now, limit)?;
             let rows = sql::witnesses_from_rows(&witness_rows(tx, log_id)?)?;
             engine::pending_witnesses(&rows, now, limit)
         })

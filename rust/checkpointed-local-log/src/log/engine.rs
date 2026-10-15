@@ -315,14 +315,21 @@ pub(crate) fn commit_witness_in(
     Ok((index.unwrap_or_default(), updated))
 }
 
+/// Validates `pendingWitnesses` arguments. SQL backends call it before
+/// reading rows, so `invalid` wins over `corrupt` (the contract's check order).
+pub(crate) fn validate_pending_query(now: Timestamp, limit: usize) -> Result<()> {
+    if !now.is_portable() || !(1..=MAX_WITNESSES).contains(&limit) {
+        return Err(Error::invalid("pending witness query is out of range"));
+    }
+    Ok(())
+}
+
 pub(crate) fn pending_witnesses(
     rows: &[WitnessState],
     now: Timestamp,
     limit: usize,
 ) -> Result<Vec<WitnessState>> {
-    if !now.is_portable() || !(1..=MAX_WITNESSES).contains(&limit) {
-        return Err(Error::invalid("pending witness query is out of range"));
-    }
+    validate_pending_query(now, limit)?;
     let mut due: Vec<&WitnessState> = rows
         .iter()
         .filter(|row| row.receipt.is_none() && !row.permanent && row.next_attempt_at <= now)
