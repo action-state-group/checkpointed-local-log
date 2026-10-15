@@ -108,6 +108,32 @@ Checkpoint and witness runners look up witness rows that may not exist yet,
 so absence there is ordinary control flow rather than a caller error. A
 malformed key is still `invalid`, never not found.
 
+### Intentional differences
+
+These differences from the tables above are deliberate. Conformance runners
+account for each one.
+
+- **Python time range.** Python's `datetime` holds only years 0001..9999, a
+  subset of the portable range. A caller time outside it cannot be constructed
+  in Python, and its encoded form is `invalid` when decoded (the conformance
+  runner treats it as an unrepresentable argument). A stored time outside it
+  is `corrupt`, so a log that holds one, written by another language, does not
+  open in Python. Python backends lack the `extended-years` capability and
+  skip the `entries/extended-years` case. Within years 0001..9999 the
+  encodings are identical.
+- **Python times are instants.** Python takes and returns timezone-aware UTC
+  `datetime` values. A naive `datetime` is `invalid`, never read as local or
+  UTC time.
+- **Python value names.** The state is `cll.log.CllState`, its checkpoint
+  tuple `CheckpointState` and its receipt `WitnessReceipt`; `cll.log.State`
+  does not exist. The other names follow the snake_case convention.
+- **Python `LedgerStore`.** `cll.ledger.store.LedgerStore` keeps its own
+  format and is not part of storage interop. `cll.log.ledger.LedgerEntryStore`
+  puts it behind `EntryStore` without the `digest-append` capability, and
+  `cll.log.ledger.LogSourceEntries` puts any `LogSource` behind `EntrySource`;
+  their module docstring defines the mapping, including how `appendedAt` is
+  derived from the capsule `timestamp`.
+
 ## Operations
 
 Every operation checks `closed` first. `commitCll` then compares the expected
@@ -187,7 +213,9 @@ Persistent backends separate provisioning from opening. `init` creates the
 file, tables or initial metadata and is idempotent. `open` requires existing
 state and never creates it. In-memory backends have only a constructor.
 TypeScript's `SqliteStore.open` and `MysqlStore.open` also provision, which
-predates this split.
+predates this split. Python's backend modules expose `init` and `open` as
+functions (`cll.log.jsonl.init(path)`, `cll.log.sqlite.open(path, log_id)`,
+`cll.log.mysql.open(url, log_id)`).
 
 ## Capabilities
 
