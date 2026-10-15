@@ -1,6 +1,6 @@
 # Changelog: checkpointed-local-log (Rust)
 
-## Unreleased
+## 0.3.1
 
 - **New: `cll::log`, the CLL storage interfaces.** The entry log, checkpoint
   state and witness state traits of the shared backend contract
@@ -9,7 +9,8 @@
   synchronous with `&self` methods, plus `Error`/`ErrorCode`, the portable
   `Timestamp` (exact `Date.toISOString()` text, signed six-digit years) and the
   portable JSON encodings in `cll::log::wire`.
-- **Backends.** `memory::MemoryStore`; `jsonl::JsonlStore` (JSONL v4, Unix);
+- **Backends.** `memory::MemoryStore`; `jsonl::JsonlStore` (JSONL v4, Unix; `unsupported` at open on Solaris,
+  newlib and NuttX, which have no `flock(2)`);
   `sqlite::SqliteStore` behind the `sqlite` feature (bundled SQLite);
   `mysql::MysqlStore` behind the `mysql` feature. They read and write the same
   journals and databases as the Go and TypeScript backends. Default features
