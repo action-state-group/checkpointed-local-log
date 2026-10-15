@@ -4,8 +4,10 @@
 The SQLite index is a derived, rebuildable structure (see :meth:`LedgerStore.reindex`)
 that exists only to make :meth:`LedgerStore.scan` fast — the JSONL segments are the
 durable record. This module is the *only* place in the package that is allowed to
-touch ``sqlite3``: the connection is a private attribute and is never returned to a
-caller, so every other subpackage must go through :class:`LedgerStore`.
+touch the ledger's ``sqlite3`` index: the connection is a private attribute and is
+never returned to a caller, so every other subpackage must go through
+:class:`LedgerStore`. (``cll.log.sqlite`` separately owns the CLL backend's own
+tables and never reads these.)
 
 Field mapping note: the ``agent-action-capsule`` envelope has no literal
 ``counterparty`` field. ``scan(agent=...)`` matches the capsule's ``developer``

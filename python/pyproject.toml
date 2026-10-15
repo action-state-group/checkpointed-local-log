@@ -39,11 +39,17 @@ cll = "cll.cli:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff>=0.4,<0.16"]
+# cll.log.mysql: the MySQL 8 CLL backend.
+mysql = ["PyMySQL>=1.1"]
 
 [tool.setuptools]
-packages = ["cll", "cll.checkpoint", "cll.ledger"]
+packages = ["cll", "cll.checkpoint", "cll.ledger", "cll.log"]
 package-dir = {cll = "."}
 include-package-data = false
+
+[tool.setuptools.package-data]
+# The pinned backend conformance vectors (backend-conformance-vectors/generate.py).
+"cll.log" = ["vectors.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
