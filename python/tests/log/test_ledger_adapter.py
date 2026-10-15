@@ -123,3 +123,19 @@ def test_log_source_adapter_rejects_gaps():
 
     with pytest.raises(CorruptError):
         LogSourceEntries(Gappy()).scan_entries(0, 10)
+
+
+@pytest.mark.parametrize(
+    "stamp,micros",
+    [
+        ("2026-09-01T12:00:00.1Z", 100000),
+        ("2026-09-01T12:00:00.1234Z", 123000),
+        ("2026-09-01T12:00:00.1234567+00:00", 123000),
+        ("2026-09-01 12:00:00.12", 120000),
+    ],
+)
+def test_capsule_timestamp_accepts_any_fraction_length(stamp, micros):
+    """As LedgerStore.scan reads it, on Python 3.9 too (where fromisoformat
+    takes only 3 or 6 fraction digits)."""
+    parsed = capsule_timestamp(Record(1, "ab" * 32, {"timestamp": stamp}))
+    assert parsed == datetime(2026, 9, 1, 12, 0, 0, micros, tzinfo=timezone.utc)

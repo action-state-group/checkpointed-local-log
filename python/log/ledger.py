@@ -34,8 +34,9 @@ adapters take the binding object structurally.
 """
 from __future__ import annotations
 
+import re
 import threading
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Callable
 
 from . import (
@@ -62,13 +63,30 @@ def capsule_timestamp(record: Any) -> datetime:
     value = capsule.get("timestamp") if isinstance(capsule, dict) else None
     if not isinstance(value, str) or not value:
         raise CorruptError(f"record seq={getattr(record, 'seq', '?')} has no capsule timestamp")
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00").replace("z", "+00:00"))
-    except ValueError as exc:
-        raise CorruptError(f"record seq={getattr(record, 'seq', '?')} has an unparseable timestamp") from exc
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+    parsed = _instant(value)
+    if parsed is None:
+        raise CorruptError(f"record seq={getattr(record, 'seq', '?')} has an unparseable timestamp")
     return normalize_time(parsed, CorruptError)
+
+
+# The same RFC 3339 reading as cll.ledger.store._instant(zoneless_is_utc=True),
+# copied so this module never imports cll.ledger (and its sqlite3 index).
+_RFC3339 = re.compile(r"([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt ]([0-9]{2}:[0-9]{2}:[0-9]{2})(?:\.([0-9]+))?([Zz]|[+-][0-9]{2}:[0-9]{2})?")
+
+
+def _instant(value: str) -> datetime | None:
+    """``value`` (an RFC 3339 time, any fraction length; no offset is UTC)
+    as an aware instant, or ``None``."""
+    match = _RFC3339.fullmatch(value.strip())
+    if match is None:
+        return None
+    date, clock, fraction, offset = match.groups()
+    zone = "+00:00" if offset in (None, "Z", "z") else offset
+    try:
+        # fromisoformat on Python 3.9/3.10 takes only 3 or 6 fraction digits.
+        return datetime.fromisoformat(f"{date}T{clock}.{(fraction or '')[:6].ljust(6, '0')}{zone}")
+    except ValueError:
+        return None
 
 
 def record_entry(record: Any, appended_at: Callable[[Any], datetime] = capsule_timestamp) -> Entry:

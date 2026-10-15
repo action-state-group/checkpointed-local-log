@@ -45,6 +45,8 @@ from .wire import normalize_time
 
 __all__ = [
     "Engine",
+    "binary",
+    "check_expected_attempts",
     "mmr_leaf_count",
     "witness_key",
     "check_append",
@@ -68,8 +70,32 @@ def _is_int(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def _is_bytes(value: object) -> bool:
-    return isinstance(value, (bytes, bytearray, memoryview))
+def binary(value: object) -> bytes | None:
+    """``value``'s raw bytes when it is a binary buffer, else ``None``.
+
+    Conversion comes before any length check: ``len`` of a typed
+    ``memoryview`` counts items, not bytes (``memoryview(bytes(128)).cast("I")``
+    has length 32)."""
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    return None
+
+
+def _width(value: object, minimum: int, maximum: int) -> bytes | None:
+    """``value`` as bytes when it is a buffer of ``minimum..maximum`` bytes."""
+    data = binary(value)
+    if data is None or not minimum <= len(data) <= maximum:
+        return None
+    return data
+
+
+def _utf8_length(value: str) -> int | None:
+    """UTF-8 byte length, or ``None`` for a string with an unpaired
+    surrogate, which has no UTF-8 encoding."""
+    try:
+        return len(value.encode("utf-8"))
+    except UnicodeEncodeError:
+        return None
 
 
 def mmr_leaf_count(size: int) -> int | None:
@@ -96,9 +122,10 @@ def witness_key(witness_id: str, checkpoint_size: int) -> tuple:
 
 
 def check_value(value: object) -> bytes:
-    if not _is_bytes(value) or len(value) != ENTRY_BYTES:
+    data = _width(value, ENTRY_BYTES, ENTRY_BYTES)
+    if data is None:
         raise InvalidError("entry value must be exactly 32 bytes")
-    return bytes(value)
+    return data
 
 
 def check_append(input: object) -> tuple:
@@ -141,8 +168,7 @@ def validate_entries(entries: Sequence[Entry], error: type[CllError] = CorruptEr
         if (
             entry.seq != index + 1
             or entry.seq > MAX_PORTABLE_INTEGER
-            or not _is_bytes(entry.value)
-            or len(entry.value) != ENTRY_BYTES
+            or _width(entry.value, ENTRY_BYTES, ENTRY_BYTES) is None
         ):
             raise error("stored CLL entries are not contiguous and valid")
         normalize_time(entry.appended_at, error)
@@ -156,27 +182,26 @@ def validate_witness(value: object, error: type[CllError] = InvalidError) -> Wit
     and a UTC millisecond ``next_attempt_at``."""
     if not isinstance(value, WitnessState):
         raise error("witness state must be a WitnessState")
+    checkpoint = _width(value.checkpoint, 1, MAX_CHECKPOINT_BYTES)
     if (
         not validate_identifier(value.witness_id)
         or not _is_int(value.checkpoint_size)
         or not 0 < value.checkpoint_size < 1 << 64
-        or not _is_bytes(value.checkpoint)
-        or not 1 <= len(value.checkpoint) <= MAX_CHECKPOINT_BYTES
+        or checkpoint is None
         or not _is_int(value.attempts)
         or not 0 <= value.attempts <= MAX_ATTEMPTS
         or not isinstance(value.permanent, bool)
     ):
         raise error("witness state is invalid")
-    if value.last_error is not None and (
-        not isinstance(value.last_error, str) or len(value.last_error.encode("utf-8")) > MAX_REASON_BYTES
-    ):
-        raise error("witness last_error is invalid")
+    if value.last_error is not None:
+        length = _utf8_length(value.last_error) if isinstance(value.last_error, str) else None
+        if length is None or length > MAX_REASON_BYTES:
+            raise error("witness last_error is invalid")
     next_attempt_at = normalize_time(value.next_attempt_at, error)
     receipt = value.receipt
     if receipt is not None:
-        if not isinstance(receipt, WitnessReceipt) or not _is_bytes(receipt.bytes):
-            raise error("witness receipt is invalid")
-        if not 1 <= len(receipt.bytes) <= MAX_WITNESS_RESPONSE_BYTES:
+        receipt_bytes = _width(receipt.bytes, 1, MAX_WITNESS_RESPONSE_BYTES) if isinstance(receipt, WitnessReceipt) else None
+        if receipt_bytes is None:
             raise error("witness receipt is invalid")
         if receipt.entry_hash is not None and (
             not isinstance(receipt.entry_hash, str) or _ENTRY_HASH.fullmatch(receipt.entry_hash) is None
@@ -188,7 +213,7 @@ def validate_witness(value: object, error: type[CllError] = InvalidError) -> Wit
             if position is not None and (not _is_int(position) or not 0 <= position <= MAX_PORTABLE_INTEGER):
                 raise error("witness receipt position is invalid")
         receipt = WitnessReceipt(
-            bytes=bytes(receipt.bytes),
+            bytes=receipt_bytes,
             entry_hash=receipt.entry_hash,
             entry_hash_scheme=receipt.entry_hash_scheme,
             leaf_index=receipt.leaf_index,
@@ -197,7 +222,7 @@ def validate_witness(value: object, error: type[CllError] = InvalidError) -> Wit
     return WitnessState(
         witness_id=value.witness_id,
         checkpoint_size=value.checkpoint_size,
-        checkpoint=bytes(value.checkpoint),
+        checkpoint=checkpoint,
         attempts=value.attempts,
         next_attempt_at=next_attempt_at,
         receipt=receipt,
@@ -218,10 +243,9 @@ def _validate_metadata(value: CllState, node_count: int, error: type[CllError]) 
         first_pending_at = normalize_time(value.first_pending_at, error)
     checkpoint = value.checkpoint
     if checkpoint is not None:
+        data = _width(checkpoint.bytes, 1, MAX_CHECKPOINT_BYTES) if isinstance(checkpoint, CheckpointState) else None
         if (
-            not isinstance(checkpoint, CheckpointState)
-            or not _is_bytes(checkpoint.bytes)
-            or not 1 <= len(checkpoint.bytes) <= MAX_CHECKPOINT_BYTES
+            data is None
             or not _is_int(checkpoint.size)
             or not 0 < checkpoint.size <= value.size
             or not _is_int(checkpoint.indexed_seq)
@@ -229,14 +253,14 @@ def _validate_metadata(value: CllState, node_count: int, error: type[CllError]) 
             or not isinstance(checkpoint.peaks, (tuple, list))
         ):
             raise error("checkpoint state is invalid")
-        for peak in checkpoint.peaks:
-            if not _is_bytes(peak) or len(peak) != ENTRY_BYTES:
-                raise error("checkpoint peak has wrong width")
+        peaks = tuple(_width(peak, ENTRY_BYTES, ENTRY_BYTES) for peak in checkpoint.peaks)
+        if None in peaks:
+            raise error("checkpoint peak has wrong width")
         checkpoint = CheckpointState(
-            bytes=bytes(checkpoint.bytes),
+            bytes=data,
             size=checkpoint.size,
             indexed_seq=checkpoint.indexed_seq,
-            peaks=tuple(bytes(peak) for peak in checkpoint.peaks),
+            peaks=peaks,
         )
     if not isinstance(value.witnesses, (tuple, list)):
         raise error("witnesses must be a sequence")
@@ -255,10 +279,10 @@ def _validate_metadata(value: CllState, node_count: int, error: type[CllError]) 
 def _nodes(value: object, error: type[CllError]) -> tuple:
     if not isinstance(value, (tuple, list)):
         raise error("nodes must be a sequence")
-    for node in value:
-        if not _is_bytes(node) or len(node) != ENTRY_BYTES:
-            raise error("node has wrong width")
-    return tuple(bytes(node) for node in value)
+    nodes = tuple(_width(node, ENTRY_BYTES, ENTRY_BYTES) for node in value)
+    if None in nodes:
+        raise error("node has wrong width")
+    return nodes
 
 
 def validate_state(value: object, error: type[CllError] = InvalidError) -> CllState:
@@ -281,12 +305,14 @@ def validate_state(value: object, error: type[CllError] = InvalidError) -> CllSt
 def _same_expected(checkpoint: CheckpointState | None, expected: bytes | None) -> bool:
     if checkpoint is None:
         return expected is None
-    return expected is not None and checkpoint.bytes == bytes(expected)
+    return expected is not None and checkpoint.bytes == expected
 
 
 def _check_expected(current: CllState, expected_size: object, expected_checkpoint: object) -> None:
-    if expected_checkpoint is not None and not _is_bytes(expected_checkpoint):
-        raise InvalidError("expected checkpoint must be bytes or None")
+    if expected_checkpoint is not None:
+        expected_checkpoint = binary(expected_checkpoint)
+        if expected_checkpoint is None:
+            raise InvalidError("expected checkpoint must be bytes or None")
     if not _is_int(expected_size):
         raise InvalidError("expected size must be an integer")
     if current.size != expected_size or not _same_expected(current.checkpoint, expected_checkpoint):

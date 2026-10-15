@@ -29,7 +29,9 @@ from . import (
 from .engine import (
     apply_cll,
     apply_witness,
+    binary,
     check_append,
+    check_expected_attempts,
     check_pending,
     check_scan,
     check_value,
@@ -73,9 +75,10 @@ def _json(raw: Any, what: str) -> Any:
 def entry_from_row(seq: Any, value: Any, appended_at: Any) -> Entry:
     if not isinstance(seq, int) or not 0 < seq <= MAX_PORTABLE_INTEGER:
         raise CorruptError("stored entry is invalid")
-    if not isinstance(value, (bytes, bytearray, memoryview)) or len(value) != ENTRY_BYTES:
+    value = binary(value)
+    if value is None or len(value) != ENTRY_BYTES:
         raise CorruptError("stored entry is invalid")
-    return Entry(seq, bytes(value), parse_time(appended_at))
+    return Entry(seq, value, parse_time(appended_at))
 
 
 def witness_from_row(witness_id: Any, checkpoint_size: Any, attempts: Any, encoded: Any) -> WitnessState:
@@ -131,7 +134,11 @@ def load_state(cursor: Any, log_id: str, for_update: bool = False) -> CllState:
     for position, node in cursor.fetchall():
         if position != len(nodes):
             raise CorruptError("stored node positions are not dense")
-        nodes.append(encode_bytes(bytes(node)))
+        # bytes(5) would be five zero bytes: require a real 32-byte buffer.
+        node = binary(node)
+        if node is None or len(node) != ENTRY_BYTES:
+            raise CorruptError("stored node is not 32 bytes")
+        nodes.append(encode_bytes(node))
     wire = dict(wire)
     wire["nodes"] = nodes
     wire["witnesses"] = []
@@ -230,6 +237,7 @@ def commit_witness(cursor: Any, log_id: str, expected_attempts: int, next: Witne
     """Witness compare-and-set: the ``attempts`` predicate on the UPDATE is the
     lock, so it needs no ``cll_meta`` row lock."""
     next = validate_witness(next)
+    check_expected_attempts(expected_attempts)
     current = get_witness(cursor, log_id, next.witness_id, next.checkpoint_size)
     if current is None:
         raise ContentionError("witness state changed")

@@ -97,11 +97,12 @@ _IDENTIFIER = re.compile(r"[A-Za-z0-9._:/-]+")
 
 def validate_identifier(value: object) -> bool:
     """True when ``value`` is a portable log or witness identifier: 1..191
-    UTF-8 bytes matching ``^[A-Za-z0-9._:/-]+$``."""
+    UTF-8 bytes matching ``^[A-Za-z0-9._:/-]+$``. The pattern admits only
+    ASCII, so a string with an unpaired surrogate is simply not one."""
     return (
         isinstance(value, str)
-        and 1 <= len(value.encode("utf-8")) <= MAX_IDENTIFIER_BYTES
         and _IDENTIFIER.fullmatch(value) is not None
+        and len(value) <= MAX_IDENTIFIER_BYTES
     )
 
 

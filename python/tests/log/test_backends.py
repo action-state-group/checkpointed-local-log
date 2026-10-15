@@ -326,6 +326,34 @@ def test_jsonl_torn_tail(tmp_path):
             b'"witness":{}}\n',
             "missing witness",
         ),
+        (
+            # state.size must equal the current size plus the nodes this commit adds.
+            b'{"version":4,"type":"cll.init"}\n{"version":4,"type":"cll.commit","expected_size":"0",'
+            b'"state":{"size":"3","indexedSeq":"2","nodes":["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="],'
+            b'"witnesses":[]}}\n',
+            "does not match size",
+        ),
+        (
+            # An unpaired surrogate has no UTF-8 form: durable data, so corrupt.
+            b'{"version":4,"type":"cll.init"}\n{"version":4,"type":"cll.commit","expected_size":"0",'
+            b'"state":{"size":"1","indexedSeq":"1","nodes":["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="],'
+            b'"witnesses":[{"witnessId":"w","checkpointSize":"1","checkpoint":"YQ==","attempts":0,'
+            b'"nextAttemptAt":"2026-09-01T12:00:00.000Z","permanent":false,"lastError":"\\ud800"}]}}\n',
+            "last_error",
+        ),
+        (
+            b'{"version":4,"type":"cll.init"}\n{"version":4,"type":"cll.commit","expected_size":"0",'
+            b'"state":{"size":"1","indexedSeq":"1","nodes":["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="],'
+            b'"witnesses":[{"witnessId":"\\ud800","checkpointSize":"1","checkpoint":"YQ==","attempts":0,'
+            b'"nextAttemptAt":"2026-09-01T12:00:00.000Z","permanent":false}]}}\n',
+            "witness state is invalid",
+        ),
+        (
+            b'{"version":4,"type":"cll.init"}\n{"version":4,"type":"cll.commit","expected_size":"'
+            + b"1" * 5000
+            + b'","state":{"size":"0","indexedSeq":"0","nodes":[],"witnesses":[]}}\n',
+            "invalid decimal",
+        ),
         (b"", "missing JSONL initialization"),
     ],
 )
@@ -488,3 +516,125 @@ def test_readme_example(tmp_path, monkeypatch):
     result = store.append(AppendInput(bytes(32), datetime.now(timezone.utc)))
     store.close()
     assert result.outcome == "inserted"
+
+
+# -- review fixes --------------------------------------------------------------------
+
+# 128 bytes whose typed view has 32 items: lengths are bytes, never items.
+TYPED = memoryview(bytes(128)).cast("I")
+
+
+def one_node(**fields) -> CllState:
+    return CllState(size=1, nodes=(value(0x30),), indexed_seq=1, **fields)
+
+
+def test_typed_memoryviews_are_measured_in_bytes(backend):
+    assert len(TYPED) == 32
+    with pytest.raises(InvalidError):
+        backend.append(AppendInput(TYPED, T0))
+    with pytest.raises(InvalidError):
+        backend.get_entry(TYPED)
+    with pytest.raises(InvalidError):
+        backend.commit_cll(0, None, CllState(size=1, nodes=(TYPED,), indexed_seq=1))
+    with pytest.raises(InvalidError):
+        backend.commit_cll(0, None, one_node(checkpoint=CheckpointState(b"cp", 1, 1, (TYPED,))))
+    too_big = memoryview(bytes(4 * 65536)).cast("I")  # 65536 items, 262144 bytes
+    with pytest.raises(InvalidError):
+        backend.commit_cll(0, None, one_node(checkpoint=CheckpointState(too_big, 1, 1, ())))
+    with pytest.raises(InvalidError):
+        backend.commit_cll(0, None, one_node(witnesses=(WitnessState("w", 1, too_big, 0, T0),)))
+    backend.commit_cll(0, None, one_node(witnesses=(WitnessState("w", 1, b"a", 0, T0),)))
+    huge_receipt = memoryview(bytes(4 * 2097152)).cast("I")
+    with pytest.raises(InvalidError):
+        backend.commit_witness(0, WitnessState("w", 1, b"a", 1, T0, receipt=WitnessReceipt(huge_receipt)))
+    # A plain byte-format memoryview of 32 bytes is a valid value.
+    assert backend.append(AppendInput(memoryview(value(1)), T0)).entry.value == value(1)
+
+
+def test_commit_witness_checks_expected_attempts_before_the_lookup(backend):
+    missing = WitnessState("missing", 1, b"a", 1, T0)
+    for expected in (-1, 1 << 32, True):
+        with pytest.raises(InvalidError):
+            backend.commit_witness(expected, missing)
+    with pytest.raises(ContentionError):
+        backend.commit_witness(0, missing)
+
+
+def test_unpaired_surrogates_are_invalid_caller_input(backend):
+    with pytest.raises(InvalidError):
+        backend.get_witness("\ud800", 1)
+    for row in (WitnessState("\ud800", 1, b"a", 0, T0), WitnessState("w", 1, b"a", 0, T0, last_error="\ud800")):
+        with pytest.raises(InvalidError):
+            backend.commit_cll(0, None, one_node(witnesses=(row,)))
+        with pytest.raises(InvalidError):
+            backend.commit_witness(0, row)
+    assert backend.load_cll() == CllState()
+
+
+def test_sql_rejects_corrupt_nodes(tmp_path):
+    persistent = Persistent("sqlite", tmp_path)
+    store = persistent.open()
+    store.commit_cll(0, None, full_state())
+    store.close()
+    log_id = persistent.args[1]
+    for node in (5, b"x" * 31, "A" * 32):
+        _corrupt(persistent, "UPDATE cll_nodes SET node=? WHERE log_id=? AND position=1", (node, log_id))
+        with pytest.raises(CorruptError, match="node"):
+            persistent.open()
+
+
+def test_sql_rejects_a_surrogate_in_a_witness_row(relational):
+    store = relational.open()
+    store.commit_cll(0, None, full_state())
+    store.close()
+    row = json.dumps({
+        "witnessId": "primary", "checkpointSize": "3", "checkpoint": "Y3A=", "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z", "permanent": False, "lastError": "\ud800",
+    }).encode("ascii")
+    _corrupt(relational, "UPDATE cll_witnesses SET witness=? WHERE log_id=?", (row, relational.args[1]))
+    with pytest.raises(CorruptError):
+        relational.open()
+
+
+def test_mysql_url_rejects_bad_ports():
+    pytest.importorskip("pymysql")
+    from cll.log.mysql import connect_args
+
+    for url in ("mysql://u@h:abc/db", "mysql://u@h:99999/db"):
+        with pytest.raises(InvalidError, match="port"):
+            connect_args(url)
+
+
+def test_mysql_reconnects_after_a_dropped_connection(tmp_path):
+    relational = Persistent("mysql", tmp_path)
+    store = relational.open()
+    killer, _ = _raw(relational)
+    try:
+        killer.cursor().execute(f"KILL {store._connection.thread_id()}")
+        assert store.append(AppendInput(value(1), T0)).entry.seq == 1
+        assert store.get_entry(value(1)).seq == 1
+    finally:
+        killer.close()
+        store.close()
+
+
+def test_mysql_failed_rollback_does_not_mask_the_error(tmp_path):
+    from cll.log import mysql
+
+    store = Persistent("mysql", tmp_path).open()
+    connection = store._connection
+
+    class FailingRollback:
+        def __getattr__(self, name):
+            return getattr(connection, name)
+
+        def rollback(self):
+            raise mysql.pymysql.err.OperationalError(2013, "lost connection")
+
+    store._connection = FailingRollback()
+    try:
+        with pytest.raises(InvalidError):
+            store.append(AppendInput(b"short", T0))
+    finally:
+        store._connection = connection
+        store.close()

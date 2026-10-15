@@ -48,7 +48,7 @@ __all__ = [
     "dumps",
 ]
 
-_TIME = re.compile(r"(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z")
+_TIME = re.compile(r"([0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})\.([0-9]{3})Z")
 _DECIMAL = re.compile(r"0|[1-9][0-9]*")
 
 
@@ -99,8 +99,9 @@ def format_decimal(value: int) -> str:
 
 
 def parse_decimal(text: object, error: type[CllError] = CorruptError) -> int:
-    """A canonical unsigned 64-bit base-10 string."""
-    if not isinstance(text, str) or _DECIMAL.fullmatch(text) is None:
+    """A canonical unsigned 64-bit base-10 string. Length is checked before
+    ``int()``, which refuses very long digit strings with ``ValueError``."""
+    if not isinstance(text, str) or len(text) > 20 or _DECIMAL.fullmatch(text) is None:
         raise error(f"invalid decimal: {text!r}")
     value = int(text)
     if value >= 1 << 64:
