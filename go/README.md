@@ -92,6 +92,18 @@ mysqlStore, err := mysql.Open(ctx, dsn, "default")
 - SQLite uses WAL transactions and supports multiple handles in one process.
 - MySQL uses transactional row locking and supports multiple processes.
 
+A backend you write yourself implements `cll.Backend`, or only `cll.EntryStore`
+when it is just an entry log, and runs the shared conformance vectors from its
+tests:
+
+```go
+func TestConformance(t *testing.T) {
+	conformance.Run(t, conformance.Config{
+		Open: func(t *testing.T) any { return newMyBackend(t) },
+	})
+}
+```
+
 SQLite and MySQL accept an explicit log ID. The TypeScript default is
 `"default"`; use that value when both runtimes must open the same log. A
 different ID selects a different logical log in the same database. JSONL holds

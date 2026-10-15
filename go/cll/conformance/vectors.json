@@ -1,0 +1,3290 @@
+{
+ "version": 1,
+ "contract": "docs/backend-contract.md",
+ "description": "Language-neutral CLL backend conformance cases. Each case runs its steps in order against a fresh, empty backend. Arguments and results use the contract's portable encodings. A case runs only when the backend implements every listed interface, has every capability in requires and none in unless.",
+ "interfaces": {
+  "entries": "EntryStore: append, getEntry, scanEntries",
+  "checkpoint": "CheckpointStateStore: loadCll, commitCll",
+  "witness": "WitnessStateStore: pendingWitnesses, getWitness, commitWitness",
+  "close": "close"
+ },
+ "capabilities": {
+  "digest-append": "append stores a bare 32-byte identity (absent: append of a new identity is unsupported)",
+  "reopen": "the runner can close the backend and open the same durable state again (the reopen step)",
+  "extended-years": "times outside years 0001..9999 are representable"
+ },
+ "cases": [
+  {
+   "name": "entries/empty-log",
+   "description": "A new log has no entries; lookups of any 32-byte value are not found.",
+   "interfaces": [
+    "entries"
+   ],
+   "steps": [
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 10,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "expect": {
+      "error": "not_found"
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/append-and-idempotent",
+   "description": "New values get dense 1-based sequences; a repeated value returns its original entry and time.",
+   "interfaces": [
+    "entries"
+   ],
+   "requires": [
+    "digest-append"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T13:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "idempotent"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "idempotent"
+      }
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 10,
+     "expect": {
+      "result": [
+       {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "expect": {
+      "result": {
+       "seq": "2",
+       "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+       "appendedAt": "2026-09-01T12:00:01.000Z"
+      }
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "expect": {
+      "result": {
+       "seq": "1",
+       "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+       "appendedAt": "2026-09-01T12:00:00.000Z"
+      }
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk=",
+     "expect": {
+      "error": "not_found"
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/scan-bounds",
+   "description": "Scans return entries after afterSeq in order, at most limit, and reject out-of-range arguments.",
+   "interfaces": [
+    "entries"
+   ],
+   "requires": [
+    "digest-append"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 2,
+     "expect": {
+      "result": [
+       {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "2",
+     "limit": 2,
+     "expect": {
+      "result": [
+       {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "1",
+     "limit": 1000,
+     "expect": {
+      "result": [
+       {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "3",
+     "limit": 1,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "100",
+     "limit": 1,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "9007199254740991",
+     "limit": 1,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "9007199254740992",
+     "limit": 1,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 0,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 1001,
+     "expect": {
+      "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/invalid-values",
+   "description": "Values that are not 32 bytes are invalid for append and lookup, and nothing is stored.",
+   "interfaces": [
+    "entries"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ==",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ==",
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "",
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 0,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 10,
+     "expect": {
+      "result": []
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/time-range",
+   "description": "Append keeps millisecond times exactly and rejects times outside the ECMAScript Date range.",
+   "interfaces": [
+    "entries"
+   ],
+   "requires": [
+    "digest-append"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "1969-12-31T23:59:59.999Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "1969-12-31T23:59:59.999Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "0001-01-01T00:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "0001-01-01T00:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "9999-12-31T23:59:59.999Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "9999-12-31T23:59:59.999Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+      "appendedAt": "+275760-09-13T00:00:00.001Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+      "appendedAt": "-271821-04-19T23:59:59.999Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/extended-years",
+   "description": "Times outside years 0001..9999 within the ECMAScript Date range use the six-digit year form.",
+   "interfaces": [
+    "entries"
+   ],
+   "requires": [
+    "digest-append",
+    "extended-years"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "-271821-04-20T00:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "-271821-04-20T00:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "+275760-09-13T00:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "+275760-09-13T00:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "0000-01-01T00:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "0000-01-01T00:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 10,
+     "expect": {
+      "result": [
+       {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "-271821-04-20T00:00:00.000Z"
+       },
+       {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "+275760-09-13T00:00:00.000Z"
+       },
+       {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "0000-01-01T00:00:00.000Z"
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "entries/digest-append-unsupported",
+   "description": "A store without digest-append validates the value, then refuses a new identity as unsupported.",
+   "interfaces": [
+    "entries"
+   ],
+   "unless": [
+    "digest-append"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ==",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "unsupported"
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "expect": {
+      "error": "not_found"
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/initial-state",
+   "description": "A new backend has empty CLL state.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "0",
+       "indexedSeq": "0",
+       "nodes": [],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/first-commit",
+   "description": "The first commit expects size 0 and no checkpoint, and is returned by loadCll.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "primary",
+         "checkpointSize": "1",
+         "checkpoint": "Y2hlY2twb2ludC0x",
+         "attempts": 0,
+         "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "primary",
+         "checkpointSize": "1",
+         "checkpoint": "Y2hlY2twb2ludC0x",
+         "attempts": 0,
+         "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/state-without-checkpoint",
+   "description": "Nodes and indexedSeq may advance without a checkpoint, and firstPendingAt round-trips.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": [],
+      "firstPendingAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+       ],
+       "witnesses": [],
+       "firstPendingAt": "2026-09-01T12:00:01.000Z"
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+        "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/compare-and-set",
+   "description": "A stale expected size or checkpoint is contention, before any validation of next.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "2",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0y",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0y",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/invalid-structure",
+   "description": "A next state whose nodes, size or checkpoint tuple break the structural rules is invalid.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "2",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "2",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "2",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEB"
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "0",
+      "checkpointIndexedSeq": "0",
+      "checkpointPeaks": [],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "0",
+       "indexedSeq": "0",
+       "nodes": [],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/invalid-witness-rows",
+   "description": "Witness rows inside a commit follow the witness rules, and a key may appear once.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "bad id",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "0",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false,
+        "lastError": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+       }
+      ]
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "0",
+       "indexedSeq": "0",
+       "nodes": [],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false,
+        "lastError": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/append-only",
+   "description": "Existing nodes cannot change and size cannot shrink.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f38=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f38=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+        "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/checkpoint-transitions",
+   "description": "A checkpoint cannot be removed, move backward, or change at the size it already holds.",
+   "interfaces": [
+    "checkpoint"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hhbmdlZA==",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "0",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0y",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0z",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0y",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "3",
+     "next": {
+      "size": "4",
+      "indexedSeq": "3",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0z",
+      "checkpointSize": "4",
+      "checkpointIndexedSeq": "3",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+       "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0y",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+        "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0z",
+       "checkpointSize": "4",
+       "checkpointIndexedSeq": "3",
+       "checkpointPeaks": [
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI=",
+        "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/get",
+   "description": "getWitness validates the key, then returns the row or not found.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "error": "not_found"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 0,
+       "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+       "permanent": false
+      }
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "3",
+     "expect": {
+      "error": "not_found"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "other",
+     "checkpointSize": "1",
+     "expect": {
+      "error": "not_found"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "",
+     "checkpointSize": "1",
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "bad id",
+     "checkpointSize": "1",
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     "checkpointSize": "1",
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "0",
+     "expect": {
+      "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/commit-cas",
+   "description": "commitWitness validates next, then compares attempts and checkpoint bytes with the stored row.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "missing",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+      "permanent": false
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 1,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+      "permanent": false
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "missing",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 0,
+      "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+      "permanent": false,
+      "lastError": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 1,
+       "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+       "permanent": false,
+       "lastError": "timeout"
+      }
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 2,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "receipt": "cmVjZWlwdA==",
+      "entryHash": "abababababababababababababababababababababababababababababababab",
+      "entryHashScheme": "legacy",
+      "leafIndex": 0,
+      "treeSize": 1
+     },
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 1,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 2,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "receipt": "cmVjZWlwdA==",
+      "entryHash": "abababababababababababababababababababababababababababababababab",
+      "entryHashScheme": "legacy",
+      "leafIndex": 0,
+      "treeSize": 1
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 2,
+       "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+       "permanent": false,
+       "receipt": "cmVjZWlwdA==",
+       "entryHash": "abababababababababababababababababababababababababababababababab",
+       "entryHashScheme": "legacy",
+       "leafIndex": 0,
+       "treeSize": 1
+      }
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T13:00:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": []
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/invalid-rows",
+   "description": "commitWitness rejects rows that break the witness rules as invalid.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "bad id",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "0",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": ""
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "entryHash": "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "entryHash": "ababababababababababababababababababababababababababababababab"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "entryHashScheme": "other"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "leafIndex": -1
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "treeSize": 9007199254740992
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "entryHash": "abababababababababababababababababababababababababababababababab"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "leafIndex": 0
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 0,
+       "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+       "permanent": false
+      }
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout",
+      "receipt": "cg==",
+      "leafIndex": 9007199254740991,
+      "treeSize": 0
+     },
+     "expect": {
+      "result": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/commit-cll-merge",
+   "description": "commitCll inserts new witness keys, keeps existing rows as stored, never deletes rows, and rejects rebinding a key.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "secondary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 1,
+       "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+       "permanent": false,
+       "lastError": "timeout"
+      }
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "secondary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "secondary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 0,
+       "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+       "permanent": false
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": []
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "primary",
+         "checkpointSize": "1",
+         "checkpoint": "Y2hlY2twb2ludC0x",
+         "attempts": 1,
+         "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+         "permanent": false,
+         "lastError": "timeout"
+        },
+        {
+         "witnessId": "secondary",
+         "checkpointSize": "1",
+         "checkpoint": "Y2hlY2twb2ludC0x",
+         "attempts": 0,
+         "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "1",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "secondary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0y",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expectedCheckpoint": "Y2hlY2twb2ludC0x",
+     "expect": {
+      "error": "contention"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "secondary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "secondary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 0,
+       "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+       "permanent": false
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/pending-order",
+   "description": "pendingWitnesses returns due rows without receipt or permanent failure, by numeric size then witness ID.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "zeta",
+        "checkpointSize": "10",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "beta",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "later",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "done",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false,
+        "receipt": "cmVjZWlwdA=="
+       },
+       {
+        "witnessId": "failed",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": true
+       },
+       {
+        "witnessId": "mid",
+        "checkpointSize": "3",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "mid",
+        "checkpointSize": "3",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "beta",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "zeta",
+        "checkpointSize": "10",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 2,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "mid",
+        "checkpointSize": "3",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T11:59:59.999Z",
+     "limit": 32,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T13:00:00.000Z",
+     "limit": 1,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "later",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 0,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 33,
+     "expect": {
+      "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "lifecycle/close",
+   "description": "close is repeatable, and every other operation then fails closed before validating arguments.",
+   "interfaces": [
+    "entries",
+    "checkpoint",
+    "witness",
+    "close"
+   ],
+   "steps": [
+    {
+     "op": "close",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "close",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "CA==",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AQ==",
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 1,
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "9007199254740992",
+     "limit": 0,
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "2",
+      "indexedSeq": "0",
+      "nodes": [],
+      "witnesses": []
+     },
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "pendingWitnesses",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 0,
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "",
+     "checkpointSize": "0",
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "",
+      "checkpointSize": "0",
+      "checkpoint": "",
+      "attempts": 0,
+      "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+      "permanent": false
+     },
+     "expect": {
+      "error": "closed"
+     }
+    },
+    {
+     "op": "close",
+     "expect": {
+      "result": null
+     }
+    }
+   ]
+  },
+  {
+   "name": "lifecycle/reopen",
+   "description": "A persistent backend reopens with the same entries, CLL state and witness rows.",
+   "interfaces": [
+    "entries",
+    "checkpoint",
+    "witness",
+    "close"
+   ],
+   "requires": [
+    "digest-append",
+    "reopen"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "3",
+      "indexedSeq": "2",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+       "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "checkpointSize": "3",
+      "checkpointIndexedSeq": "2",
+      "checkpointPeaks": [
+       "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "3",
+        "checkpoint": "Y2hlY2twb2ludC0y",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ],
+      "firstPendingAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "3",
+      "checkpoint": "Y2hlY2twb2ludC0y",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "reopen",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "scanEntries",
+     "afterSeq": "0",
+     "limit": 10,
+     "expect": {
+      "result": [
+       {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       }
+      ]
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+        "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+       ],
+       "checkpoint": "Y2hlY2twb2ludC0y",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "primary",
+         "checkpointSize": "3",
+         "checkpoint": "Y2hlY2twb2ludC0y",
+         "attempts": 1,
+         "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+         "permanent": false
+        }
+       ],
+       "firstPendingAt": "2026-09-01T12:00:02.000Z"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T13:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "idempotent"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "reopen",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getEntry",
+     "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+     "expect": {
+      "result": {
+       "seq": "3",
+       "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+       "appendedAt": "2026-09-01T12:00:02.000Z"
+      }
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "3",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "3",
+       "checkpoint": "Y2hlY2twb2ludC0y",
+       "attempts": 1,
+       "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+       "permanent": false
+      }
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -3,11 +3,13 @@ package mysql
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/cll/conformance"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/storetest"
 	mysqldriver "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/require"
@@ -33,6 +35,28 @@ func TestContractAndCrossHandle(t *testing.T) {
 		require.NoError(t, second.Close())
 	})
 	storetest.CrossHandle(t, first, second)
+
+	// Every case gets its own log ID in the same database.
+	logs, count := map[any]string{}, 0
+	conformance.Run(t, conformance.Config{
+		Open: func(t *testing.T) any {
+			count++
+			logID := fmt.Sprintf("conformance-%d", count)
+			require.NoError(t, Init(t.Context(), dsn, logID))
+			store, err := Open(t.Context(), dsn, logID)
+			require.NoError(t, err)
+			logs[store] = logID
+			return store
+		},
+		Reopen: func(t *testing.T, current any) any {
+			logID := logs[current]
+			require.NoError(t, current.(*Store).Close())
+			store, err := Open(t.Context(), dsn, logID)
+			require.NoError(t, err)
+			logs[store] = logID
+			return store
+		},
+	})
 }
 
 func TestApplicationTableCoexistence(t *testing.T) {

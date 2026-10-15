@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/cll/conformance"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/storetest"
 	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 	"github.com/stretchr/testify/require"
@@ -133,4 +134,26 @@ func TestCloseAfterOpenFailureReleasesLock(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte("{not-json}\n"), 0o600))
 	_, err := Open(path)
 	require.True(t, errors.Is(err, cll.ErrCorrupt))
+}
+
+func TestConformanceVectors(t *testing.T) {
+	paths := map[any]string{}
+	conformance.Run(t, conformance.Config{
+		Open: func(t *testing.T) any {
+			path := filepath.Join(t.TempDir(), "cll.jsonl")
+			require.NoError(t, Init(path))
+			store, err := Open(path)
+			require.NoError(t, err)
+			paths[store] = path
+			return store
+		},
+		Reopen: func(t *testing.T, current any) any {
+			path := paths[current]
+			require.NoError(t, current.(*Store).Close())
+			store, err := Open(path)
+			require.NoError(t, err)
+			paths[store] = path
+			return store
+		},
+	})
 }

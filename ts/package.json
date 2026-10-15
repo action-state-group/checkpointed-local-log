@@ -33,6 +33,10 @@
     "./mysql": {
       "types": "./dist/mysql.d.ts",
       "import": "./dist/mysql.js"
+    },
+    "./conformance": {
+      "types": "./dist/conformance.d.ts",
+      "import": "./dist/conformance.js"
     }
   },
   "files": [

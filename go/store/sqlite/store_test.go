@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/cll/conformance"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/storetest"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
@@ -86,5 +87,27 @@ func TestApplicationTableCoexistence(t *testing.T) {
 			return nil, err
 		}
 		return Open(path, logID)
+	})
+}
+
+func TestConformanceVectors(t *testing.T) {
+	paths := map[any]string{}
+	conformance.Run(t, conformance.Config{
+		Open: func(t *testing.T) any {
+			path := filepath.Join(t.TempDir(), "cll.sqlite")
+			require.NoError(t, Init(path, "conformance"))
+			store, err := Open(path, "conformance")
+			require.NoError(t, err)
+			paths[store] = path
+			return store
+		},
+		Reopen: func(t *testing.T, current any) any {
+			path := paths[current]
+			require.NoError(t, current.(*Store).Close())
+			store, err := Open(path, "conformance")
+			require.NoError(t, err)
+			paths[store] = path
+			return store
+		},
 	})
 }
