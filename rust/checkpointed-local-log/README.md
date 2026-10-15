@@ -28,6 +28,24 @@ use cll::mmr::{add_leaf, MemoryNodeStore};
 - `store`, `node_store`: the log store and a durable, file-backed MMR node
   store.
 - `witness`: witness registration of checkpoints.
+- `log`: the storage interfaces shared with the Go, TypeScript and Python
+  implementations (entry log, checkpoint state, witness state), with
+  `memory` and `jsonl` backends, `sqlite` and `mysql` backends behind Cargo
+  features of the same names, and a conformance runner for any backend.
+
+```toml
+checkpointed-local-log = { version = "0.3", features = ["sqlite"] }
+```
+
+```rust
+use cll::log::{memory::MemoryStore, AppendInput, EntryStore, Timestamp};
+
+let log = MemoryStore::new();
+let result = log
+    .append(&AppendInput { value: vec![7; 32], appended_at: Timestamp::now() })
+    .unwrap();
+assert_eq!(result.entry.seq, 1);
+```
 
 ## Tests
 
@@ -37,7 +55,11 @@ so they run from a checkout, not from the published package:
 
 ```
 cargo test
+CLL_MYSQL_URL=mysql://user:pass@127.0.0.1:3306/cll cargo test --all-features
 ```
+
+The MySQL tests skip when `CLL_MYSQL_URL` is unset, and fail instead when `CI`
+is set.
 
 ## Changes
 

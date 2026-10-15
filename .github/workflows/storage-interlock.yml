@@ -54,6 +54,13 @@ jobs:
       - name: Build TypeScript
         run: npm ci && npm run build
         working-directory: ts
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: stable
+      - name: Build the Rust driver
+        working-directory: rust
+        run: cargo build -p checkpointed-local-log --features sqlite,mysql --example storage_interop
 
       - name: Go conformance vectors
         working-directory: go
@@ -76,6 +83,9 @@ jobs:
         working-directory: python
         # Test IDs are <backend>/<case>; the CLL_MYSQL_URL above serves mysql.
         run: python -m pytest -q tests/log/test_conformance.py -k "${{ matrix.backend }}"
+      - name: Rust conformance vectors
+        working-directory: rust
+        run: cargo test -p checkpointed-local-log --features sqlite,mysql --test log_conformance -- --exact "${{ matrix.backend }}_with_reopen"
 
       - name: Every language writes, every other reads and verifies
         run: bash go/scripts/check-storage-interop.sh "${{ matrix.backend }}"

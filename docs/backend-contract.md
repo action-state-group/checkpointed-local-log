@@ -55,6 +55,10 @@ Go adds a leading `context.Context` to every operation except `Close`. Go and
 TypeScript are asynchronous or context-bound; the Python and Rust interfaces
 are synchronous.
 
+Rust trait methods take `&self` and borrow their inputs (`&AppendInput`,
+`&State`, `&WitnessState`); backends synchronize internally, so one handle can
+be shared across threads like a Go backend.
+
 ## Values
 
 | Value | Fields | Rules |
@@ -96,6 +100,12 @@ throws `CllError` with a `code`. Python raises a subclass of `CllError`, whose
 
 `rejected` is not produced by storage operations. It is listed so that one code
 set covers the whole library.
+
+I/O and database-driver failures that no rule above classifies, such as a lost
+connection or a permission error, carry no CLL code in Go and TypeScript: they
+are the platform's own errors. Rust gives every `Error` a code, so it reports
+them as `ErrorCode::Storage` (`storage`). No contract condition produces it,
+and the conformance vectors never expect it.
 
 ### Not found
 
@@ -220,6 +230,9 @@ language's `open`.
 Python's backend modules expose `init` and `open` as functions
 (`cll.log.jsonl.init(path)`, `cll.log.sqlite.open(path, log_id)`,
 `cll.log.mysql.open(url, log_id)`).
+Rust's are `JsonlStore`, `SqliteStore` and `MysqlStore`, each with `init`
+and `open`, and `MemoryStore::new`. Rust's JSONL backend is Unix-only, because
+the writer lock is `flock(2)`.
 
 ## Capabilities
 

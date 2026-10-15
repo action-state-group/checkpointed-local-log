@@ -24,6 +24,7 @@ PINNED_COPIES = (
     "go/cll/conformance/vectors.json",
     "ts/src/conformance/vectors.json",
     "python/log/vectors.json",
+    "rust/checkpointed-local-log/src/log/conformance/vectors.json",
 )
 
 MAX_PORTABLE = 9007199254740991

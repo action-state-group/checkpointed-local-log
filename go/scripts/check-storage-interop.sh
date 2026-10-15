@@ -35,8 +35,15 @@ trap cleanup EXIT
 #   <driver> advance|verify|summary|hold|expect-contention <backend> <target> <log-id> [argument...]
 # CLL_INTEROP_LANGUAGES selects a subset (default: all). The py driver runs
 # under CLL_PYTHON (default: python3), which must have ./python installed.
-all_languages=(go ts py)
+all_languages=(go ts py rs)
 read -r -a languages <<<"${CLL_INTEROP_LANGUAGES:-${all_languages[*]}}"
+
+# The Rust driver is built once; every call runs the binary.
+rs_driver="${CARGO_TARGET_DIR:-$workspace_root/rust/target}/debug/examples/storage_interop"
+if [[ " ${languages[*]} " == *" rs "* ]]; then
+  cargo build --quiet --manifest-path "$workspace_root/rust/Cargo.toml" \
+    -p checkpointed-local-log --features sqlite,mysql --example storage_interop
+fi
 
 driver() {
   local language=$1
@@ -45,6 +52,7 @@ driver() {
     go) go -C "$go_dir" run ./test/interop/storage "$@" ;;
     ts) node "$go_dir/test/interop/storage.mjs" "$@" ;;
     py) "${CLL_PYTHON:-python3}" "$go_dir/test/interop/storage.py" "$@" ;;
+    rs) "$rs_driver" "$@" ;;
     *)
       echo "unsupported language: $language" >&2
       return 2
