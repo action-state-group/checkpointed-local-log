@@ -1,9 +1,11 @@
 # Changelog: evidencebook (Rust)
 
-## 0.0.2 (unreleased)
+## 0.0.3
 
-- Depends on `checkpointed-local-log` 0.3.0 (which has no default witness
-  client). Nothing in this crate used the removed default.
+- Depends on `checkpointed-local-log` 0.3.1 (which has no default witness
+  client, and adds `cll::log`). Nothing in this crate used the removed
+  default. Version 0.0.2 was never published: the manifest carried it before
+  the merged-bump release workflow existed, so this release takes 0.0.3.
 
 ## 0.0.1
 
