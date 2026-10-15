@@ -287,6 +287,10 @@ def test_no_direct_sqlite_access_outside_ledger():
     for py_file in repo_root.rglob("*.py"):
         if "ledger" in py_file.relative_to(repo_root).parts:
             continue
+        # The CLL SQLite backend (docs/backend-contract.md) owns its own
+        # tables and never reads the ledger's.
+        if py_file.relative_to(repo_root).parts == ("log", "sqlite.py"):
+            continue
         for lineno, line in enumerate(py_file.read_text().splitlines(), start=1):
             if pattern.match(line):
                 offenders.append(f"{py_file}:{lineno}")
