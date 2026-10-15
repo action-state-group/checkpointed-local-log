@@ -97,368 +97,44 @@ so it has no storage-level log ID argument.
 
 ## Public Go contract
 
-The public contract is intentionally parallel to TypeScript CLL in `ts/`,
-expressed in idiomatic Go. Byte slices returned by public methods are defensive copies.
+The backend interfaces, their semantics and error codes, the limits, the
+portable encodings, JSONL v4 and the relational schema are defined once for
+every language in [the CLL backend contract](../docs/backend-contract.md).
+`cll/types.go` and `cll/errors.go` implement it; this section records only what
+is specific to Go.
 
-```go
-package cll
+- Every operation except `Close` takes a leading `context.Context`.
+- `CommitCLL` arguments are `expectedSize`, `expectedCheckpoint` and `next`. A
+  nil expected checkpoint means that no checkpoint exists.
+- Nil `State.Checkpoint`, `State.FirstPendingAt` and `WitnessState.Receipt`
+  are the contract's absent values. Encoders flatten the grouped checkpoint and
+  receipt structs to the portable field names.
+- Required timestamps never use Go's zero value as absence, because
+  `0001-01-01T00:00:00.000Z` is a valid JavaScript date.
+- Errors wrap one sentinel per contract code (`ErrNotFound` ... `ErrUnsupported`),
+  tested with `errors.Is`. `GetWitness` returns `ErrNotFound` for an absent
+  key, Go's mapping of the contract's not-found result.
+- Witness HTTP retry classification stays in `witness.IsRetryable`; it is not
+  a storage error class.
+- Checkpoint and witness run loops retry `ErrContention`; benign
+  competing-writer races do not end a long-running host loop.
+- The time encoder reproduces the signed six-digit year form of
+  `Date.toISOString()` and never uses `time.RFC3339Nano`, which would omit
+  `.000`.
+- SQLite enables WAL, foreign keys, a five-second busy timeout and immediate
+  write transactions. A process-wide queue keyed by canonical database path and
+  log ID serializes handles in the same Go process.
+- Relational loads use `ORDER BY position` for nodes and
+  `ORDER BY checkpoint_size, witness_id` for witnesses; `PendingWitnesses`
+  then sorts numerically as the contract requires.
 
-type AppendOutcome string
-
-const (
-    AppendInserted   AppendOutcome = "inserted"
-    AppendIdempotent AppendOutcome = "idempotent"
-)
-
-type Entry struct {
-    Seq        uint64
-    Value      []byte
-    AppendedAt time.Time
-}
-
-type AppendInput struct {
-    Value      []byte
-    AppendedAt time.Time
-}
-
-type AppendResult struct {
-    Entry   Entry
-    Outcome AppendOutcome
-}
-
-type WitnessReceiptState struct {
-    Bytes           []byte
-    EntryHash       string
-    EntryHashScheme string
-    LeafIndex       *int64
-    TreeSize        *int64
-}
-
-type WitnessState struct {
-    WitnessID      string
-    CheckpointSize uint64
-    Checkpoint     []byte
-    Attempts       uint32
-    NextAttemptAt  time.Time
-    Receipt        *WitnessReceiptState
-    Permanent      bool
-    LastError      string
-}
-
-type CheckpointState struct {
-    Bytes      []byte
-    Size       uint64
-    IndexedSeq uint64
-    Peaks      [][]byte
-}
-
-type State struct {
-    Size           uint64
-    Nodes          [][]byte
-    IndexedSeq     uint64
-    FirstPendingAt *time.Time
-    Checkpoint     *CheckpointState
-    Witnesses      []WitnessState
-}
-
-type EntrySource interface {
-    ScanEntries(context.Context, uint64, int) ([]Entry, error)
-}
-
-type CheckpointStateStore interface {
-    LoadCLL(context.Context) (State, error)
-    CommitCLL(context.Context, uint64, []byte, State) error
-}
-
-type WitnessStateStore interface {
-    PendingWitnesses(context.Context, time.Time, int) ([]WitnessState, error)
-    GetWitness(context.Context, string, uint64) (WitnessState, error)
-    CommitWitness(context.Context, uint32, WitnessState) error
-}
-
-type CheckpointStore interface {
-    EntrySource
-    CheckpointStateStore
-    WitnessStateStore
-}
-
-type Backend interface {
-    EntrySource
-    Append(context.Context, AppendInput) (AppendResult, error)
-    GetEntry(context.Context, []byte) (Entry, error)
-    CheckpointStateStore
-    WitnessStateStore
-    Close() error
-}
-```
-
-`CommitCLL` arguments are `expectedSize`, `expectedCheckpoint`, and `next` in
-that order. A nil expected checkpoint means that no checkpoint currently
-exists. Nil `State.Checkpoint`, `State.FirstPendingAt`, and
-`WitnessState.Receipt` preserve the corresponding TypeScript `undefined`
-values. Encoders flatten the two grouped structs back to the exact TypeScript
-field names. Required timestamps do not use Go's zero value as absence because
-`0001-01-01T00:00:00.000Z` is a valid JavaScript date. `GetWitness` returns
-`ErrNotFound` rather than a zero value.
-
-The stable error classes are:
-
-```go
-ErrNotFound
-ErrInvalid
-ErrCorrupt
-ErrClosed
-ErrContention
-ErrRejected
-```
-
-Backends return `ErrContention` for failed compare-and-set operations. Witness
-HTTP retry classification remains in `witness.IsRetryable`; it is not a
-storage error class.
-
-Shared limits and validation match TypeScript CLL:
-
-```go
-EntryBytes              = 32
-MaxWitnesses            = 32
-MaxCheckpointBytes      = 64 << 10
-MaxJournalEventBytes    = 4 << 20
-MaxWitnessResponseBytes = 2 << 20
-MaxIdentifierBytes      = 191
-MaxReasonBytes          = 4096
-DefaultScanLimit        = 100
-MaxScanLimit            = 1000
-MaxPortableInteger      = 9007199254740991
-MinPortableUnixMillis   = -8640000000000000
-MaxPortableUnixMillis   = 8640000000000000
-```
-
-Log and witness identifiers contain at most `MaxIdentifierBytes` UTF-8 bytes,
-are non-empty, and match the ASCII subset `^[A-Za-z0-9._:/-]+$`.
-Pending-witness and entry-scan query limits use `MaxWitnesses` and
-`MaxScanLimit`. Dense entry sequences and receipt positions do not exceed
-`MaxPortableInteger`. This is required even though most state counters use
-decimal JSON strings, because TypeScript CLL receives SQLite entry sequences and
-receipt positions as JavaScript numbers.
-
-## State transition contract
-
-This table is the authoritative transition and error mapping shared by every
-backend:
-
-| Operation or condition | Required result |
-| --- | --- |
-| Append a valid, new `EntryBytes`-wide value | Allocate the next dense 1-based sequence, truncate its UTC time to milliseconds, and return `AppendInserted`. |
-| Append an existing value | Return its original sequence and timestamp with `AppendIdempotent`; do not replace the timestamp. |
-| Append with an invalid value or time | `ErrInvalid`. |
-| `ScanEntries(afterSeq, limit)` with valid arguments | Return entries after `afterSeq` in ascending sequence order, bounded by `MaxScanLimit`. |
-| Invalid identifier, query limit, sequence, receipt position, or other caller value | `ErrInvalid`. |
-| Missing entry or witness in a direct lookup | `ErrNotFound`. |
-| `CommitCLL` expected size or exact checkpoint bytes differ from current state | `ErrContention`. |
-| CLL nodes or `IndexedSeq` are not append-only, a node width differs from `EntryBytes`, `Size` is not the node count, the checkpoint tuple is incomplete, checkpoint size is not positive or exceeds current `Size`, or checkpoint indexed sequence exceeds current `IndexedSeq` | `ErrInvalid`. |
-| A checkpoint is removed, its size or indexed sequence moves backward, or its bytes, metadata, or peaks change at an already-used size | `ErrContention`. |
-| `CommitCLL` introduces a witness key | Insert the complete row. |
-| `CommitCLL` repeats a witness key with identical checkpoint bytes | Preserve the complete current row. Only `CommitWitness` may change delivery state. |
-| `CommitCLL` rebinds an existing witness key to different checkpoint bytes | `ErrContention`. |
-| `CommitWitness` finds no current row or its expected attempt count is stale | `ErrContention`. |
-| `PendingWitnesses` | Return only receipt-free, non-permanent rows due at or before `now`, in numeric checkpoint-size order with witness-ID tie ordering, bounded by `MaxWitnesses`. |
-| Malformed or internally inconsistent durable bytes, rows, or events are found while opening or reading | `ErrCorrupt`. |
-| `Close` is repeated | Succeed. All other operations after close return `ErrClosed`. |
-| Witness protocol or offline verification permanently rejects a response | `ErrRejected`. |
-
-The storage transition layer enforces these structural rules. The checkpoint
+The storage layer enforces the contract's structural rules. The checkpoint
 runner additionally verifies the MMR leaf-count relationship, checkpoint
-signature, checkpoint metadata, peak commitments, and consistency proof before
-extending restored state.
-
-Checkpoint and witness run loops retry `ErrContention`; they do not terminate a
-long-running host loop for benign competing-writer races.
-
-## Portable encodings
-
-All persistent JSON uses compact UTF-8 JSON without insignificant whitespace.
-Readers allow additive unknown object fields but reject unknown event types,
-missing required fields, invalid encodings, and inconsistent duplicate index
-columns.
-
-| Logical value | Persistent encoding |
-| --- | --- |
-| `uint64` state and sequence values | Base-10 JSON strings with no leading zero |
-| Entry value, node, checkpoint, receipt, and checkpoint peak bytes | RFC 4648 standard padded base64 |
-| Append and state timestamps | ECMAScript `Date.toISOString()` form with exactly millisecond precision, such as `2026-09-01T12:00:00.000Z` |
-| `Attempts`, `LeafIndex`, and `TreeSize` | JSON numbers within their declared Go and JavaScript-safe ranges |
-| Optional values | Field absent, never JSON `null` |
-
-The Go encoder and decoder reproduce the expanded signed six-digit year form
-used by `Date.toISOString()` outside years 0000 through 9999. They do not use
-`time.RFC3339Nano`, which would omit `.000` and diverge from TypeScript.
-Every required entry, checkpoint, or state timestamp and every non-nil
-optional timestamp must fall within `MinPortableUnixMillis` and
-`MaxPortableUnixMillis`, inclusively. Caller input outside that range is
-`ErrInvalid`; the same value in durable data is `ErrCorrupt`.
-
-The wire entry object is:
-
-```json
-{"seq":"1","value":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","appendedAt":"2026-09-01T12:00:00.000Z"}
-```
-
-CLL state uses these exact JSON field names:
-
-```text
-size, nodes, indexedSeq, firstPendingAt,
-checkpoint, checkpointSize, checkpointIndexedSeq, checkpointPeaks, witnesses
-```
-
-Witness state uses these exact JSON field names:
-
-```text
-witnessId, checkpointSize, checkpoint, attempts, nextAttemptAt,
-receipt, entryHash, entryHashScheme, leafIndex, treeSize, permanent, lastError
-```
-
-`entryHashScheme`, when present, is currently the literal `legacy` required by
-the existing checkpoint witness response.
-
-## JSONL v4
-
-`jsonl.Open(path)` opens one file representing one CLL. The log identity used
-in signed checkpoints is runner configuration and is not duplicated into the
-journal.
-
-Every durable event ends with one newline and has `version: 4`:
-
-```json
-{"version":4,"type":"cll.init"}
-{"version":4,"type":"entry.append","entry":{"seq":"1","value":"...","appendedAt":"..."}}
-{"version":4,"type":"cll.commit","expected_size":"0","state":{"size":"1","indexedSeq":"1","nodes":["..."],"witnesses":[]}}
-{"version":4,"type":"witness.commit","expected_attempts":0,"witness":{"witnessId":"primary","checkpointSize":"1","checkpoint":"...","attempts":1,"nextAttemptAt":"...","permanent":false}}
-```
-
-`cll.commit` includes `expected_checkpoint` only when a current checkpoint is
-expected. Its `state.nodes` contains only newly added nodes, and
-`state.witnesses` contains only newly added witnesses. Replay reconstructs the
-full state before applying the same transition validation as a live mutation.
-
-The writer acquires a non-blocking exclusive lock on the journal file
-descriptor itself. A sidecar lock is not interoperable because the TypeScript
-writer locks the journal descriptor. It records and fsyncs the complete event
-before considering the mutation durable. A failed write is truncated back to
-the previous durable offset and fsynced. Explicit `jsonl.Init` truncates an incomplete final tail; `Open` rejects it without modifying the journal; malformed complete lines are
-corruption. A version 3 journal is rejected explicitly.
-
-On a new empty file the writer emits `cll.init` exactly once. On an existing
-file it never emits another init merely because the process reopened it.
-Replay matches current TypeScript behavior: `cll.init` is valid while entries
-and MMR state remain empty, but becomes corruption after either is non-empty.
-The canonical writer therefore produces one leading init even though a replay
-of manually constructed repeated init events in an otherwise empty state is
-tolerated for compatibility.
-
-## Relational schema
-
-The table and column names, keys, value encodings, and initial metadata JSON
-match TypeScript CLL. The schema deliberately has no additional version table.
-The initial state is
-`{"size":"0","indexedSeq":"0","nodes":[],"witnesses":[]}`.
-
-### SQLite
-
-```sql
-CREATE TABLE IF NOT EXISTS cll_meta (
-  log_id TEXT PRIMARY KEY,
-  state BLOB NOT NULL
-);
-CREATE TABLE IF NOT EXISTS cll_entries (
-  log_id TEXT NOT NULL,
-  seq INTEGER NOT NULL,
-  value BLOB NOT NULL,
-  appended_at TEXT NOT NULL,
-  PRIMARY KEY(log_id, seq),
-  UNIQUE(log_id, value)
-);
-CREATE TABLE IF NOT EXISTS cll_nodes (
-  log_id TEXT NOT NULL,
-  position INTEGER NOT NULL,
-  node BLOB NOT NULL,
-  PRIMARY KEY(log_id, position)
-);
-CREATE TABLE IF NOT EXISTS cll_witnesses (
-  log_id TEXT NOT NULL,
-  witness_id TEXT NOT NULL,
-  checkpoint_size TEXT NOT NULL,
-  attempts INTEGER NOT NULL,
-  witness BLOB NOT NULL,
-  PRIMARY KEY(log_id, witness_id, checkpoint_size)
-);
-```
-
-### MySQL 8
-
-```sql
-CREATE TABLE IF NOT EXISTS cll_meta (
-  log_id VARCHAR(191) PRIMARY KEY,
-  state LONGBLOB NOT NULL
-) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS cll_entries (
-  log_id VARCHAR(191) NOT NULL,
-  seq BIGINT UNSIGNED NOT NULL,
-  value BINARY(32) NOT NULL,
-  appended_at VARCHAR(32) NOT NULL,
-  PRIMARY KEY(log_id, seq),
-  UNIQUE KEY uq_cll_entry(log_id, value)
-) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS cll_nodes (
-  log_id VARCHAR(191) NOT NULL,
-  position BIGINT UNSIGNED NOT NULL,
-  node BINARY(32) NOT NULL,
-  PRIMARY KEY(log_id, position)
-) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS cll_witnesses (
-  log_id VARCHAR(191) NOT NULL,
-  witness_id VARCHAR(191) NOT NULL,
-  checkpoint_size VARCHAR(32) NOT NULL,
-  attempts INT UNSIGNED NOT NULL,
-  witness LONGBLOB NOT NULL,
-  PRIMARY KEY(log_id, witness_id, checkpoint_size)
-) ENGINE=InnoDB;
-```
-
-`cll_meta.state` contains the complete JSON state except that `nodes` and
-`witnesses` are empty arrays. `cll_nodes` and `cll_witnesses` are authoritative
-for those collections. Witness JSON repeats `checkpointSize` and `attempts`;
-opening a store rejects disagreement between JSON and the indexed columns.
-
-Relational loads use `ORDER BY position` for nodes and
-`ORDER BY checkpoint_size, witness_id` for witnesses. Because
-`checkpoint_size` is decimal text, the latter is lexicographic. Public pending
-witness selection then applies a stable numeric checkpoint-size sort, matching
-the TypeScript transition engine and preserving witness-ID order for ties.
-
-SQLite enables WAL, foreign keys, a five-second busy timeout, and immediate write
-transactions. A process-wide queue keyed by canonical database path and log ID
-serializes handles in the same Go process; contention remaining after the
-bounded database wait is `ErrContention`. MySQL locks the log's `cll_meta` row
-with `SELECT ... FOR UPDATE`. Under that lock, append derives the next sequence
-from the indexed entry rows, verifies dense ordering, and inserts the new entry.
-MMR size is never used as an entry sequence because MMR size counts nodes, not
-entries.
-
-Reads stay incremental in both Go and TypeScript:
-
-- `GetEntry` queries by `(log_id, value)`.
-- `ScanEntries` queries the requested sequence range.
-- `LoadCLL`/`loadCll` read metadata, nodes, and witnesses, not record entries.
-- Commits insert only new nodes and witnesses.
-
-Each runtime validates complete relational state when opening a backend. Normal
-append, entry lookup, bounded scan, witness lookup, and witness CAS operations
-use targeted indexed queries. Public capabilities align semantically while
-retaining idiomatic Go and TypeScript names, numeric types, and error handling.
-Both checkpoint APIs can emit and inspect the optional positive maximum
-checkpoint interval in seconds. Go exposes the additive
-`SignCheckpointWithCadence` method without widening the runner's existing
-`Signer` interface.
+signature, checkpoint metadata, peak commitments and consistency proof before
+extending restored state. Both checkpoint APIs can emit and inspect the
+optional positive maximum checkpoint interval in seconds; Go exposes the
+additive `SignCheckpointWithCadence` method without widening the runner's
+existing `Signer` interface.
 
 ## Legacy format policy
 

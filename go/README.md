@@ -111,8 +111,9 @@ Go and TypeScript use the same four logical tables and column names:
 SQLite uses `TEXT`, `BLOB`, and `INTEGER`. MySQL uses corresponding
 `VARCHAR(191)`, `LONGBLOB` or `BINARY(32)`, and unsigned integer types. Stored
 metadata, timestamps, decimal counters, base64 values, and witness JSON use the
-same portable encodings in both runtimes. See [DESIGN.md](DESIGN.md) for the
-exact DDL and transition contract.
+same portable encodings in both runtimes. The
+[CLL backend contract](../docs/backend-contract.md) gives the exact DDL and
+transition rules.
 
 SQL backends ignore application-owned tables. `Init` provisions only the generic
 `cll_*` schema and requested log. A new log starts empty; initialization does not
