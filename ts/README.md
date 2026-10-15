@@ -275,8 +275,10 @@ for (const item of conformanceCases({ open: () => new PostgresBackend() }))
   it.skipIf(item.skip !== undefined)(item.name, item.run);
 ```
 
-Pass `reopen` to also run the cases that close and reopen durable state, and
-`digestAppend: false` for a store that cannot append a bare identity. Durable
+Pass `reopen` to also run the cases that close and reopen durable state,
+`digestAppend: false` for a store that cannot append a bare identity, and
+`interfaces` (for example `["entries"]`) for a store that implements only part
+of the contract. Durable
 implementations must also persist every mutation, return defensive copies,
 allocate dense sequences transactionally, provide consistent reads, and detect
 corrupt state; the repository's [backend tests](test/backend-contract.ts)
