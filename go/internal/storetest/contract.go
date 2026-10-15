@@ -170,6 +170,9 @@ func Run(t *testing.T, store cll.Backend) {
 
 	err = store.CommitWitness(ctx, 0, cll.WitnessState{WitnessID: "missing", CheckpointSize: 1, Checkpoint: checkpoint, NextAttemptAt: contractTime})
 	require.ErrorIs(t, err, cll.ErrContention)
+	// Validation precedes the stored-row lookup.
+	err = store.CommitWitness(ctx, 0, cll.WitnessState{WitnessID: "missing", CheckpointSize: 1, Checkpoint: checkpoint, NextAttemptAt: contractTime, LastError: strings.Repeat("x", cll.MaxReasonBytes+1)})
+	require.ErrorIs(t, err, cll.ErrInvalid)
 	err = store.CommitCLL(ctx, 0, nil, unchanged)
 	require.ErrorIs(t, err, cll.ErrContention)
 	invalid := unchanged

@@ -8,6 +8,8 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  validateWitness,
+  validateWitnessKey,
   validateAppendInput,
   validateEntryScan,
   validateEntryValue,
@@ -392,6 +394,7 @@ export class MysqlStore implements CllBackend {
     checkpointSize: bigint,
   ): Promise<WitnessState | undefined> {
     return this.read(async (query) => {
+      validateWitnessKey(witnessId, checkpointSize);
       const [rows] = await query.execute(
         "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?",
         [this.logId, witnessId, String(checkpointSize)],
@@ -411,6 +414,7 @@ export class MysqlStore implements CllBackend {
     // witnesses (distinct witness_id) from serializing on the shared meta row.
     return this.track(() =>
       this.withConnection(false, async (connection) => {
+        validateWitness(next);
         const [rows] = await connection.execute(
           "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?",
           [this.logId, next.witnessId, String(next.checkpointSize)],

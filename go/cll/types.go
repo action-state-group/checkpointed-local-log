@@ -103,9 +103,20 @@ type State struct {
 	Witnesses      []WitnessState
 }
 
+// The interfaces below implement the CLL backend contract in
+// docs/backend-contract.md, which defines their operations, error codes and
+// storage formats for every language.
+
 // EntrySource exposes bounded entries after a dense sequence position.
 type EntrySource interface {
 	ScanEntries(context.Context, uint64, int) ([]Entry, error)
+}
+
+// EntryStore is the entry log: it appends opaque identities and looks them up.
+type EntryStore interface {
+	EntrySource
+	Append(context.Context, AppendInput) (AppendResult, error)
+	GetEntry(context.Context, []byte) (Entry, error)
 }
 
 // CheckpointStateStore persists append-only CLL state with compare-and-set.
@@ -114,7 +125,8 @@ type CheckpointStateStore interface {
 	CommitCLL(context.Context, uint64, []byte, State) error
 }
 
-// WitnessStateStore persists independent witness-delivery state.
+// WitnessStateStore persists independent witness-delivery state. GetWitness
+// returns ErrNotFound for an absent key.
 type WitnessStateStore interface {
 	PendingWitnesses(context.Context, time.Time, int) ([]WitnessState, error)
 	GetWitness(context.Context, string, uint64) (WitnessState, error)
@@ -130,9 +142,7 @@ type CheckpointStore interface {
 
 // Backend is the complete generic persistence contract.
 type Backend interface {
-	EntrySource
-	Append(context.Context, AppendInput) (AppendResult, error)
-	GetEntry(context.Context, []byte) (Entry, error)
+	EntryStore
 	CheckpointStateStore
 	WitnessStateStore
 	Close() error
