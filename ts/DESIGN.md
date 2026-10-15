@@ -17,6 +17,10 @@ The package owns:
 
 ## Backend contract
 
+The [CLL backend contract](../docs/backend-contract.md) is the source of truth
+for operations, error codes, limits and storage formats in every language; this
+section summarizes the TypeScript side.
+
 `CllBackend` combines four narrow structural interfaces: `EntryStore`,
 `EntrySource`, `CheckpointStateStore`, and `WitnessStateStore`. Every included
 backend implements that interface directly. Durable backends compose the
