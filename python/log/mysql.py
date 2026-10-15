@@ -7,7 +7,14 @@ the DDL Go and TypeScript run, so one database serves every language. Several
 logs share a database, keyed by ``log_id``. Writers serialize per log by
 locking its ``cll_meta`` row with ``SELECT ... FOR UPDATE``; ``commit_witness``
 relies on its ``attempts`` compare-and-set instead. Duplicate keys, lock wait
-timeouts and deadlocks are ``contention``.
+timeouts and deadlocks are ``contention``; other driver errors, such as a lost
+connection or a refused login, propagate as ``pymysql`` exceptions because the
+contract has no code for them.
+
+Each handle owns one connection and serializes its operations on it. An
+operation first pings the server and reconnects if the connection dropped; a
+drop during a transaction fails that operation, which the caller may retry.
+Open several handles for parallel work.
 
 ``init(url, log_id)`` provisions the tables and the log's metadata, preserving
 existing data. ``open(url, log_id)`` requires both and never writes. ``url`` is
@@ -20,7 +27,7 @@ from __future__ import annotations
 import threading
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from urllib.parse import unquote, urlsplit
 
 import pymysql
@@ -83,9 +90,13 @@ def connect_args(url: str) -> dict:
     database = unquote(parts.path.lstrip("/"))
     if parts.scheme != "mysql" or not parts.hostname or not database or "/" in database or parts.query:
         raise InvalidError("MySQL URL must be mysql://user:password@host:port/database")
+    try:
+        port = parts.port  # ValueError for a non-numeric or out-of-range port
+    except ValueError as exc:
+        raise InvalidError("MySQL URL port must be a number in 0..65535") from exc
     return {
         "host": parts.hostname,
-        "port": parts.port or 3306,
+        "port": port or 3306,
         "user": unquote(parts.username or ""),
         "password": unquote(parts.password or ""),
         "database": database,
@@ -126,8 +137,9 @@ class _Cursor:
 class MysqlStore:
     """A MySQL ``Backend`` for one log. Use ``open`` or ``init``."""
 
-    def __init__(self, connection: Any, log_id: str) -> None:
-        self._connection = connection
+    def __init__(self, connect: Callable[[], Any], log_id: str) -> None:
+        self._connect = connect
+        self._connection = connect()
         self._log_id = log_id
         self._lock = threading.RLock()
         self._closed = False
@@ -136,16 +148,21 @@ class MysqlStore:
     def _open(cls, url: str, log_id: str, initialize: bool) -> MysqlStore:
         if not validate_identifier(log_id):
             raise InvalidError("log ID is required")
-        connection = pymysql.connect(
-            **connect_args(url),
-            charset="utf8mb4",
-            autocommit=True,
-            binary_prefix=True,
-            # UPDATE reports matched rows, so committing an unchanged witness
-            # row still satisfies the compare-and-set.
-            client_flag=CLIENT.FOUND_ROWS,
-        )
-        store = cls(connection, log_id)
+        arguments = connect_args(url)
+
+        def connect() -> Any:
+            return pymysql.connect(
+                **arguments,
+                charset="utf8mb4",
+                autocommit=True,
+                binary_prefix=True,
+                # UPDATE reports matched rows, so committing an unchanged
+                # witness row still satisfies the compare-and-set.
+                client_flag=CLIENT.FOUND_ROWS,
+            )
+
+        store = cls(connect, log_id)
+        connection = store._connection
         try:
             if initialize:
                 with store._classified():
@@ -179,18 +196,44 @@ class MysqlStore:
         with self._lock:
             if self._closed:
                 raise ClosedError("backend is closed")
-            with self._classified(), self._connection.cursor() as raw:
-                cursor = _Cursor(raw)
-                if begin is None:
-                    yield cursor
-                    return
-                raw.execute(begin)
-                try:
-                    yield cursor
-                except BaseException:
-                    self._connection.rollback()
-                    raise
-                self._connection.commit()
+            with self._classified():
+                self._ensure_connected()
+                with self._connection.cursor() as raw:
+                    cursor = _Cursor(raw)
+                    if begin is None:
+                        yield cursor
+                        return
+                    raw.execute(begin)
+                    try:
+                        yield cursor
+                    except BaseException:
+                        self._rollback()
+                        raise
+                    self._connection.commit()
+
+    def _ensure_connected(self) -> None:
+        """Replace a connection the server dropped (idle timeout, restart)
+        with a new one before an operation starts. PyMySQL deprecates
+        ``ping(reconnect=True)`` in favour of a new connection. A drop
+        inside a transaction still fails that operation."""
+        try:
+            self._connection.ping()
+        except pymysql.MySQLError:
+            try:
+                self._connection.close()
+            except pymysql.MySQLError:
+                pass
+            self._connection = self._connect()
+
+    def _rollback(self) -> None:
+        """Roll back after a failure without masking it: a rollback that
+        itself fails (for example on a dropped connection) is discarded, as
+        the server rolls back an unfinished transaction when the session
+        ends."""
+        try:
+            self._connection.rollback()
+        except pymysql.MySQLError:
+            pass
 
     def _write(self):
         return self._transaction("START TRANSACTION")
@@ -233,4 +276,7 @@ class MysqlStore:
             if self._closed:
                 return
             self._closed = True
-            self._connection.close()
+            try:
+                self._connection.close()
+            except pymysql.MySQLError:
+                pass  # already dropped by the server: nothing left to close

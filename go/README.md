@@ -111,7 +111,8 @@ one logical log per file.
 
 ### Relational schema
 
-Go and TypeScript use the same four logical tables and column names:
+Every language that ships the SQL backends runs the same DDL, so all of them
+use the same four logical tables and column names:
 
 | Table | Purpose | Key |
 | --- | --- | --- |
@@ -123,7 +124,7 @@ Go and TypeScript use the same four logical tables and column names:
 SQLite uses `TEXT`, `BLOB`, and `INTEGER`. MySQL uses corresponding
 `VARCHAR(191)`, `LONGBLOB` or `BINARY(32)`, and unsigned integer types. Stored
 metadata, timestamps, decimal counters, base64 values, and witness JSON use the
-same portable encodings in both runtimes. The
+same portable encodings in every language. The
 [CLL backend contract](../docs/backend-contract.md) gives the exact DDL and
 transition rules.
 

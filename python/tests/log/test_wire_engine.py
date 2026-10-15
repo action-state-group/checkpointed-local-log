@@ -167,3 +167,31 @@ def test_importing_cll_log_loads_no_database_driver():
         "assert 'cll.ledger' not in sys.modules\n"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
+
+
+def test_parse_decimal_bounds_length_before_int():
+    for text in ("1" * 21, "1" * 5000):
+        with pytest.raises(CorruptError):
+            parse_decimal(text)
+        with pytest.raises(InvalidError):
+            parse_decimal(text, InvalidError)
+    assert parse_decimal(str((1 << 64) - 1)) == (1 << 64) - 1
+
+
+def test_parse_time_rejects_non_ascii_digits():
+    with pytest.raises(CorruptError):
+        parse_time("٢026-09-01T12:00:00.000Z")
+
+
+def test_identifiers_with_unpaired_surrogates_are_not_identifiers():
+    assert not validate_identifier("\ud800")
+    assert not validate_identifier("ok\udfff")
+
+
+def test_validate_witness_maps_surrogates_to_the_error_class():
+    at = datetime(2026, 1, 1, tzinfo=UTC)
+    for row in (WitnessState("\ud800", 1, b"a", 0, at), WitnessState("w", 1, b"a", 0, at, last_error="\ud800")):
+        with pytest.raises(InvalidError):
+            validate_witness(row)
+        with pytest.raises(CorruptError):
+            validate_witness(row, CorruptError)
