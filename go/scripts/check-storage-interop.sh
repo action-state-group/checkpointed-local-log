@@ -34,8 +34,15 @@ trap cleanup EXIT
 # Every language that ships a backend has a driver with the same modes:
 #   <driver> advance|verify|summary|hold|expect-contention <backend> <target> <log-id> [argument...]
 # CLL_INTEROP_LANGUAGES selects a subset (default: all).
-all_languages=(go ts)
+all_languages=(go ts rs)
 read -r -a languages <<<"${CLL_INTEROP_LANGUAGES:-${all_languages[*]}}"
+
+# The Rust driver is built once; every call runs the binary.
+rs_driver="${CARGO_TARGET_DIR:-$workspace_root/rust/target}/debug/examples/storage_interop"
+if [[ " ${languages[*]} " == *" rs "* ]]; then
+  cargo build --quiet --manifest-path "$workspace_root/rust/Cargo.toml" \
+    -p checkpointed-local-log --features sqlite,mysql --example storage_interop
+fi
 
 driver() {
   local language=$1
@@ -43,6 +50,7 @@ driver() {
   case "$language" in
     go) go -C "$go_dir" run ./test/interop/storage "$@" ;;
     ts) node "$go_dir/test/interop/storage.mjs" "$@" ;;
+    rs) "$rs_driver" "$@" ;;
     *)
       echo "unsupported language: $language" >&2
       return 2
