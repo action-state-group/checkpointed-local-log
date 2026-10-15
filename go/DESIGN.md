@@ -250,9 +250,10 @@ covers what the vectors cannot express:
 
 ### Cross-runtime storage
 
-The root [interoperability workflow](../.github/workflows/interop.yml) runs
+The root [storage interlock](../.github/workflows/storage-interlock.yml) runs
 continuation tests between every ordered pair of languages at the same
-checked-out repository revision:
+checked-out repository revision, then has every language print the log it
+reads and requires identical entries, state, witness rows and checkpoint roots:
 
 | Backend | Go creates, TS continues, Go verifies | TS creates, Go continues, TS verifies |
 | --- | --- | --- |
@@ -304,8 +305,8 @@ Independent GitHub checks should remain parallel:
 2. `unit`: non-MySQL unit and backend contract tests.
 3. `race`: race-enabled Go tests.
 4. `mysql`: MySQL backend contract against a real MySQL 8 service.
-5. `storage-interop`: bidirectional JSONL, SQLite, and MySQL continuation with
-   `ts/` at the same checked-out repository revision.
+5. `storage-interlock`: JSONL, SQLite and MySQL continuation between every
+   ordered pair of languages at the same checked-out repository revision.
 6. `checkpoint-interop`: Go, TypeScript, and Python checkpoint compatibility.
 
 `capsule-emit-go` keeps its existing independent quality, coverage, race, and

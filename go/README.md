@@ -263,8 +263,10 @@ backends, and crash recovery.
 GitHub Actions exposes separate checks for quality, unit tests, race tests,
 checkpoint wire interoperability, JSONL continuation, SQLite continuation, and
 MySQL continuation. The root [interoperability workflow](../.github/workflows/interop.yml)
-builds `ts/`, installs `python/`, and runs the Go drivers from `go/` at the same
-checked-out repository revision.
+checks checkpoint bytes across Go, TypeScript and Python, and the
+[storage interlock](../.github/workflows/storage-interlock.yml) runs every
+language's drivers against each storage format at the same checked-out
+repository revision.
 
 ## Development
 

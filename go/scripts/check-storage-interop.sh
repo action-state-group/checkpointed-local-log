@@ -32,7 +32,7 @@ cleanup() {
 trap cleanup EXIT
 
 # Every language that ships a backend has a driver with the same modes:
-#   <driver> advance|verify|hold|expect-contention <backend> <target> <log-id> [argument...]
+#   <driver> advance|verify|summary|hold|expect-contention <backend> <target> <log-id> [argument...]
 # CLL_INTEROP_LANGUAGES selects a subset (default: all).
 all_languages=(go ts)
 read -r -a languages <<<"${CLL_INTEROP_LANGUAGES:-${all_languages[*]}}"
@@ -77,6 +77,10 @@ esac
 
 suffix="${GITHUB_RUN_ID:-local}-$$"
 
+canonical() {
+  python3 -c 'import json, sys; print(json.dumps(json.load(sys.stdin), sort_keys=True, separators=(",", ":")))'
+}
+
 # For every ordered pair: the first language creates the log, the second
 # continues it, the first continues again and the second verifies all three
 # entries, checkpoints, nodes and witness rows.
@@ -88,7 +92,20 @@ for first in "${languages[@]}"; do
     driver "$second" advance "$backend" "$(target "$second" "$name")" "$name"
     driver "$first" advance "$backend" "$(target "$first" "$name")" "$name"
     driver "$second" verify "$backend" "$(target "$second" "$name")" "$name" 3
-    echo "$backend: $first -> $second passed"
+    # Every language must read the same entries, state, witness rows and
+    # checkpoint root from this log, byte for byte after canonical encoding.
+    for reader in "${languages[@]}"; do
+      driver "$reader" summary "$backend" "$(target "$reader" "$name")" "$name" |
+        canonical >"$work_dir/$name.$reader.summary"
+    done
+    for reader in "${languages[@]}"; do
+      if ! cmp -s "$work_dir/$name.$first.summary" "$work_dir/$name.$reader.summary"; then
+        echo "$backend: $reader reads $first -> $second differently from $first" >&2
+        diff "$work_dir/$name.$first.summary" "$work_dir/$name.$reader.summary" >&2 || true
+        exit 1
+      fi
+    done
+    echo "$backend: $first -> $second passed; root $(sed -n 's/.*"root": *"\([0-9a-f]*\)".*/\1/p' "$work_dir/$name.$first.summary")"
   done
 done
 

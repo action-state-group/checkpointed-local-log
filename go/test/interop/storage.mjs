@@ -12,13 +12,14 @@ if (
   logId === undefined
 )
   throw new Error(
-    "usage: storage.mjs <advance|verify|hold|expect-contention> <jsonl|sqlite|mysql> <target> <log-id> [argument]",
+    "usage: storage.mjs <advance|verify|summary|hold|expect-contention> <jsonl|sqlite|mysql> <target> <log-id> [argument]",
   );
 
 const dist = process.env.CLL_TS_DIST;
 if (dist === undefined) throw new Error("CLL_TS_DIST is required");
 
 const core = await import(pathToFileURL(join(dist, "index.js")).href);
+
 const backendModule = await import(
   pathToFileURL(join(dist, `${backendName}.js`)).href
 );
@@ -61,6 +62,9 @@ if (mode === "expect-contention") {
         await verify(store, expected);
         break;
       }
+      case "summary":
+        await summary(store);
+        break;
       case "hold":
         if (argument === undefined || secondArgument === undefined)
           throw new Error("hold requires ready and stop paths");
@@ -271,4 +275,64 @@ async function hold(readyPath, stopPath) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   throw new Error("timed out waiting for stop file");
+}
+
+// Prints the log as every language reads it: entries, CLL state with witness
+// rows in key order, and the root bagged from the checkpoint peaks. The
+// interlock compares these byte for byte after canonical JSON encoding.
+async function summary(store) {
+  const b64 = (bytes) => Buffer.from(bytes).toString("base64");
+  const entries = (await store.scanEntries(0n, 1000)).map((entry) => ({
+    seq: String(entry.seq),
+    value: b64(entry.value),
+    appendedAt: entry.appendedAt.toISOString(),
+  }));
+  const state = await store.loadCll();
+  const witnesses = [...state.witnesses]
+    .sort((a, b) =>
+      a.checkpointSize !== b.checkpointSize
+        ? a.checkpointSize < b.checkpointSize
+          ? -1
+          : 1
+        : Buffer.compare(Buffer.from(a.witnessId), Buffer.from(b.witnessId)),
+    )
+    .map((row) => {
+      const { checkpointSize, checkpoint, nextAttemptAt, receipt, ...rest } =
+        row;
+      return {
+        ...rest,
+        checkpointSize: String(checkpointSize),
+        checkpoint: b64(checkpoint),
+        nextAttemptAt: nextAttemptAt.toISOString(),
+        ...(receipt === undefined ? {} : { receipt: b64(receipt) }),
+      };
+    });
+  const wire = {
+    size: String(state.size),
+    indexedSeq: String(state.indexedSeq),
+    nodes: state.nodes.map(b64),
+    ...(state.firstPendingAt === undefined
+      ? {}
+      : { firstPendingAt: state.firstPendingAt.toISOString() }),
+    ...(state.checkpoint === undefined
+      ? {}
+      : {
+          checkpoint: b64(state.checkpoint),
+          checkpointSize: String(state.checkpointSize),
+          checkpointIndexedSeq: String(state.checkpointIndexedSeq),
+          checkpointPeaks: state.checkpointPeaks.map(b64),
+        }),
+    witnesses,
+  };
+  let root = "";
+  if (state.checkpointPeaks !== undefined && state.checkpointPeaks.length) {
+    let bagged = Buffer.from(state.checkpointPeaks.at(-1));
+    for (let i = state.checkpointPeaks.length - 2; i >= 0; i -= 1)
+      bagged = createHash("sha256")
+        .update(bagged)
+        .update(state.checkpointPeaks[i])
+        .digest();
+    root = bagged.toString("hex");
+  }
+  process.stdout.write(`${JSON.stringify({ entries, state: wire, root })}\n`);
 }

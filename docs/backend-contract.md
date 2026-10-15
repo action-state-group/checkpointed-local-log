@@ -390,6 +390,12 @@ backend tests also cover, against every backend that supports them:
 
 A JSONL journal, SQLite database or MySQL log written by one language opens,
 continues and verifies in every other, with identical checkpoint roots. The
-[`interop` workflow](../.github/workflows/interop.yml) runs
-[`go/scripts/check-storage-interop.sh`](../go/scripts/check-storage-interop.sh)
-over every language pair and backend.
+[storage interlock workflow](../.github/workflows/storage-interlock.yml) runs
+on every pull request. For each storage format it runs every language's
+conformance vectors, then
+[`go/scripts/check-storage-interop.sh`](../go/scripts/check-storage-interop.sh),
+which, for every ordered pair of languages, creates a log in one, continues it
+in the other, and requires every language to read byte-identical entries,
+state, witness rows and checkpoint root. A pull request that adds a language's
+backend adds its driver and conformance step to both, so no language merges
+without passing them.

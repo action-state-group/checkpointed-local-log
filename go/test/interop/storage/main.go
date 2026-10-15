@@ -5,13 +5,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/backend"
 	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 	"github.com/action-state-group/checkpointed-local-log/go/store/jsonl"
 	"github.com/action-state-group/checkpointed-local-log/go/store/mysql"
@@ -30,7 +33,7 @@ func main() {
 
 func run(ctx context.Context, args []string) (runErr error) {
 	if len(args) < 4 {
-		return fmt.Errorf("usage: storage <advance|verify|hold|expect-contention> <jsonl|sqlite|mysql> <target> <log-id> [argument]")
+		return fmt.Errorf("usage: storage <advance|verify|summary|hold|expect-contention> <jsonl|sqlite|mysql> <target> <log-id> [argument]")
 	}
 	mode, backendName, target, logID := args[0], args[1], args[2], args[3]
 	if mode == "advance" || mode == "hold" {
@@ -82,6 +85,8 @@ func run(ctx context.Context, args []string) (runErr error) {
 			return parseErr
 		}
 		return verify(ctx, store, expected)
+	case "summary":
+		return summary(ctx, store)
 	case "hold":
 		if len(args) != 6 {
 			return fmt.Errorf("hold requires ready and stop paths")
@@ -326,4 +331,40 @@ func hold(readyPath, stopPath string) error {
 			}
 		}
 	}
+}
+
+// summary prints the log as every language reads it: entries, CLL state with
+// witness rows in key order, and the root bagged from the checkpoint peaks.
+// The interlock compares these byte for byte after canonical JSON encoding.
+func summary(ctx context.Context, store cll.Backend) error {
+	entries, err := store.ScanEntries(ctx, 0, cll.MaxScanLimit)
+	if err != nil {
+		return err
+	}
+	wireEntries := make([]backend.WireEntry, len(entries))
+	for index, entry := range entries {
+		if wireEntries[index], err = backend.EntryToWire(entry); err != nil {
+			return err
+		}
+	}
+	state, err := store.LoadCLL(ctx)
+	if err != nil {
+		return err
+	}
+	sort.SliceStable(state.Witnesses, func(i, j int) bool {
+		left, right := state.Witnesses[i], state.Witnesses[j]
+		if left.CheckpointSize != right.CheckpointSize {
+			return left.CheckpointSize < right.CheckpointSize
+		}
+		return left.WitnessID < right.WitnessID
+	})
+	wireState, err := backend.StateToWire(state)
+	if err != nil {
+		return err
+	}
+	root := ""
+	if state.Checkpoint != nil {
+		root = hex.EncodeToString(mmr.RootFromPeaks(state.Checkpoint.Peaks))
+	}
+	return json.NewEncoder(os.Stdout).Encode(map[string]any{"entries": wireEntries, "state": wireState, "root": root})
 }
