@@ -1,6 +1,6 @@
 # Changelog: checkpointed-local-log (Rust)
 
-## Unreleased
+## 0.3.1
 
 - **New: `cll::log`, the CLL storage interfaces.** The entry log, checkpoint
   state and witness state traits of the shared backend contract
