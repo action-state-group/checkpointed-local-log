@@ -232,7 +232,8 @@ Python's backend modules expose `init` and `open` as functions
 `cll.log.mysql.open(url, log_id)`).
 Rust's are `JsonlStore`, `SqliteStore` and `MysqlStore`, each with `init`
 and `open`, and `MemoryStore::new`. Rust's JSONL backend is Unix-only, because
-the writer lock is `flock(2)`.
+the writer lock is `flock(2)`; on Unix targets without it (Solaris, newlib,
+NuttX) opening a journal is `unsupported`.
 
 ## Capabilities
 

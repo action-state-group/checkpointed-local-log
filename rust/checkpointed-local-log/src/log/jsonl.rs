@@ -13,7 +13,9 @@
 //!   is truncated back to the previous durable offset.
 //! - A version 3 journal is rejected as unsupported legacy data (`corrupt`).
 //!
-//! Available on Unix only, because the lock is `flock(2)`.
+//! Available on Unix only, because the lock is `flock(2)`. On Unix targets
+//! whose `libc` has no `flock` (Solaris, newlib, NuttX) the crate still
+//! builds and opening a journal is `unsupported`.
 
 use super::engine::{self, Engine};
 use super::wire::{self, WireEntry, WireState, WireWitness};
@@ -26,6 +28,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::OpenOptionsExt;
+#[cfg(not(any(target_os = "solaris", target_env = "newlib", target_os = "nuttx")))]
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -136,20 +139,7 @@ fn open(path: &Path, initialize: bool) -> Result<JsonlStore> {
         .mode(0o640)
         .open(path)
         .map_err(|e| Error::with_source(ErrorCode::Storage, "open JSONL journal", e))?;
-    // SAFETY: flock only reads the descriptor, which `file` owns for the
-    // duration of the call. The lock is released when the descriptor closes.
-    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
-        let error = std::io::Error::last_os_error();
-        return Err(if error.raw_os_error() == Some(libc::EWOULDBLOCK) {
-            Error::with_source(
-                ErrorCode::Contention,
-                "JSONL journal already has a writer",
-                error,
-            )
-        } else {
-            Error::with_source(ErrorCode::Storage, "lock JSONL journal", error)
-        });
-    }
+    lock_journal(&file)?;
     let mut engine = Engine::default();
     replay(&mut file, &mut engine, initialize)?;
     let mut inner = Inner {
@@ -399,4 +389,35 @@ impl Backend for JsonlStore {
         drop(inner.file.take());
         Ok(())
     }
+}
+
+/// Takes the writer lock on the journal descriptor itself, as Go and
+/// TypeScript do, so writers in different languages exclude each other.
+#[cfg(not(any(target_os = "solaris", target_env = "newlib", target_os = "nuttx")))]
+fn lock_journal(file: &File) -> Result<()> {
+    // SAFETY: flock only reads the descriptor, which `file` owns for the
+    // duration of the call. The lock is released when the descriptor closes.
+    if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+        let error = std::io::Error::last_os_error();
+        return Err(if error.raw_os_error() == Some(libc::EWOULDBLOCK) {
+            Error::with_source(
+                ErrorCode::Contention,
+                "JSONL journal already has a writer",
+                error,
+            )
+        } else {
+            Error::with_source(ErrorCode::Storage, "lock JSONL journal", error)
+        });
+    }
+    Ok(())
+}
+
+/// These Unix targets have no `flock(2)` in `libc`, so a journal cannot take
+/// the cross-language writer lock there; the crate still builds.
+#[cfg(any(target_os = "solaris", target_env = "newlib", target_os = "nuttx"))]
+fn lock_journal(_file: &File) -> Result<()> {
+    Err(Error::new(
+        ErrorCode::Unsupported,
+        "the JSONL writer lock needs flock(2), which this platform lacks",
+    ))
 }
