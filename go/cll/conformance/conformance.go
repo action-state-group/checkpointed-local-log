@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"slices"
 	"strconv"
 	"testing"
@@ -22,7 +23,6 @@ import (
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/backend"
-	"github.com/action-state-group/checkpointed-local-log/go/internal/portable"
 	"github.com/stretchr/testify/require"
 )
 
@@ -326,12 +326,24 @@ func decodeBytes(value string) ([]byte, error) {
 	return decoded, nil
 }
 
+var timeForm = regexp.MustCompile(`^([+-][0-9]{6}|[0-9]{4})-([0-9]{2})-([0-9]{2})T([0-9]{2}):([0-9]{2}):([0-9]{2})\.([0-9]{3})Z$`)
+
+// decodeTime reads the toISOString() form without enforcing the portable
+// range, so a time outside it reaches the backend, which must reject it.
 func decodeTime(value string) (time.Time, error) {
-	parsed, err := portable.ParseTime(value)
-	if err != nil {
+	parts := timeForm.FindStringSubmatch(value)
+	if parts == nil {
 		return time.Time{}, errUnrepresentable
 	}
-	return parsed, nil
+	fields := make([]int, len(parts)-1)
+	for index, part := range parts[1:] {
+		parsed, err := strconv.Atoi(part)
+		if err != nil {
+			return time.Time{}, errUnrepresentable
+		}
+		fields[index] = parsed
+	}
+	return time.Date(fields[0], time.Month(fields[1]), fields[2], fields[3], fields[4], fields[5], fields[6]*int(time.Millisecond), time.UTC), nil
 }
 
 func decodeDecimal(value string) (uint64, error) {
