@@ -13,8 +13,10 @@ categories = ["cryptography"]
 readme = "README.md"
 documentation = "https://docs.rs/checkpointed-local-log"
 # The package carries the library only: the tests and examples read the
-# conformance vectors from the repository root, which does not ship.
-include = ["src/**/*.rs", "Cargo.toml", "README.md", "CHANGELOG.md", "LICENSE-APACHE"]
+# conformance vectors from the repository root, which does not ship. The one
+# exception is the pinned copy of backend-conformance-vectors/vectors.json that
+# `cll::log::conformance` embeds, so user-written backends can run it.
+include = ["src/**/*.rs", "src/log/conformance/vectors.json", "Cargo.toml", "README.md", "CHANGELOG.md", "LICENSE-APACHE"]
 
 [lib]
 name = "cll"
@@ -29,6 +31,14 @@ coset = "0.4"
 ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
 thiserror = "1"
 ureq = { version = "2", features = ["json"] }
+base64 = "0.22"
+# Database drivers stay optional: default features load none of them.
+rusqlite = { version = "0.40", features = ["bundled"], optional = true }
+mysql = { version = "28", default-features = false, features = ["minimal-rust"], optional = true }
+
+[target.'cfg(unix)'.dependencies]
+# flock(2) on the JSONL journal descriptor (`cll::log::jsonl`).
+libc = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
@@ -40,7 +50,16 @@ tempfile = "3"
 # Python environment; CI's rust-test job sets one up and runs with
 # `--all-features`.
 python-interop-tests = []
+# `cll::log::sqlite`: the shared relational schema on SQLite (bundled).
+sqlite = ["dep:rusqlite"]
+# `cll::log::mysql`: the shared relational schema on MySQL 8.
+mysql = ["dep:mysql"]
 
 [[test]]
 name = "scitt_cose_receipt_interop"
 required-features = ["python-interop-tests"]
+
+# The storage-interop driver for go/scripts/check-storage-interop.sh.
+[[example]]
+name = "storage_interop"
+required-features = ["sqlite", "mysql"]

@@ -13,6 +13,9 @@
 # to `checkpoint-conformance-vectors/reference_verifier.py` (no Rust
 # scitt-cose verifier exists yet) to check the witness-receipt boundary.
 #
+# The MySQL 8.4 service backs the `cll::log::mysql` tests: with `CI` set they
+# fail rather than skip when CLL_MYSQL_URL is missing.
+#
 # It also runs evidencebook's vocabulary gate: that crate carries no
 # deployment vocabulary, and scripts/check-vocabulary.sh fails the build if
 # any appears.
@@ -28,6 +31,19 @@ permissions:
 jobs:
   rust-test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: rust
+          MYSQL_DATABASE: cll
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prust --silent"
+          --health-interval=2s
+          --health-timeout=5s
+          --health-retries=30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -56,7 +72,13 @@ jobs:
 
       - name: cargo test
         working-directory: rust
+        env:
+          CLL_MYSQL_URL: mysql://root:rust@127.0.0.1:3306/cll
         run: cargo test --all-features
+
+      - name: cargo test (default features)
+        working-directory: rust
+        run: cargo test
 
       - name: cargo doc (warnings are errors)
         working-directory: rust

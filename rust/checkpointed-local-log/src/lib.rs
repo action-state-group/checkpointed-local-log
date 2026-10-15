@@ -17,8 +17,15 @@
 //! stays Python-only, by decision -- see the repo README); it defines
 //! nothing about how the entries it indexes are produced, interpreted, or
 //! governed.
+//!
+//! [`log`] holds the storage interfaces every CLL implementation shares (the
+//! entry log, checkpoint state and witness state of the repository's
+//! `docs/backend-contract.md`), their in-memory, JSONL, SQLite (feature
+//! `sqlite`) and MySQL (feature `mysql`) backends, and the conformance runner
+//! for any backend.
 
 pub mod checkpoint;
+pub mod log;
 pub mod mmr;
 pub mod node_store;
 pub mod range_proof;
