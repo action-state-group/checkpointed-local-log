@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- **New: `cll::log`, the CLL storage interfaces.** The entry log, checkpoint
+  state and witness state traits of the shared backend contract
+  (`docs/backend-contract.md`): `EntrySource`, `EntryStore`,
+  `CheckpointStateStore`, `WitnessStateStore`, `CheckpointStore` and `Backend`,
+  synchronous with `&self` methods, plus `Error`/`ErrorCode`, the portable
+  `Timestamp` (exact `Date.toISOString()` text, signed six-digit years) and the
+  portable JSON encodings in `cll::log::wire`.
+- **Backends.** `memory::MemoryStore`; `jsonl::JsonlStore` (JSONL v4, Unix);
+  `sqlite::SqliteStore` behind the `sqlite` feature (bundled SQLite);
+  `mysql::MysqlStore` behind the `mysql` feature. They read and write the same
+  journals and databases as the Go and TypeScript backends. Default features
+  add no database driver.
+- **Conformance runner.** `cll::log::conformance` runs the shared backend
+  conformance vectors, embedded in the crate, against any backend, including
+  entry-log-only stores and stores without `digest-append`.
+
 ## 0.3.0
 
 - **BREAKING: no default witness.** `impl Default for WitnessClient` and

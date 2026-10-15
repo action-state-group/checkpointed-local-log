@@ -47,6 +47,7 @@ The `reopen` step closes the backend and opens the same durable state again.
 |---|---|
 | Go | `github.com/action-state-group/checkpointed-local-log/go/cll/conformance` |
 | TypeScript | `@action-state-group/cll/conformance` |
+| Rust | `cll::log::conformance` (crate `checkpointed-local-log`) |
 
 ## What the vectors do not cover
 

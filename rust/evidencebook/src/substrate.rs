@@ -24,6 +24,14 @@
 //! checkpoint (registration needs the wire bytes) before
 //! [`CllSubstrate::commit_checkpoint`] persists it. Checkpoint time is the
 //! caller's: coarsening it is a privacy decision of the store, not of the log.
+//!
+//! **Relation to the log's entry interface.** The log's storage interfaces
+//! (`cll::log`, `docs/backend-contract.md` in the log's repository) sit below
+//! [`Substrate`]. [`CllSubstrate`] does not use them yet: its durable form is
+//! the MMR node file plus `checkpoints.jsonl`, which keeps neither the record
+//! ids (leaves are one-way hashes of them) nor append times, so an existing
+//! book cannot be read as a `cll::log` entry log without a format migration.
+//! Its append is also not idempotent per record id, unlike the log's.
 
 use cll::checkpoint::{
     checkpoint_to_cose, try_sign_checkpoint_digest, CheckpointRecord, CheckpointSigner,
