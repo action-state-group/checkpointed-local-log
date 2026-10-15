@@ -6,6 +6,7 @@ export default defineConfig({
     "src/jsonl.ts",
     "src/sqlite.ts",
     "src/mysql.ts",
+    "src/conformance.ts",
   ],
   format: ["esm"],
   dts: false,

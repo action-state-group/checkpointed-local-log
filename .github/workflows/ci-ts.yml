@@ -95,5 +95,5 @@ jobs:
           cd "$consumer_dir"
           npm init -y
           npm install "$package_dir"/*.tgz
-          node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql")'
+          node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql"); const { conformanceCases } = await import("@action-state-group/cll/conformance"); if (conformanceCases({ open: () => ({}) }).length === 0) throw new Error("no conformance cases")'
           node --conditions=browser -e 'await import("@action-state-group/cll")'

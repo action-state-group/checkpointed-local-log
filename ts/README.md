@@ -110,8 +110,9 @@ using its current `attempts` value as the compare-and-swap token.
 
 ## Backends
 
-All included backends implement `CllBackend` directly and run the same contract
-suite.
+All included backends implement `CllBackend`, the full backend of the
+[CLL backend contract](../docs/backend-contract.md), and run its shared
+conformance vectors.
 
 ```ts
 import { MemoryStore } from "@action-state-group/cll";
@@ -263,12 +264,23 @@ export class PostgresBackend implements CllBackend {
 }
 ```
 
-Run the repository's
-[backend contract](test/backend-contract.ts)
-unchanged against the new backend. Durable implementations must persist every mutation, return defensive
-copies, allocate dense sequences transactionally, provide consistent reads,
-enforce checkpoint and witness compare-and-swap, detect corrupt state, and make
-`close()` idempotent.
+The [CLL backend contract](../docs/backend-contract.md) defines every
+operation, error code and storage format. Run the shared conformance vectors
+against the new backend with any test framework:
+
+```ts
+import { conformanceCases } from "@action-state-group/cll/conformance";
+
+for (const item of conformanceCases({ open: () => new PostgresBackend() }))
+  it.skipIf(item.skip !== undefined)(item.name, item.run);
+```
+
+Pass `reopen` to also run the cases that close and reopen durable state, and
+`digestAppend: false` for a store that cannot append a bare identity. Durable
+implementations must also persist every mutation, return defensive copies,
+allocate dense sequences transactionally, provide consistent reads, and detect
+corrupt state; the repository's [backend tests](test/backend-contract.ts)
+show how the included backends check what the vectors cannot express.
 
 See [DESIGN.md](DESIGN.md) for state and durability invariants.
 

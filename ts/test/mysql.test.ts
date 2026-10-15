@@ -8,6 +8,7 @@ import {
 } from "../src/index.js";
 import type { CllBackend } from "../src/index.js";
 import { MysqlStore } from "../src/mysql.js";
+import { conformanceCases } from "../src/conformance.js";
 import { backendContract, crossHandleContract } from "./backend-contract.js";
 
 describe("MySQL backend", () => {
@@ -35,6 +36,34 @@ describe("MySQL backend", () => {
     open.push(backend);
     await backendContract(backend);
   }, 60_000);
+
+  describe("conformance vectors", () => {
+    const logs = new WeakMap<object, string>();
+    let count = 0;
+    for (const item of conformanceCases({
+      open: async () => {
+        count += 1;
+        const logId = `conformance-${count}`;
+        const store = await MysqlStore.open(
+          container.getConnectionUri(),
+          logId,
+        );
+        logs.set(store, logId);
+        return store;
+      },
+      reopen: async (current) => {
+        const logId = logs.get(current as object)!;
+        await (current as MysqlStore).close();
+        const store = await MysqlStore.open(
+          container.getConnectionUri(),
+          logId,
+        );
+        logs.set(store, logId);
+        return store;
+      },
+    }))
+      it.skipIf(item.skip !== undefined)(item.name, item.run, 60_000);
+  });
 
   it("allocates dense sequences across handles", async () => {
     const first = await MysqlStore.open(container.getConnectionUri(), "shared");

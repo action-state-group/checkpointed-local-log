@@ -5,7 +5,10 @@ repository, and for backends that users write against these interfaces.
 
 This document is the single source of truth for the CLL entry log, checkpoint
 state, witness state and full backend: their operations, semantics, error
-codes, limits and storage formats. Each language's interface cites it.
+codes, limits and storage formats. Each language's interface cites it. The
+shared conformance suite in
+[`backend-conformance-vectors/`](../backend-conformance-vectors/) turns the
+rules below into cases that every backend runs.
 
 The log stores opaque 32-byte identities. It does not know what an identity
 names. Record bodies, signatures, admission and application indexes stay with

@@ -225,7 +225,11 @@ or add SQLite/MySQL dependencies.
 
 ### Shared backend contract
 
-The same Go test suite runs against Memory, JSONL, SQLite, and MySQL and covers:
+Every backend runs the language-neutral
+[conformance vectors](../backend-conformance-vectors/) through
+`cll/conformance`, which user-supplied backends can run too. The Go test suite
+in `internal/storetest` runs against Memory, JSONL, SQLite and MySQL and also
+covers what the vectors cannot express:
 
 - insert, duplicate append, dense sequence, timestamp preservation;
 - defensive copies, missing values, invalid widths and scan ranges;
