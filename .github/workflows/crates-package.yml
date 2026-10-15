@@ -1,17 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-# crates-package: the two Rust crates package cleanly for crates.io.
+# crates-package: the checkpointed-local-log crate packages cleanly for
+# crates.io.
 #
-# For each crate, the package's file list is checked (the library, its README
-# and CHANGELOG, for evidencebook the vendored schema it embeds, and for
-# checkpointed-local-log the pinned backend conformance vectors that
-# `cll::log::conformance` embeds; never tests, other vectors, keys or build
-# output), then `cargo publish --dry-run` builds
-# the packaged crate against crates.io. Nothing is uploaded.
-#
-# evidencebook depends on checkpointed-local-log by version. Until that version
-# is on crates.io, its dry run cannot resolve it, so the two crates are instead
-# packaged together as the workspace for local compatibility coverage. That
-# fallback does not establish registry resolution or publication readiness.
+# The package's file list is checked (the library, its README and CHANGELOG,
+# and the pinned backend conformance vectors that `cll::log::conformance`
+# embeds; never tests, other vectors, keys or build output), then
+# `cargo publish --dry-run` builds the packaged crate against crates.io.
+# Nothing is uploaded. (evidencebook moved to its own repository.)
 name: Crate packaging
 
 on:
@@ -35,13 +30,13 @@ jobs:
         run: bash .github/scripts/test_crate_availability.sh
 
       - name: crates.io metadata (keywords, categories, required fields)
-        run: python3 .github/scripts/check_crate_metadata.py rust/checkpointed-local-log/Cargo.toml rust/evidencebook/Cargo.toml
+        run: python3 .github/scripts/check_crate_metadata.py rust/checkpointed-local-log/Cargo.toml
 
       - name: package file lists
         working-directory: rust
         run: |
           set -euo pipefail
-          for crate in checkpointed-local-log evidencebook; do
+          for crate in checkpointed-local-log; do
             cargo package --list --allow-dirty -p "$crate" > "/tmp/$crate.list"
             echo "== $crate"; cat "/tmp/$crate.list"
             # The one vector file a crate may ship: the pinned copy the
@@ -55,18 +50,3 @@ jobs:
       - name: checkpointed-local-log dry run
         working-directory: rust
         run: cargo publish --dry-run --allow-dirty -p checkpointed-local-log
-
-      - name: evidencebook dry run
-        working-directory: rust
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^version = "\(.*\)"/\1/p' checkpointed-local-log/Cargo.toml | head -1)
-          if bash ../.github/scripts/check_crate_availability.sh checkpointed-local-log "$version"; then
-            echo "Registry-backed EvidenceBook verification BLOCKED: checkpointed-local-log $version is absent."
-            echo "Packaging both crates only for local compatibility coverage."
-            cargo package --workspace --allow-dirty
-          else
-            status=$?
-            [ "$status" -eq 2 ] || exit "$status"
-            cargo publish --dry-run --allow-dirty -p evidencebook
-          fi

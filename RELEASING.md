@@ -12,7 +12,6 @@ merging it tags and publishes. The packages are listed in
 | `python` | `python/pyproject.toml` | `python/v<version>` | `publish-python.yml` | `pypi` (tag rule `python/v*`) |
 | `ts` | `ts/package.json` and `ts/package-lock.json` | `ts/v<version>` | `publish-ts.yml` | `npm` (tag rule `ts/v*`) |
 | `crates/checkpointed-local-log` | `rust/checkpointed-local-log/Cargo.toml` and `rust/Cargo.lock` | `crates/checkpointed-local-log-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
-| `crates/evidencebook` | `rust/evidencebook/Cargo.toml` and `rust/Cargo.lock` | `crates/evidencebook-v<version>` | `publish-rust.yml` | `crates-io` (tag rule `crates/*-v*`) |
 
 The prefix is only on the Git tag. The registry version stays plain (`0.5.1`).
 
@@ -37,14 +36,10 @@ The prefix is only on the Git tag. The registry version stays plain (`0.5.1`).
 Bumping a version by hand in any pull request releases it the same way when it
 merges.
 
-Both crates are members of the `rust/` workspace and share `rust/Cargo.lock`.
-`evidencebook` depends on `checkpointed-local-log` by path, so a `minor` or
-`major` bump of that crate also needs `rust/evidencebook/Cargo.toml`'s requirement
-raised on the release branch; CI's `--locked` builds fail until it is.
-Release the two crates in separate merges, `checkpointed-local-log` first: if
-one merge bumps both, `evidencebook` may upload before crates.io serves the new
-`checkpointed-local-log` and fail; re-run its publish once that version is
-live.
+The `evidencebook` crate moved to its own repository,
+[action-state-group/evidencebook](https://github.com/action-state-group/evidencebook),
+which releases it. Its 0.0.1 and 0.0.3 tags here (`crates/evidencebook-v*`)
+and their GitHub Releases are history and stay unchanged.
 
 If a publish fails after the tag exists:
 
@@ -89,7 +84,7 @@ workflow file and its environment:
 |---|---|---|---|
 | PyPI | `checkpointed-local-log` | `publish-python.yml` | `pypi` |
 | npm | `@action-state-group/cll` | `publish-ts.yml` | `npm` or blank |
-| crates.io | `checkpointed-local-log`, `evidencebook` | `publish-rust.yml` | `crates-io` |
+| crates.io | `checkpointed-local-log` | `publish-rust.yml` | `crates-io` |
 
 Renaming a publisher workflow breaks publishing until the registry is updated
 first. No registry token is stored in this repository.

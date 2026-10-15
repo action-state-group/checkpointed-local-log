@@ -6,14 +6,13 @@
 | `rust/checkpointed-local-log/` | Cargo `checkpointed-local-log`, library `cll` |
 | `go/` | `github.com/action-state-group/checkpointed-local-log/go` |
 | `ts/` | npm `@action-state-group/cll` |
-| `rust/evidencebook/` | Separate evidence-layer crate `evidencebook` |
 
 Install Python from the repository root with `pip install ./python`, or
 `pip install -e './python[dev]'` for development. Run Go commands in `go/`,
 npm commands in `ts/`, and Cargo commands in the relevant crate directory.
 Release tags are language-specific: `python/v*`, `ts/v*`, `go/v*`,
-`crates/checkpointed-local-log-v*` and `crates/evidencebook-v*`. Python,
-TypeScript and the two crates are released through a reviewed version-bump
+`crates/checkpointed-local-log-v*`. Python, TypeScript and the crate are
+released through a reviewed version-bump
 pull request; a Go release is an admin-pushed `go/v*` tag. See
 [RELEASING.md](RELEASING.md).
 
@@ -129,44 +128,12 @@ to the reference.
 
 ## The `evidencebook` Rust crate
 
-`rust/evidencebook/` (crates.io: [`evidencebook`](https://crates.io/crates/evidencebook),
-0.0.1) implements the store-level semantics of the Evidence Layer
-Internet-Draft, [`draft-mih-agent-evidence-layer-00`](https://github.com/action-state-group/agent-action-capsule/blob/main/spec/draft-mih-agent-evidence-layer-00.md)
-(kept in `agent-action-capsule`, not here). It is a second layer on top of
-this repository's log: evidencebook owns records, their epistemic types and
-links, retention, disclosure, index classes, request answers, and reconcile
-and close; the embedded `cll` crate owns append order, the MMR, checkpoints,
-inclusion and consistency. `cll` is embedded, never exposed:
-`tests/public_api.rs` fails if a public item names a `cll` type. Each public
-item names the I-D section it implements, and the I-D is
-implementation-independent: a store conforms by meeting its requirements, not
-by using this crate.
-
-| Module | I-D section | What it does |
-|---|---|---|
-| `record` | Record header, Epistemic Type, Typed Links | The record header and its validation, the eight epistemic types (read from the vendored schema shared with the Go and Python implementations), the six link types. |
-| `retention` | Record/Payload Separation; Retention States | Folds lifecycle records into a retention state per record and payload; a move to `DELETED` is a tombstone. |
-| `disclosure` | Disclosure Records | The store's own statement of what it revealed, with each withheld field listed under its committed digest. |
-| `index` | Index Classes | Operational, authenticated and discovery index traits; a discovery result cannot be used as proof input (a `compile_fail` doctest pins this). |
-| `substrate` | The Commitment-Substrate Interface | The `Substrate` and `Signer` traits and `CllSubstrate`, the reference implementation: a file-backed MMR plus `checkpoints.jsonl`. |
-| `request` | Answering a Request; Three Kinds of "No" | Request subjects, outcomes, the kinds of "no", the registered refusal reasons, and verification of a signed refusal (tokens from the companion `draft-mih-agent-evidence-request-00`). |
-| `reconcile` | Reconcile and Close | Pairs halves from two independently held accounts into one of six states, under the profile's join policy and comparator; one unavailable half is not counted as disagreement. |
-| `padding` | Privacy Considerations (what a checkpoint reveals) | Padding records with a fresh store nonce, so the leaf count reaches a bucket boundary before a checkpoint. |
-| `canonical` | Record identity | RFC 8785 JCS and `JSON-DIGEST`; a record's `record_id` is its capsule's `capsule_id`. |
-
-`tests/refusal_interop.rs` verifies a refusal signed by the Python
-implementation (the same vector the Go implementation checks). Both crates
-are members of the Rust workspace in `rust/`, sharing one `Cargo.lock`, and
-`.github/workflows/rust.yml` checks them together on every push and pull
-request: evidencebook's vocabulary gate, `cargo fmt`,
-`cargo clippy -D warnings`, `cargo test --all-features`, and `cargo doc` with
-warnings denied.
-
-```sh
-cd rust && cargo test -p evidencebook && ./evidencebook/scripts/check-vocabulary.sh
-```
-
-See [`rust/evidencebook/README.md`](rust/evidencebook/README.md).
+The evidence-layer crate [`evidencebook`](https://crates.io/crates/evidencebook)
+lives in its own repository,
+[action-state-group/evidencebook](https://github.com/action-state-group/evidencebook),
+and depends on this repository's `checkpointed-local-log` crate from crates.io.
+Versions 0.0.1 and 0.0.3 were published from here; their
+`crates/evidencebook-v*` tags and GitHub Releases remain as history.
 
 ## Conformance vectors
 
@@ -205,8 +172,7 @@ being reachable. See comments in `spec/Makefile` for `rebuild` and
 
 ## License
 
-- **Implementation code** in `python/`, `go/`, `ts/`, `rust/` (including the
-  separate `evidencebook` crate), plus tests and tooling, is licensed under Apache-2.0
+- **Implementation code** in `python/`, `go/`, `ts/`, `rust/`, plus tests and tooling, is licensed under Apache-2.0
   unless a file-specific notice says otherwise: see [LICENSE-APACHE](LICENSE-APACHE)
   and the component license files. The Rust crate manifests declare `Apache-2.0`.
 - **The specification text** under `spec/` is under the Revised BSD License:

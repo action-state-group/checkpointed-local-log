@@ -2,7 +2,7 @@
 
 Guidance for coding agents working in this repository: the Checkpointed Local
 Log Internet-Draft (`spec/`) and its Python, Rust, Go and TypeScript
-implementations, plus the `evidencebook` crate.
+implementations.
 
 ## Commands
 
@@ -15,7 +15,7 @@ python -m ruff check .
 python -m pytest -q
 python -m pytest -q ../.github/test_release.py     # release helper
 
-# rust/  (the workspace: checkpointed-local-log and evidencebook)
+# rust/  (the workspace: checkpointed-local-log)
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-features
@@ -31,8 +31,7 @@ CLL_ROOT=.. npm run check
 npm run build
 ```
 
-`rust/evidencebook/` also runs `./scripts/check-vocabulary.sh`. Cross-language
-interop checks live in `.github/scripts/` and `go/scripts/`.
+Cross-language interop checks live in `.github/scripts/` and `go/scripts/`.
 
 ## Layout
 
@@ -42,7 +41,6 @@ interop checks live in `.github/scripts/` and `go/scripts/`.
 | `rust/checkpointed-local-log/` | crate `checkpointed-local-log`, library `cll` |
 | `go/` | `github.com/action-state-group/checkpointed-local-log/go` |
 | `ts/` | npm `@action-state-group/cll` |
-| `rust/evidencebook/` | crate `evidencebook`, which depends on `checkpointed-local-log` by path |
 | `spec/` | the Internet-Draft source |
 
 The conformance vector directories (`*-vectors/`) are shared by every
@@ -56,7 +54,7 @@ implementation; change them only with all implementations agreeing.
 - New behavior needs tests in the same change, including error paths.
 - One top-level directory per language. In `rust/`, `Cargo.toml` is the
   workspace, each crate is `rust/<crate-name>/` (here
-  `rust/checkpointed-local-log/` and `rust/evidencebook/`), and all crates
+  `rust/checkpointed-local-log/`), and all crates
   share `rust/Cargo.lock`. Add a Rust crate as another workspace member, never
   at `rust/` itself or outside it; its `.github/releases.json` entry names
   `rust/<crate-name>/Cargo.toml` and `rust/Cargo.lock`. The other
