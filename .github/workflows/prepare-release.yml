@@ -17,7 +17,7 @@ on:
         description: Package to release (.github/releases.json)
         required: true
         type: choice
-        options: [python, ts, crates/checkpointed-local-log, crates/evidencebook]
+        options: [python, ts, crates/checkpointed-local-log]
       bump:
         description: Version part to raise
         required: true

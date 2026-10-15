@@ -14,7 +14,7 @@ export PATH="$work:$PATH"
 export TEST_CURL_EXIT=0
 for status in 404 200 401 403 429 500 000; do
   export TEST_HTTP_STATUS="$status"
-  if bash "$root/check_crate_availability.sh" evidencebook 0.0.2 > "$work/result" 2>&1; then
+  if bash "$root/check_crate_availability.sh" checkpointed-local-log 0.0.0 > "$work/result" 2>&1; then
     [ "$status" = 404 ] || { cat "$work/result"; exit 1; }
   else
     result=$?
@@ -24,11 +24,11 @@ for status in 404 200 401 403 429 500 000; do
   fi
 done
 export TEST_HTTP_STATUS=404 TEST_CURL_EXIT=6
-if bash "$root/check_crate_availability.sh" evidencebook 0.0.2 > "$work/result" 2>&1; then
+if bash "$root/check_crate_availability.sh" checkpointed-local-log 0.0.0 > "$work/result" 2>&1; then
   echo "network failure incorrectly accepted as absence" >&2; exit 1
 fi
 export TEST_CURL_EXIT=0
-if bash "$root/check_crate_availability.sh" '../unexpected' 0.0.2 > "$work/result" 2>&1; then
+if bash "$root/check_crate_availability.sh" '../unexpected' 0.0.0 > "$work/result" 2>&1; then
   echo "invalid crate accepted" >&2; exit 1
 fi
 echo 'Crate availability: explicit absence, existing version and error tests passed.'

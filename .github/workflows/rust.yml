@@ -2,8 +2,7 @@
 # Builds and tests the Rust workspace (rust/): the `checkpointed-local-log`
 # crate (library `cll`, rust/checkpointed-local-log/), including its pass over
 # the shared cross-language conformance vectors (mmr-conformance-vectors/,
-# commitment-conformance-vectors/, checkpoint-conformance-vectors/), and the
-# `evidencebook` crate (rust/evidencebook/), which embeds it. Also
+# commitment-conformance-vectors/, checkpoint-conformance-vectors/). Also
 # runs the Python reference_verifier.py scripts for those same vector sets,
 # so a divergence between the Python reference and the Rust port is caught
 # by CI on either side, not just locally.
@@ -15,10 +14,6 @@
 #
 # The MySQL 8.4 service backs the `cll::log::mysql` tests: with `CI` set they
 # fail rather than skip when CLL_MYSQL_URL is missing.
-#
-# It also runs evidencebook's vocabulary gate: that crate carries no
-# deployment vocabulary, and scripts/check-vocabulary.sh fails the build if
-# any appears.
 name: Rust CI
 
 on:
@@ -58,9 +53,6 @@ jobs:
 
       - name: install checkpointed-local-log (dev)
         run: python -m pip install -e "./python[dev]"
-
-      - name: evidencebook vocabulary gate
-        run: rust/evidencebook/scripts/check-vocabulary.sh
 
       - name: cargo fmt --check
         working-directory: rust

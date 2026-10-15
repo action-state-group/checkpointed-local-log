@@ -17,12 +17,5 @@
     "lockfile": "rust/Cargo.lock",
     "tag_prefix": "crates/checkpointed-local-log-v",
     "workflow": "publish-rust.yml"
-  },
-  "crates/evidencebook": {
-    "kind": "cargo",
-    "manifest": "rust/evidencebook/Cargo.toml",
-    "lockfile": "rust/Cargo.lock",
-    "tag_prefix": "crates/evidencebook-v",
-    "workflow": "publish-rust.yml"
   }
 }

@@ -3,7 +3,7 @@
 # dispatches this on the tag it creates when a version bump merges (see
 # RELEASING.md), and an admin-pushed tag also triggers it.
 #
-# Tag: crates/<crate>-v<version>, e.g. crates/evidencebook-v0.0.2. The tag
+# Tag: crates/<crate>-v<version>, e.g. crates/checkpointed-local-log-v0.3.1. The tag
 # must point at a commit on main, and <version> must equal the crate's
 # Cargo.toml version.
 #
@@ -71,7 +71,7 @@ jobs:
           fi
           crate="${BASH_REMATCH[1]}"; version="${BASH_REMATCH[2]}"
           case "$crate" in
-            checkpointed-local-log|evidencebook) dir="rust/$crate" ;;
+            checkpointed-local-log) dir="rust/$crate" ;;
             *) echo "::error::$crate is not a crate this workflow publishes"; exit 1 ;;
           esac
           git fetch --no-tags origin main
