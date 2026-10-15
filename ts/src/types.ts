@@ -64,6 +64,10 @@ export interface CllState {
   readonly witnesses: readonly WitnessState[];
 }
 
+// The interfaces below implement the CLL backend contract in
+// docs/backend-contract.md, which defines their operations, error codes and
+// storage formats for every language.
+
 export interface EntrySource {
   scanEntries(afterSeq: bigint, limit: number): Promise<readonly CllEntry[]>;
 }
@@ -84,6 +88,7 @@ export interface CheckpointStateStore {
 
 export interface WitnessStateStore {
   pendingWitnesses(now: Date, limit: number): Promise<readonly WitnessState[]>;
+  /** Resolves `undefined` for an absent key: the contract's `not_found`. */
   getWitness(
     witnessId: string,
     checkpointSize: bigint,
@@ -96,7 +101,11 @@ export interface CheckpointStore
     CheckpointStateStore,
     WitnessStateStore {}
 
-/** Complete generic persistence contract implemented by every backend. */
+/**
+ * Complete generic persistence contract implemented by every backend. This is
+ * the contract's `Backend`; TypeScript prefixes package-level type names with
+ * `Cll`, as in `CllEntry` and `CllState`.
+ */
 export interface CllBackend
   extends EntryStore,
     CheckpointStateStore,
@@ -110,7 +119,9 @@ export type CllErrorCode =
   | "corrupt"
   | "closed"
   | "contention"
-  | "rejected";
+  | "rejected"
+  /** The store does not offer this operation, such as a bare-identity append. */
+  | "unsupported";
 
 export class CllError extends Error {
   public constructor(

@@ -61,7 +61,7 @@ func startMySQL(t *testing.T) (string, func()) {
 	if os.Getenv("CI") == "" {
 		testcontainers.SkipIfProviderIsNotHealthy(t)
 	}
-	container, err := containermysql.Run(t.Context(), "mysql:8.0.36",
+	container, err := containermysql.Run(t.Context(), "mysql:8.4",
 		containermysql.WithDatabase("cll"),
 		containermysql.WithUsername("cll"),
 		containermysql.WithPassword("password"),

@@ -137,19 +137,20 @@ describe("shared backend contract", () => {
     );
     const backend = await JsonlStore.open(path);
     open.push(backend);
-    const nodes = Array.from({ length: 100 }, (_, index) =>
+    // An MMR of 50 leaves has 97 nodes; the 51st leaf adds one more.
+    const nodes = Array.from({ length: 97 }, (_, index) =>
       Uint8Array.from({ length: 32 }, () => index),
     );
     await backend.commitCll(0n, undefined, {
-      size: 100n,
+      size: 97n,
       nodes,
-      indexedSeq: 0n,
+      indexedSeq: 50n,
       witnesses: [],
     });
-    await backend.commitCll(100n, undefined, {
-      size: 101n,
+    await backend.commitCll(97n, undefined, {
+      size: 98n,
       nodes: [...nodes, new Uint8Array(32)],
-      indexedSeq: 0n,
+      indexedSeq: 51n,
       witnesses: [],
     });
     const lines = readFileSync(path, "utf8").trimEnd().split("\n");
@@ -158,7 +159,26 @@ describe("shared backend contract", () => {
     open.pop();
     const reopened = await JsonlStore.open(path);
     open.push(reopened);
-    expect((await reopened.loadCll()).size).toBe(101n);
+    expect((await reopened.loadCll()).size).toBe(98n);
+  });
+
+  it("JSONL reports a complete line that breaks a transition rule as corrupt", async () => {
+    const path = join(
+      mkdtempSync(join(tmpdir(), "cll-jsonl-rule-")),
+      "cll.jsonl",
+    );
+    writeFileSync(
+      path,
+      [
+        '{"version":4,"type":"cll.init"}',
+        // Two nodes do not form an MMR whose leaf count is indexedSeq.
+        `{"version":4,"type":"cll.commit","expected_size":"0","state":{"size":"2","indexedSeq":"1","nodes":["${"A".repeat(43)}=","${"A".repeat(43)}="],"witnesses":[]}}`,
+        "",
+      ].join("\n"),
+    );
+    await expect(JsonlStore.open(path)).rejects.toMatchObject({
+      code: "corrupt",
+    } satisfies Partial<CllError>);
   });
 
   it("SQLite allocates dense sequences across handles", async () => {

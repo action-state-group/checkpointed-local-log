@@ -496,6 +496,9 @@ func (s *Store) GetWitness(ctx context.Context, witnessID string, checkpointSize
 
 func (s *Store) CommitWitness(ctx context.Context, expectedAttempts uint32, next cll.WitnessState) error {
 	return s.write(ctx, func(tx *sql.Tx) error {
+		if err := backend.ValidateWitness(next); err != nil {
+			return err
+		}
 		var encodedCurrent []byte
 		err := tx.QueryRowContext(ctx, "SELECT witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?", s.logID, next.WitnessID, fmt.Sprintf("%d", next.CheckpointSize)).Scan(&encodedCurrent)
 		if errors.Is(err, sql.ErrNoRows) {

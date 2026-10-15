@@ -364,6 +364,11 @@ func validateStateMetadata(value cll.State, nodeCount uint64, class error) error
 	return nil
 }
 
+// ValidateWitness applies the witness rules to a caller value. Backends that
+// look up the stored row first call it so invalid input is never reported as
+// contention.
+func ValidateWitness(value cll.WitnessState) error { return validateWitness(value, cll.ErrInvalid) }
+
 func validateWitness(value cll.WitnessState, class error) error {
 	if cll.ValidateIdentifier(value.WitnessID) != nil || value.CheckpointSize == 0 || len(value.Checkpoint) < 1 || len(value.Checkpoint) > cll.MaxCheckpointBytes || portable.ValidateTime(value.NextAttemptAt) != nil || len(value.LastError) > cll.MaxReasonBytes {
 		return fmt.Errorf("%w: witness state is invalid", class)

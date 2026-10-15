@@ -48,7 +48,10 @@ export async function backendContract(backend: CllBackend): Promise<void> {
   await expect(backend.getEntry(value(9))).rejects.toMatchObject({
     code: "not_found",
   } satisfies Partial<CllError>);
-  await expect(backend.getWitness("", 0n)).resolves.toBeUndefined();
+  await expect(backend.getWitness("", 0n)).rejects.toMatchObject({
+    code: "invalid",
+  } satisfies Partial<CllError>);
+  await expect(backend.getWitness("absent", 1n)).resolves.toBeUndefined();
 
   const runner = new CheckpointRunner(backend, {
     logId: "contract",
@@ -116,6 +119,50 @@ export async function backendContract(backend: CllBackend): Promise<void> {
   await expect(backend.commitWitness(0, witness)).rejects.toMatchObject({
     code: "contention",
   } satisfies Partial<CllError>);
+  // Validation precedes the stored-row lookup, and a row cannot be rebound.
+  await expect(
+    backend.commitWitness(0, {
+      ...witness,
+      witnessId: "missing",
+      lastError: "x".repeat(4097),
+    }),
+  ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+  await expect(
+    backend.commitWitness(0, {
+      ...secondWitness,
+      attempts: 1,
+      checkpoint: Uint8Array.of(1),
+    }),
+  ).rejects.toMatchObject({ code: "contention" } satisfies Partial<CllError>);
+  await expect(
+    backend.commitWitness(0, { ...secondWitness, entryHash: "ab".repeat(32) }),
+  ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+  const current = await backend.loadCll();
+  await expect(
+    backend.commitCll(current.size, current.checkpoint, {
+      ...current,
+      witnesses: [secondWitness, secondWitness],
+    }),
+  ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+  await expect(
+    backend.commitCll(current.size, current.checkpoint, {
+      ...current,
+      nodes: [...current.nodes, value(5)],
+      size: current.size + 1n,
+    }),
+  ).rejects.toMatchObject({ code: "invalid" } satisfies Partial<CllError>);
+  // Pending order is numeric checkpoint size, then witness ID.
+  const due = (witnessId: string): WitnessState => ({
+    ...witness,
+    witnessId,
+  });
+  await backend.commitCll(current.size, current.checkpoint, {
+    ...current,
+    witnesses: [due("zeta"), due("alpha")],
+  });
+  expect(
+    (await backend.pendingWitnesses(at, 32)).map((row) => row.witnessId),
+  ).toEqual(["alpha", "second-witness", "zeta"]);
   await backend.close();
   await backend.close();
   await expect(backend.scanEntries(0n, 1)).rejects.toMatchObject({

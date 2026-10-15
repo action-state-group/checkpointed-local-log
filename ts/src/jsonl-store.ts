@@ -91,7 +91,10 @@ export class JsonlStore implements CllBackend {
           backend.applyEvent(raw as JournalEvent);
           initialized = true;
         } catch (error) {
-          if (error instanceof CllError) throw error;
+          // A complete line that breaks a transition rule is corruption,
+          // whatever code the live mutation would have reported.
+          if (error instanceof CllError && error.code === "corrupt")
+            throw error;
           throw new CllError(
             "corrupt",
             `corrupt complete JSONL line at byte ${start}`,

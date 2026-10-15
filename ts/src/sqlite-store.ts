@@ -4,6 +4,8 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  validateWitness,
+  validateWitnessKey,
   validateAppendInput,
   validateEntryScan,
   validateEntryValue,
@@ -360,6 +362,7 @@ export class SqliteStore implements CllBackend {
     checkpointSize: bigint,
   ): Promise<WitnessState | undefined> {
     return this.read(() => {
+      validateWitnessKey(witnessId, checkpointSize);
       const row = this.db
         .prepare(
           "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?",
@@ -376,6 +379,7 @@ export class SqliteStore implements CllBackend {
     next: WitnessState,
   ): Promise<void> {
     return this.write(() => {
+      validateWitness(next);
       const row = this.db
         .prepare(
           "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? AND checkpoint_size=?",
