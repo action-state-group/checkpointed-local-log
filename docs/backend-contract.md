@@ -183,8 +183,11 @@ representable.
 Persistent backends separate provisioning from opening. `init` creates the
 file, tables or initial metadata and is idempotent. `open` requires existing
 state and never creates it. In-memory backends have only a constructor.
-TypeScript's `SqliteStore.open` and `MysqlStore.open` also provision, which
-predates this split.
+TypeScript predates this split and has no separate `init`: `JsonlStore.open`
+creates a missing file, truncates an incomplete final line and writes
+`cll.init`, and `SqliteStore.open` and `MysqlStore.open` create tables and
+metadata. Code that must open a log without changing it uses another
+language's `open`.
 
 ## Capabilities
 
@@ -278,8 +281,9 @@ newline:
 - An event is durable once its complete line is written and fsynced. A failed
   write is truncated back to the previous durable offset.
 - `init` truncates an incomplete final line. `open` rejects one without
-  changing the file. A malformed complete line is `corrupt`. A version 3
-  journal is rejected as unsupported legacy data.
+  changing the file (TypeScript's `open` truncates it, see
+  [Lifecycle](#lifecycle)). A malformed complete line is `corrupt`. A
+  version 3 journal is legacy data and is also `corrupt`.
 - No event may exceed `MaxJournalEventBytes`.
 
 ### Relational schema
