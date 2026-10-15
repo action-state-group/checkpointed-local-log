@@ -251,7 +251,7 @@ covers what the vectors cannot express:
 ### Cross-runtime storage
 
 The root [interoperability workflow](../.github/workflows/interop.yml) runs
-bidirectional continuation tests between `go/` and `ts/` at the same
+continuation tests between every ordered pair of languages at the same
 checked-out repository revision:
 
 | Backend | Go creates, TS continues, Go verifies | TS creates, Go continues, TS verifies |
