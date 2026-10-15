@@ -66,6 +66,7 @@ describe("conformance vectors: SQLite", () => {
 
 describe("conformance vectors: EntryStore subset", () => {
   for (const item of conformanceCases({
+    interfaces: ["entries"],
     open: () => {
       const store = new MemoryStore();
       return {
@@ -75,9 +76,20 @@ describe("conformance vectors: EntryStore subset", () => {
       };
     },
   }))
-    it.skipIf(
-      item.skip !== undefined ||
-        !item.name.startsWith("entries/") ||
-        item.name === "entries/digest-append-unsupported",
-    )(item.name, item.run);
+    it.skipIf(item.skip !== undefined)(item.name, item.run);
+});
+
+it("skips exactly the cases a subset backend cannot run", () => {
+  const cases = conformanceCases({
+    interfaces: ["entries"],
+    open: () => new MemoryStore(),
+  });
+  const runnable = cases.filter((item) => item.skip === undefined);
+  expect(runnable.length).toBeGreaterThan(0);
+  expect(runnable.every((item) => item.name.startsWith("entries/"))).toBe(true);
+  expect(
+    conformanceCases({ open: () => new MemoryStore() }).filter((item) =>
+      item.skip?.startsWith("backend does not implement"),
+    ),
+  ).toEqual([]);
 });

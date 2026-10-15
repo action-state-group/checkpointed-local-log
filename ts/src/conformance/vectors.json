@@ -2237,6 +2237,124 @@
    ]
   },
   {
+   "name": "witness/commit-unchanged",
+   "description": "commitWitness with a row identical to the stored one succeeds; an unchanged row is not a lost race.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "checkpointSize": "1",
+      "checkpointIndexedSeq": "1",
+      "checkpointPeaks": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "primary",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 0,
+      "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+      "permanent": false
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 0,
+       "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+       "permanent": false
+      }
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 0,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "commitWitness",
+     "expectedAttempts": 1,
+     "next": {
+      "witnessId": "primary",
+      "checkpointSize": "1",
+      "checkpoint": "Y2hlY2twb2ludC0x",
+      "attempts": 1,
+      "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+      "permanent": false,
+      "lastError": "timeout"
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "getWitness",
+     "witnessId": "primary",
+     "checkpointSize": "1",
+     "expect": {
+      "result": {
+       "witnessId": "primary",
+       "checkpointSize": "1",
+       "checkpoint": "Y2hlY2twb2ludC0x",
+       "attempts": 1,
+       "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+       "permanent": false,
+       "lastError": "timeout"
+      }
+     }
+    }
+   ]
+  },
+  {
    "name": "witness/invalid-rows",
    "description": "commitWitness rejects rows that break the witness rules as invalid.",
    "interfaces": [

@@ -23,6 +23,7 @@ VECTORS = HERE / "vectors.json"
 PINNED_COPIES = (
     "go/cll/conformance/vectors.json",
     "ts/src/conformance/vectors.json",
+    "python/log/vectors.json",
     "rust/checkpointed-local-log/src/log/conformance/vectors.json",
 )
 
@@ -382,6 +383,19 @@ def witness_cases() -> list[dict]:
                 ok("commitWitness", expectedAttempts=1, next=receipt),
                 step("getWitness", {"witnessId": "primary", "checkpointSize": "1"}, receipt),
                 step("pendingWitnesses", {"now": LATER, "limit": 32}, []),
+            ],
+        },
+        {
+            "name": "witness/commit-unchanged",
+            "description": "commitWitness with a row identical to the stored one succeeds; an unchanged row is not a lost race.",
+            "interfaces": ["checkpoint", "witness"],
+            "steps": [
+                commit(0, None, {**base, "witnesses": [w1]}),
+                ok("commitWitness", expectedAttempts=0, next=w1),
+                step("getWitness", {"witnessId": "primary", "checkpointSize": "1"}, w1),
+                ok("commitWitness", expectedAttempts=0, next=w1_tried),
+                ok("commitWitness", expectedAttempts=1, next=w1_tried),
+                step("getWitness", {"witnessId": "primary", "checkpointSize": "1"}, w1_tried),
             ],
         },
         {

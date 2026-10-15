@@ -77,9 +77,18 @@ jobs:
             sqlite) npx vitest run test/conformance.test.ts -t "conformance vectors: SQLite" ;;
             mysql) npx vitest run test/mysql.test.ts -t "conformance vectors" ;;
           esac
+<<<<<<< HEAD
       - name: Rust conformance vectors
         working-directory: rust
         run: cargo test -p checkpointed-local-log --features sqlite,mysql --test log_conformance -- --exact "${{ matrix.backend }}_with_reopen"
+=======
+      - name: Install Python
+        run: python -m pip install './python[dev,mysql]'
+      - name: Python conformance vectors
+        working-directory: python
+        # Test IDs are <backend>/<case>; the CLL_MYSQL_URL above serves mysql.
+        run: python -m pytest -q tests/log/test_conformance.py -k "${{ matrix.backend }}"
+>>>>>>> claude/cll-308-python
 
       - name: Every language writes, every other reads and verifies
         run: bash go/scripts/check-storage-interop.sh "${{ matrix.backend }}"

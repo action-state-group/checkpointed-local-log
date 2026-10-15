@@ -47,7 +47,14 @@ The `reopen` step closes the backend and opens the same durable state again.
 |---|---|
 | Go | `github.com/action-state-group/checkpointed-local-log/go/cll/conformance` |
 | TypeScript | `@action-state-group/cll/conformance` |
+<<<<<<< HEAD
 | Rust | `cll::log::conformance` (crate `checkpointed-local-log`) |
+=======
+| Python | `cll.log.conformance` (`cases(open, reopen=None, digest_append=True, interfaces=...)`) |
+
+Python backends lack the `extended-years` capability, because `datetime` holds
+only years 0001..9999; see the contract's intentional differences.
+>>>>>>> claude/cll-308-python
 
 ## What the vectors do not cover
 

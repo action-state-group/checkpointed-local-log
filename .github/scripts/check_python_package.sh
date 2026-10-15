@@ -26,7 +26,7 @@ wheel = next(root.glob('*.whl'))
 sdist = next(root.glob('*.tar.gz'))
 for names in [zipfile.ZipFile(wheel).namelist(), tarfile.open(sdist).getnames()]:
     assert not any('/tests/' in p or '/.env' in p or '/__pycache__/' in p for p in names)
-    for module in ['__init__.py', 'cli.py', 'revocation.py', 'signing.py', 'checkpoint/__init__.py', 'ledger/__init__.py', 'LICENSE', 'LICENSE-APACHE']:
+    for module in ['__init__.py', 'cli.py', 'revocation.py', 'signing.py', 'checkpoint/__init__.py', 'ledger/__init__.py', 'log/__init__.py', 'log/vectors.json', 'LICENSE', 'LICENSE-APACHE']:
         assert any(p.endswith('/' + module) for p in names), module
 assert all(p.startswith(('cll/', 'checkpointed_local_log-')) for p in zipfile.ZipFile(wheel).namelist())
 PY
@@ -42,5 +42,5 @@ for kind in source editable wheel sdist; do
     wheel) "$work/$kind/bin/python" -m pip install "$dist/"*.whl ;;
     sdist) "$work/$kind/bin/python" -m pip install "$dist/"*.tar.gz ;;
   esac
-  (cd "$work" && "$work/$kind/bin/python" -c 'import cll, cll.checkpoint, cll.ledger, cll.revocation, cll.signing' && "$work/$kind/bin/cll" --help)
+  (cd "$work" && "$work/$kind/bin/python" -c 'import cll, cll.checkpoint, cll.ledger, cll.log, cll.log.conformance, cll.revocation, cll.signing; cll.log.conformance.load_vectors()' && "$work/$kind/bin/cll" --help)
 done

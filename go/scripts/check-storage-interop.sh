@@ -33,8 +33,9 @@ trap cleanup EXIT
 
 # Every language that ships a backend has a driver with the same modes:
 #   <driver> advance|verify|summary|hold|expect-contention <backend> <target> <log-id> [argument...]
-# CLL_INTEROP_LANGUAGES selects a subset (default: all).
-all_languages=(go ts rs)
+# CLL_INTEROP_LANGUAGES selects a subset (default: all). The py driver runs
+# under CLL_PYTHON (default: python3), which must have ./python installed.
+all_languages=(go ts py rs)
 read -r -a languages <<<"${CLL_INTEROP_LANGUAGES:-${all_languages[*]}}"
 
 # The Rust driver is built once; every call runs the binary.
@@ -50,6 +51,7 @@ driver() {
   case "$language" in
     go) go -C "$go_dir" run ./test/interop/storage "$@" ;;
     ts) node "$go_dir/test/interop/storage.mjs" "$@" ;;
+    py) "${CLL_PYTHON:-python3}" "$go_dir/test/interop/storage.py" "$@" ;;
     rs) "$rs_driver" "$@" ;;
     *)
       echo "unsupported language: $language" >&2

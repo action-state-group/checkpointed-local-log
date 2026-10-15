@@ -32,7 +32,18 @@ export interface ConformanceConfig {
   reopen?(current: unknown): unknown;
   /** False when append refuses identities the store does not already hold. */
   digestAppend?: boolean;
+  /**
+   * The contract interfaces the backend implements; cases that need another
+   * are skipped. Defaults to all of them, a full `CllBackend`.
+   */
+  interfaces?: readonly ConformanceInterface[];
 }
+
+export type ConformanceInterface =
+  | "entries"
+  | "checkpoint"
+  | "witness"
+  | "close";
 
 export interface ConformanceCase {
   readonly name: string;
@@ -68,15 +79,21 @@ export function conformanceCases(
   const capabilities = new Set<string>(["extended-years"]);
   if (config.digestAppend !== false) capabilities.add("digest-append");
   if (config.reopen !== undefined) capabilities.add("reopen");
+  const implemented = new Set<string>(
+    config.interfaces ?? Object.keys(operations),
+  );
   return (vectors.cases as Case[]).map((item) => {
+    const absent = item.interfaces.find((name) => !implemented.has(name));
     const missing = (item.requires ?? []).find((c) => !capabilities.has(c));
     const excluded = (item.unless ?? []).find((c) => capabilities.has(c));
     const skip =
-      missing !== undefined
-        ? `backend lacks capability ${missing}`
-        : excluded !== undefined
-          ? `case applies only without capability ${excluded}`
-          : undefined;
+      absent !== undefined
+        ? `backend does not implement ${absent}`
+        : missing !== undefined
+          ? `backend lacks capability ${missing}`
+          : excluded !== undefined
+            ? `case applies only without capability ${excluded}`
+            : undefined;
     return {
       name: item.name,
       ...(skip === undefined ? {} : { skip }),

@@ -2,8 +2,8 @@
 """``cll`` -- Checkpointed Local Log: the reference library for
 ``draft-mih-scitt-checkpointed-local-log`` (see ``../spec/``).
 
-Two subpackages, imported explicitly (this top level stays empty so a bare
-``import cll`` never pays for either):
+Three subpackages, imported explicitly (this top level stays empty so a bare
+``import cll`` never pays for any of them):
 
 - ``cll.checkpoint`` -- the MMR/checkpoint/COSE core: pure position math,
   domain-separated hashing, inclusion/consistency proofs, COSE_Sign1
@@ -15,8 +15,12 @@ Two subpackages, imported explicitly (this top level stays empty so a bare
   chain-gap detection. This binding is capsule-shaped today (it verifies
   Agent Action Capsules specifically) — a content-agnostic log store is a
   possible future direction, not a claim this package makes yet.
+- ``cll.log`` -- the CLL storage contract shared with Go and TypeScript
+  (``docs/backend-contract.md``): entry log, checkpoint and witness state,
+  and the memory, JSONL v4, SQLite and MySQL backends. Content-agnostic: it
+  stores opaque 32-byte identities.
 
-Neither subpackage names a product, a company, or a capsule format in its
+No subpackage names a product, a company, or a capsule format in its
 own vocabulary — the log layer is deliberately not capsule-specific (the
 same layering law as ``scitt-cose``: capsule semantics never enter it).
 Downstream capsule-shaped consumers (``capsule-emit``, ``capsule-ledger``)
