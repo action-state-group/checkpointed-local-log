@@ -7,6 +7,28 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Added — `cll.log`, the CLL storage backends shared with Go and TypeScript
+
+- **`cll.log`** implements `docs/backend-contract.md`: the `EntrySource`,
+  `EntryStore`, `CheckpointStateStore`, `WitnessStateStore`, `CheckpointStore`
+  and `Backend` protocols, their values, the `CllError` subclasses and the
+  limits. Importing `cll` or `cll.log` loads no database driver.
+- **Backends.** `cll.log.memory`, `cll.log.jsonl` (the JSONL v4 journal),
+  `cll.log.sqlite` (stdlib `sqlite3`) and `cll.log.mysql` (PyMySQL). The
+  JSONL, SQLite and MySQL formats interoperate with Go and TypeScript: a log
+  written in one language opens, continues and verifies in the others.
+- **New `mysql` extra** (`pip install 'checkpointed-local-log[mysql]'`) for
+  the MySQL backend.
+- **`cll.log.conformance`** runs the shared backend conformance vectors
+  against any backend. The vectors ship as package data
+  (`cll/log/vectors.json`).
+- **`cll.log.ledger`** puts `LedgerStore` behind `EntryStore` (without
+  bare-identity append) and any `LogSource` behind `EntrySource`. Existing
+  `cll.ledger` and `cll.checkpoint` APIs are unchanged.
+- Python times are timezone-aware UTC `datetime` values, so Python holds only
+  years 0001..9999 of the portable time range; see the contract's intentional
+  differences.
+
 ## 0.5.1 — 2026-10-14
 
 No library changes. Adds tests that run the CLL-02 conformance vectors, and is
