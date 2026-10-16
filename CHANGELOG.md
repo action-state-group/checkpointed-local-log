@@ -10,9 +10,9 @@ are documented here. The format follows
 ### Changed
 
 - Requires `scitt-cose>=0.4.3` (was `>=0.2.0`). Its receipt verifier, which
-  the witness-stamp check uses, now rejects a receipt with an attached payload
-  and an ES256 or ES384 signature under a key on another curve
-  (action-state-group/scitt-cose#87).
+  the witness-stamp check uses, now rejects a receipt whose payload is
+  attached, and one whose ES256 or ES384 signature is under a key on another
+  curve (action-state-group/scitt-cose#87).
 
 ## 0.6.0 — 2026-10-15
 
