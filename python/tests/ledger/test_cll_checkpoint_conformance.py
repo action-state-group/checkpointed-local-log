@@ -15,7 +15,7 @@ clean parse and a byte-identical digest.
 **Ported from capsule-ledger in the CLL extraction (2026-09-01).**
 ``scitt-cose`` is not optional here the way it is for
 ``TestVerifyReceiptOffline`` in ``test_checkpoint.py``: this package's own
-``dependencies`` require ``scitt-cose>=0.2.0`` directly -- so any environment
+``dependencies`` require ``scitt-cose>=0.4.3`` directly -- so any environment
 that can import ``cll.ledger.checkpoint`` at all already has a real
 scitt-cose installed. ``importorskip`` is kept anyway (matching the existing
 convention in this test suite) purely as a defensive guard against an

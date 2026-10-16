@@ -5,6 +5,15 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Changed
+
+- Requires `scitt-cose>=0.4.3` (was `>=0.2.0`). Its receipt verifier, which
+  the witness-stamp check uses, now rejects a receipt whose payload is
+  attached, and one whose ES256 or ES384 signature is under a key on another
+  curve (action-state-group/scitt-cose#87).
+
 ## 0.6.0 — 2026-10-15
 
 ### Added — `cll.log`, the CLL storage backends shared with Go and TypeScript
