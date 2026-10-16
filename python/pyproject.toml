@@ -25,7 +25,7 @@ classifiers = [
 # docstring for why that is today's honest scope, not a neutrality claim.
 dependencies = [
     "cbor2>=5.5",
-    "scitt-cose>=0.2.0",
+    "scitt-cose>=0.4.3",
     "agent-action-capsule>=0.6.0",
     "cryptography>=42.0",
 ]
