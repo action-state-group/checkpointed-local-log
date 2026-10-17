@@ -48,6 +48,11 @@ implementation; change them only with all implementations agreeing.
 
 ## Rules
 
+- PRs that modify `spec/` or any `*-vectors/` directory, or are used to cut a
+  release tag (including PRs opened by **Release · Prepare**), must receive
+  at least one review before merge. This requirement is additional to all
+  existing CI, review and principal approval gates; it neither replaces nor
+  lowers them and grants no release or tag authority.
 - Commits use conventional commit messages and a DCO sign-off
   (`git commit -s`). Do not add AI attribution trailers; the `dco` check
   rejects both an unsigned commit and an AI co-author trailer.
