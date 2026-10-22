@@ -569,7 +569,10 @@ class LedgerStore(LedgerAPI):
                 )
             # Checked before any byte is written: a duplicate used to reach the
             # segment and only then fail the UNIQUE insert, leaving a line the
-            # index never named. So is every value the index row binds.
+            # index never named. So is every value the index row binds, and
+            # the id itself, by the rule recover() reads lines with.
+            if not isinstance(capsule_id, str) or not capsule_id:
+                raise ValueError(f"capsule_id {capsule_id!r} is not a non-empty string")
             existing = self._record_row(capsule_id)
             if existing is not None:
                 raise DuplicateRecord(capsule_id, self._existing_record(existing))
@@ -602,8 +605,11 @@ class LedgerStore(LedgerAPI):
                 # The line may be on disk (whole or in part) and is not
                 # indexed, like a crash: this instance appends nothing more
                 # until recover() reconciles it, so no later line lands after
-                # bytes the index skipped.
+                # bytes the index skipped. The write handle is dropped, so bytes
+                # a failed flush left buffered are flushed now or never, not
+                # behind a later line.
                 self._needs_recover = True
+                self._drop_write_handle()
                 raise
             self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=self._write_segment_name, offset=offset)
             record = LedgerRecord(
@@ -620,6 +626,15 @@ class LedgerStore(LedgerAPI):
                 self._rotate_segment()
 
             return record
+
+    def _drop_write_handle(self) -> None:
+        name = self._write_segment_name
+        if name is not None:
+            for key in [k for k in self._open_fhs if k.startswith(f"{name}:")]:
+                with contextlib.suppress(OSError):
+                    self._open_fhs.pop(key).close()
+        self._write_fh = None
+        self._write_segment_name = None
 
     def _record_row(self, capsule_id: str) -> sqlite3.Row | None:
         cur = self._conn.cursor()
@@ -967,6 +982,15 @@ class LedgerStore(LedgerAPI):
                 if self._rotate_at_checkpoint
                 else self._existing_segments()
             )
+            # Bytes a failed append left buffered are flushed or dropped
+            # before the segments are read, and what is read is made durable
+            # before an index row names it.
+            self._drop_write_handle()
+            for segment in segments:
+                path = self._resolve_segment_path(segment)
+                if path.exists():
+                    with open(path, "rb+") as fh:
+                        os.fsync(fh.fileno())
             try:
                 self._insert_leaves(self._leaves(segments))
                 self._conn.commit()

@@ -617,3 +617,32 @@ def test_an_unmanaged_store_reindexes_after_a_failed_append(tmp_path, monkeypatc
     store.append(_capsule(event="e2"))
     assert [r.capsule["event"] for r in store.scan()] == ["e0", "e1", "e2"]
     store.close()
+
+
+def test_a_capsule_id_that_is_not_a_string_is_refused_before_writing(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    before = _segment(tmp_path).read_bytes()
+    with pytest.raises(ValueError, match="non-empty string"):
+        store.append(_capsule(capsule_id=12345))
+    assert _segment(tmp_path).read_bytes() == before
+    store.close()
+
+
+def test_an_unmanaged_store_after_a_failed_flush_reindexes_without_losing_order(tmp_path, monkeypatch):
+    store = LedgerStore(tmp_path)
+    store.append(_capsule(event="e0"))
+    real_fsync = store_module.os.fsync
+
+    def fail(fd):
+        raise OSError("I/O error")
+
+    monkeypatch.setattr(store_module.os, "fsync", fail)
+    with pytest.raises(OSError):
+        store.append(_capsule(event="e1"))
+    monkeypatch.setattr(store_module.os, "fsync", real_fsync)
+    store.reindex()
+    store.append(_capsule(event="e2"))
+    store.reindex()
+    assert [(r.seq, r.capsule["event"]) for r in store.scan()] == [(1, "e0"), (2, "e1"), (3, "e2")]
+    store.close()
