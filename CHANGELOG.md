@@ -17,14 +17,15 @@ are documented here. The format follows
   not hold in full, raises the new `LedgerCorrupt` before anything is
   truncated. It reads only the segment's unindexed tail and returns a
   `RecoveryReport`.
-  It never runs on open: call it while holding the lock that keeps other
-  writers out (capsule-emit#358).
+  It never runs on open. The caller must keep other writers out while it
+  runs; capsule-emit will do this under its writer lock (capsule-emit#358).
 
 ### Changed
 
 - **`LedgerStore.append` checks for a duplicate `capsule_id` before writing.**
-  It raises the new `DuplicateRecord` (a `sqlite3.IntegrityError` subclass,
-  carrying the stored record) and writes nothing. Before, the line reached the
+  It raises the new `DuplicateRecord`, carrying the stored record, and writes
+  nothing. `DuplicateRecord` subclasses `sqlite3.IntegrityError`, so existing
+  `except sqlite3.IntegrityError` handlers still catch it. Before, the line reached the
   segment and only the index insert failed, leaving a line the index never
   named. If the index insert or commit fails, `append` takes the line back off
   the segment before re-raising, so a retry appends it at the same position;
@@ -33,13 +34,13 @@ are documented here. The format follows
 - `manifest.json` and segment manifests are written atomically (temp file,
   fsync, rename, directory fsync), so a crash or a concurrent reader never sees
   a truncated manifest.
-- An unmanaged `LedgerStore` (`rotate_at_checkpoint=False`) over a directory
-  that has `manifest.json` reads the store but no longer touches a segment, and
-  its `append` raises `SegmentRotationError`. Before, its record-count rotation
-  could create a segment the manifest did not list. Its `reindex()` and
-  `rebuild_lookup_index()` raise `SegmentRotationError` too.
+- **Breaking:** an unmanaged `LedgerStore` (`rotate_at_checkpoint=False`) over
+  a directory that has `manifest.json` now raises `SegmentRotationError` on
+  `append`, `reindex()` and `rebuild_lookup_index()`, and never touches a
+  segment; it still reads the store. Before, its record-count rotation
+  could create a segment the manifest did not list.
 - `reindex()` and `rebuild_lookup_index()` index the first line per
-  `capsule_id`, as the records index admits it, so a line a duplicate append
+  `capsule_id`, as `append` now allows, so a line a duplicate append
   left before this release no longer makes `reindex()` fail or shifts the
   lookup index's seqs. `reindex()` replaces the index in one transaction, so a
   failure leaves the old index in place.
