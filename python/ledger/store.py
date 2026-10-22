@@ -108,6 +108,19 @@ class RecoveryReport:
         return bool(self.truncated_bytes or self.indexed_seqs or self.lookup_seqs)
 
 
+def _line_id_problem(line: dict) -> str | None:
+    """Why ``line``'s own ``capsule_id`` member cannot name an entry, or None.
+    An absent member is fine (the id is recomputed); a present one must be a
+    non-empty string. One rule for what :meth:`LedgerStore.append` writes and
+    what :meth:`LedgerStore.recover` reads back."""
+    if "capsule_id" not in line:
+        return None
+    value = line["capsule_id"]
+    if not isinstance(value, str) or not value:
+        return f"capsule_id {value!r} is not a non-empty string"
+    return None
+
+
 def _atomic_write_text(path: Path, text: str) -> None:
     """Replace ``path`` with ``text`` so a crash or a concurrent reader sees the
     old content or the new, never a truncated file: write a sibling temp file,
@@ -571,8 +584,11 @@ class LedgerStore(LedgerAPI):
             # segment and only then fail the UNIQUE insert, leaving a line the
             # index never named. So is every value the index row binds, and
             # the id itself, by the rule recover() reads lines with.
-            if not isinstance(capsule_id, str) or not capsule_id:
-                raise ValueError(f"capsule_id {capsule_id!r} is not a non-empty string")
+            problem = _line_id_problem(to_store)
+            if problem is None and (not isinstance(capsule_id, str) or not capsule_id):
+                problem = f"capsule_id {capsule_id!r} is not a non-empty string"
+            if problem is not None:
+                raise ValueError(problem)
             existing = self._record_row(capsule_id)
             if existing is not None:
                 raise DuplicateRecord(capsule_id, self._existing_record(existing))
@@ -881,8 +897,9 @@ class LedgerStore(LedgerAPI):
             raise LedgerCorrupt(f"{path}: line at offset {offset} is not JSON") from exc
         if not isinstance(line, dict):
             raise LedgerCorrupt(f"{path}: line at offset {offset} is not a record")
-        if "capsule_id" in line and (not isinstance(line["capsule_id"], str) or not line["capsule_id"]):
-            raise LedgerCorrupt(f"{path}: line at offset {offset} has a capsule_id that is not a string")
+        problem = _line_id_problem(line)
+        if problem is not None:
+            raise LedgerCorrupt(f"{path}: line at offset {offset}: {problem}")
         if not line.get("capsule_id"):
             try:
                 compute_capsule_id(line)

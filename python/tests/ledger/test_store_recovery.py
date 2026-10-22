@@ -528,7 +528,7 @@ def test_recover_reports_a_lookup_gap_whose_line_is_not_a_record(tmp_path):
     store.close()
 
 
-@pytest.mark.parametrize("bad_id", [["x"], {"a": 1}, 10**30, ""])
+@pytest.mark.parametrize("bad_id", [["x"], {"a": 1}, 10**30, "", None])
 def test_recover_reports_a_tail_line_with_a_malformed_capsule_id(tmp_path, bad_id):
     store = _managed(tmp_path)
     store.append(_capsule())
@@ -645,4 +645,15 @@ def test_an_unmanaged_store_after_a_failed_flush_reindexes_without_losing_order(
     store.append(_capsule(event="e2"))
     store.reindex()
     assert [(r.seq, r.capsule["event"]) for r in store.scan()] == [(1, "e0"), (2, "e1"), (3, "e2")]
+    store.close()
+
+
+@pytest.mark.parametrize("bad_id", [None, "", False, 0, [], {}])
+def test_a_falsy_capsule_id_is_refused_before_writing(tmp_path, bad_id):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    before = _segment(tmp_path).read_bytes()
+    with pytest.raises(ValueError, match="non-empty string"):
+        store.append(_capsule(capsule_id=bad_id))
+    assert _segment(tmp_path).read_bytes() == before
     store.close()
