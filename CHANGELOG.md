@@ -27,10 +27,12 @@ are documented here. The format follows
   nothing. `DuplicateRecord` subclasses `sqlite3.IntegrityError`, so existing
   `except sqlite3.IntegrityError` handlers still catch it. Before, the line reached the
   segment and only the index insert failed, leaving a line the index never
-  named. If the index insert or commit fails, `append` takes the line back off
-  the segment before re-raising, so a retry appends it at the same position;
-  this applies to unmanaged stores too. A failure after the commit keeps the
-  line.
+  named. `append` also checks, before writing, that every value its index row
+  binds is one SQLite can hold (`ValueError` otherwise). If the index insert or
+  commit still fails after the line is written, that instance refuses further
+  appends (`LedgerCorrupt`) until `recover()` indexes the line, so no later line
+  lands after one the index skipped; this applies to unmanaged stores too,
+  which reopen the store instead.
 - `manifest.json` and segment manifests are written atomically (temp file,
   fsync, rename, directory fsync), so a crash or a concurrent reader never sees
   a truncated manifest.

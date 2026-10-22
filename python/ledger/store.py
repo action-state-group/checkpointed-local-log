@@ -252,6 +252,7 @@ class LedgerStore(LedgerAPI):
         self._write_fh = None
         self._write_segment_name = None
         self._open_fhs: dict[str, Any] = {}
+        self._needs_recover = False
 
         self._manifest_path = self._root / "manifest.json"
         if self._rotate_at_checkpoint:
@@ -560,15 +561,28 @@ class LedgerStore(LedgerAPI):
             capsule_id = capsule.get("capsule_id") or compute_capsule_id(capsule)
 
         with self._lock:
+            if self._needs_recover:
+                raise LedgerCorrupt(
+                    f"{self._root}: an earlier append wrote its line but did not index it; "
+                    "run recover() (managed stores) or open the store again before appending"
+                )
             # Checked before any byte is written: a duplicate used to reach the
             # segment and only then fail the UNIQUE insert, leaving a line the
-            # index never named.
+            # index never named. So is every value the index row binds.
             existing = self._record_row(capsule_id)
             if existing is not None:
                 raise DuplicateRecord(capsule_id, self._existing_record(existing))
             self._sync_write_segment()
             fh = self._write_fh
             offset = fh.tell()
+            self._record_params(
+                to_store,
+                capsule_id=capsule_id,
+                segment=self._write_segment_name,
+                offset=offset,
+                consequential=consequential,
+                authenticity=resolution.authenticity,
+            )
             line = json.dumps(to_store, separators=(",", ":"))
             fh.write(line + "\n")
             fh.flush()
@@ -584,12 +598,11 @@ class LedgerStore(LedgerAPI):
                     consequential=consequential,
                     authenticity=resolution.authenticity,
                 )
-            except Exception:
-                # Nothing was committed and the line is on disk: take it back
-                # off, so a retry appends it at the same position and the
-                # segment never holds a line the index skipped over. (A crash
-                # here instead leaves the line for recover().)
-                self._unwrite(offset)
+            except BaseException:
+                # The line is on disk and not indexed, like a crash: this
+                # instance appends nothing more until recover() indexes it, so
+                # no later line lands after a line the index skipped.
+                self._needs_recover = True
                 raise
             self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=self._write_segment_name, offset=offset)
             record = LedgerRecord(
@@ -606,17 +619,6 @@ class LedgerStore(LedgerAPI):
                 self._rotate_segment()
 
             return record
-
-    def _unwrite(self, offset: int) -> None:
-        """Cut the active segment back to ``offset`` and reopen its write
-        handle there. Caller holds ``_lock``."""
-        name = self._write_segment_name
-        for key in [k for k in self._open_fhs if k.startswith(f"{name}:")]:
-            self._open_fhs.pop(key).close()
-        self._write_fh = None
-        self._write_segment_name = None
-        os.truncate(self._segments_dir / name, offset)
-        self._sync_write_segment()
 
     def _record_row(self, capsule_id: str) -> sqlite3.Row | None:
         cur = self._conn.cursor()
@@ -653,6 +655,46 @@ class LedgerStore(LedgerAPI):
         self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=segment, offset=offset)
         return seq
 
+    _INSERT_RECORD = (
+        "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
+        "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
+        "consequential, authenticity) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+
+    @staticmethod
+    def _record_params(
+        to_store: dict, *, capsule_id: str, segment: str, offset: int, consequential: bool, authenticity: str
+    ) -> tuple:
+        """The records row for one line, every value one SQLite binds, or
+        ``ValueError``: checked before a line is written, so a record the index
+        cannot hold never reaches the segment."""
+        chain = to_store.get("chain") or {}
+        disposition = to_store.get("disposition") or {}
+        if not isinstance(chain, dict) or not isinstance(disposition, dict):
+            raise ValueError("chain and disposition must be objects")
+        params = (
+            capsule_id,
+            segment,
+            offset,
+            to_store.get("timestamp"),
+            to_store.get("operator"),
+            to_store.get("developer"),
+            to_store.get("action_type"),
+            disposition.get("verdict_class"),
+            chain.get("parent_capsule_id"),
+            chain.get("relation"),
+            1 if consequential else 0,
+            authenticity,
+        )
+        for value in params:
+            if value is None or isinstance(value, (str, float)):
+                continue
+            if isinstance(value, int) and -(2**63) <= value < 2**63:
+                continue
+            raise ValueError(f"record field value {value!r} cannot be indexed")
+        return params
+
     def _insert_record(
         self,
         to_store: dict,
@@ -664,32 +706,17 @@ class LedgerStore(LedgerAPI):
         authenticity: str,
     ) -> int:
         """Insert and commit the records row for one line. On any failure the
-        transaction is rolled back and nothing is committed, so the caller
-        may take the line back off the segment. Returns its seq."""
-        chain = to_store.get("chain") or {}
-        disposition = to_store.get("disposition") or {}
+        transaction is rolled back and nothing is committed. Returns its seq."""
+        params = self._record_params(
+            to_store,
+            capsule_id=capsule_id,
+            segment=segment,
+            offset=offset,
+            consequential=consequential,
+            authenticity=authenticity,
+        )
         try:
-            cursor = self._conn.execute(
-            "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
-            "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
-            "consequential, authenticity) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                capsule_id,
-                segment,
-                offset,
-                to_store.get("timestamp"),
-                to_store.get("operator"),
-                to_store.get("developer"),
-                to_store.get("action_type"),
-                disposition.get("verdict_class"),
-                chain.get("parent_capsule_id"),
-                chain.get("relation"),
-                1 if consequential else 0,
-                authenticity,
-            ),
-            )
-            seq = cursor.lastrowid
+            seq = self._conn.execute(self._INSERT_RECORD, params).lastrowid
             self._conn.commit()
         except BaseException:
             self._conn.rollback()
@@ -800,6 +827,7 @@ class LedgerStore(LedgerAPI):
                     os.fsync(fh.fileno())
 
             self._sync_write_segment()
+            self._needs_recover = False
             return RecoveryReport(
                 truncated_bytes=truncated,
                 indexed_seqs=tuple(indexed),
@@ -818,6 +846,8 @@ class LedgerStore(LedgerAPI):
             raise LedgerCorrupt(f"{path}: line at offset {offset} is not JSON") from exc
         if not isinstance(line, dict):
             raise LedgerCorrupt(f"{path}: line at offset {offset} is not a record")
+        if "capsule_id" in line and (not isinstance(line["capsule_id"], str) or not line["capsule_id"]):
+            raise LedgerCorrupt(f"{path}: line at offset {offset} has a capsule_id that is not a string")
         if not line.get("capsule_id"):
             try:
                 compute_capsule_id(line)
@@ -929,21 +959,15 @@ class LedgerStore(LedgerAPI):
         transaction the caller commits or rolls back."""
         self._conn.execute("DELETE FROM records")
         for segment, offset, capsule, capsule_id in leaves:
-            chain = capsule.get("chain") or {}
-            disposition = capsule.get("disposition") or {}
-            authenticity = self._reindex_authenticity(capsule)
-            self._conn.execute(
-                "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
-                "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
-                "consequential, authenticity) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    capsule_id, segment, offset, capsule.get("timestamp"), capsule.get("operator"),
-                    capsule.get("developer"), capsule.get("action_type"),
-                    disposition.get("verdict_class"), chain.get("parent_capsule_id"),
-                    chain.get("relation"), 1, authenticity,
-                ),
+            params = self._record_params(
+                capsule,
+                capsule_id=capsule_id,
+                segment=segment,
+                offset=offset,
+                consequential=True,
+                authenticity=self._reindex_authenticity(capsule),
             )
+            self._conn.execute(self._INSERT_RECORD, params)
 
     def _refuse_read_only_unmanaged(self, what: str) -> None:
         if self._read_only_unmanaged:

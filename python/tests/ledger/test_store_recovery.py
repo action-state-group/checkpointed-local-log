@@ -385,7 +385,7 @@ def test_duplicate_of_a_record_in_an_archived_segment(tmp_path):
     store.close()
 
 
-def test_failed_index_write_takes_the_line_back(tmp_path, monkeypatch):
+def test_a_failed_index_write_blocks_appends_until_recover(tmp_path, monkeypatch):
     store = _managed(tmp_path)
     store.append(_capsule(event="e0"))
     real = store._insert_record
@@ -398,14 +398,15 @@ def test_failed_index_write_takes_the_line_back(tmp_path, monkeypatch):
         return real(*args, **kwargs)
 
     monkeypatch.setattr(store, "_insert_record", flaky)
-    retry = _capsule(event="e1")
     with pytest.raises(sqlite3.OperationalError):
-        store.append(dict(retry))
+        store.append(_capsule(event="e1"))
+    with pytest.raises(LedgerCorrupt, match="run recover"):
+        store.append(_capsule(event="e2"))
+    assert store.recover().indexed_seqs == (2,)
     store.append(_capsule(event="e2"))
-    store.append(dict(retry))
     monkeypatch.undo()
     before = [(r.seq, r.capsule["event"]) for r in store.scan()]
-    assert before == [(1, "e0"), (2, "e2"), (3, "e1")]
+    assert before == [(1, "e0"), (2, "e1"), (3, "e2")]
 
     store.reindex()
     store.rebuild_lookup_index()
@@ -465,18 +466,18 @@ def test_reindex_rolls_back_a_failed_commit(tmp_path):
     store.close()
 
 
-def test_a_non_sqlite_failure_before_commit_takes_the_line_back(tmp_path):
+def test_values_the_index_cannot_hold_are_refused_before_writing(tmp_path):
     store = _managed(tmp_path)
     store.append(_capsule())
     seg = _segment(tmp_path)
     before = seg.read_bytes()
-    with pytest.raises(OverflowError):
-        store.append(_capsule(capsule_id="9a" * 32, timestamp=10**30))
+    for bad in ({"timestamp": 10**30}, {"operator": ["x"]}, {"chain": "not an object"}):
+        with pytest.raises(ValueError, match="cannot be indexed|must be objects"):
+            store.append(_capsule(capsule_id="9a" * 32, **bad))
     assert seg.read_bytes() == before
     store.append(_capsule())
     assert _seqs(store) == [1, 2]
     store.close()
-
 
 def test_a_failure_after_commit_keeps_the_line(tmp_path, monkeypatch):
     store = _managed(tmp_path)
@@ -523,5 +524,20 @@ def test_recover_reports_a_lookup_gap_whose_line_is_not_a_record(tmp_path):
 
     store = _managed(tmp_path)
     with pytest.raises(LedgerCorrupt, match="not a record"):
+        store.recover()
+    store.close()
+
+
+@pytest.mark.parametrize("bad_id", [["x"], {"a": 1}, 10**30, ""])
+def test_recover_reports_a_tail_line_with_a_malformed_capsule_id(tmp_path, bad_id):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    line = _capsule()
+    line["capsule_id"] = bad_id
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write((json.dumps(line, separators=(",", ":")) + "\n").encode())
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt):
         store.recover()
     store.close()
