@@ -541,3 +541,79 @@ def test_recover_reports_a_tail_line_with_a_malformed_capsule_id(tmp_path, bad_i
     with pytest.raises(LedgerCorrupt):
         store.recover()
     store.close()
+
+
+def test_a_string_the_index_cannot_encode_is_refused_before_writing(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    before = _segment(tmp_path).read_bytes()
+    with pytest.raises(ValueError, match="cannot be indexed"):
+        store.append(_capsule(capsule_id="9c" * 32, operator="\ud800"))
+    assert _segment(tmp_path).read_bytes() == before
+    store.close()
+
+
+def test_a_failed_fsync_blocks_appends_until_recover(tmp_path, monkeypatch):
+    store = _managed(tmp_path)
+    store.append(_capsule(event="e0"))
+
+    def fail(fd):
+        raise OSError("I/O error")
+
+    monkeypatch.setattr(store_module.os, "fsync", fail)
+    with pytest.raises(OSError):
+        store.append(_capsule(event="e1"))
+    monkeypatch.undo()
+    with pytest.raises(LedgerCorrupt, match="run recover"):
+        store.append(_capsule(event="e2"))
+    assert store.recover().indexed_seqs == (2,)
+    store.append(_capsule(event="e2"))
+    assert [r.capsule["event"] for r in store.scan()] == ["e0", "e1", "e2"]
+    store.close()
+
+
+def test_a_failed_recover_keeps_appends_blocked(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write(b'not json\n{"capsule_id":"tor')
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt):
+        store.recover()
+    with pytest.raises(LedgerCorrupt, match="run recover"):
+        store.append(_capsule())
+    store.close()
+
+
+def test_recover_reports_an_unencodable_capsule_id(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    line = _capsule()
+    line["capsule_id"] = "\ud800"
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write((json.dumps(line, separators=(",", ":")) + "\n").encode())
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt):
+        store.recover()
+    store.close()
+
+
+def test_an_unmanaged_store_reindexes_after_a_failed_append(tmp_path, monkeypatch):
+    store = LedgerStore(tmp_path)
+    store.append(_capsule(event="e0"))
+
+    def fail(*args, **kwargs):
+        raise sqlite3.OperationalError("database is locked")
+
+    monkeypatch.setattr(store, "_insert_record", fail)
+    with pytest.raises(sqlite3.OperationalError):
+        store.append(_capsule(event="e1"))
+    monkeypatch.undo()
+    with pytest.raises(LedgerCorrupt, match="reindex"):
+        store.append(_capsule(event="e2"))
+    store.reindex()
+    store.append(_capsule(event="e2"))
+    assert [r.capsule["event"] for r in store.scan()] == ["e0", "e1", "e2"]
+    store.close()

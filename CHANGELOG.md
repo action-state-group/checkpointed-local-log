@@ -28,11 +28,12 @@ are documented here. The format follows
   `except sqlite3.IntegrityError` handlers still catch it. Before, the line reached the
   segment and only the index insert failed, leaving a line the index never
   named. `append` also checks, before writing, that every value its index row
-  binds is one SQLite can hold (`ValueError` otherwise). If the index insert or
-  commit still fails after the line is written, that instance refuses further
-  appends (`LedgerCorrupt`) until `recover()` indexes the line, so no later line
-  lands after one the index skipped; this applies to unmanaged stores too,
-  which reopen the store instead.
+  binds is one SQLite can hold (`ValueError` otherwise). If writing the line,
+  or its index insert or commit, fails, that instance refuses further appends
+  (`LedgerCorrupt`) until `recover()` (managed stores) or `reindex()`
+  (unmanaged) reconciles the segment, so no later line lands after bytes the
+  index skipped. A `recover()` that raises leaves the instance refusing appends
+  too.
 - `manifest.json` and segment manifests are written atomically (temp file,
   fsync, rename, directory fsync), so a crash or a concurrent reader never sees
   a truncated manifest.

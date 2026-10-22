@@ -27,6 +27,7 @@ is an extension point, not the delivery mechanism for revocation.
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import logging
@@ -563,8 +564,8 @@ class LedgerStore(LedgerAPI):
         with self._lock:
             if self._needs_recover:
                 raise LedgerCorrupt(
-                    f"{self._root}: an earlier append wrote its line but did not index it; "
-                    "run recover() (managed stores) or open the store again before appending"
+                    f"{self._root}: an earlier append or recover() did not finish; run recover() "
+                    "(managed stores) or reindex() (unmanaged) before appending"
                 )
             # Checked before any byte is written: a duplicate used to reach the
             # segment and only then fail the UNIQUE insert, leaving a line the
@@ -584,12 +585,11 @@ class LedgerStore(LedgerAPI):
                 authenticity=resolution.authenticity,
             )
             line = json.dumps(to_store, separators=(",", ":"))
-            fh.write(line + "\n")
-            fh.flush()
-            if consequential:
-                os.fsync(fh.fileno())
-
             try:
+                fh.write(line + "\n")
+                fh.flush()
+                if consequential:
+                    os.fsync(fh.fileno())
                 seq = self._insert_record(
                     to_store,
                     capsule_id=capsule_id,
@@ -599,9 +599,10 @@ class LedgerStore(LedgerAPI):
                     authenticity=resolution.authenticity,
                 )
             except BaseException:
-                # The line is on disk and not indexed, like a crash: this
-                # instance appends nothing more until recover() indexes it, so
-                # no later line lands after a line the index skipped.
+                # The line may be on disk (whole or in part) and is not
+                # indexed, like a crash: this instance appends nothing more
+                # until recover() reconciles it, so no later line lands after
+                # bytes the index skipped.
                 self._needs_recover = True
                 raise
             self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=self._write_segment_name, offset=offset)
@@ -688,7 +689,13 @@ class LedgerStore(LedgerAPI):
             authenticity,
         )
         for value in params:
-            if value is None or isinstance(value, (str, float)):
+            if isinstance(value, str):
+                try:
+                    value.encode("utf-8")
+                except UnicodeEncodeError:
+                    raise ValueError(f"record field value {value!r} cannot be indexed") from None
+                continue
+            if value is None or isinstance(value, float):
                 continue
             if isinstance(value, int) and -(2**63) <= value < 2**63:
                 continue
@@ -765,11 +772,15 @@ class LedgerStore(LedgerAPI):
         if not self._rotate_at_checkpoint:
             raise ValueError("recover() needs a managed store (rotate_at_checkpoint=True)")
         with self._lock:
+            # Cleared only when this run finishes: a recover() that raises
+            # leaves the instance refusing appends.
+            self._needs_recover = True
             self._sync_write_segment()
             name = self._write_segment_name
             path = self._segments_dir / name
             for key in [k for k in self._open_fhs if k.startswith(f"{name}:")]:
-                self._open_fhs.pop(key).close()
+                with contextlib.suppress(OSError):
+                    self._open_fhs.pop(key).close()
             self._write_fh = None
             self._write_segment_name = None
 
@@ -791,6 +802,11 @@ class LedgerStore(LedgerAPI):
                     start = last[0] + len(indexed_line)
                 fh.seek(start)
                 tail = fh.read()
+            if tail:
+                # Lines a crashed writer left may sit only in the page cache:
+                # make them durable before an index row names them.
+                with open(path, "rb+") as fh:
+                    os.fsync(fh.fileno())
             lookup_seqs = self._catch_up_lookup()
 
             keep = tail.rfind(b"\n") + 1
@@ -801,7 +817,11 @@ class LedgerStore(LedgerAPI):
             for raw in tail[:keep].split(b"\n")[:-1]:
                 line = self._parse_line(raw, path, offset)
                 capsule_id = line.get("capsule_id") or compute_capsule_id(line)
-                if self._record_row(capsule_id) is not None:
+                try:
+                    known = self._record_row(capsule_id) is not None
+                except (UnicodeError, sqlite3.InterfaceError, sqlite3.ProgrammingError) as exc:
+                    raise LedgerCorrupt(f"{path}: line at offset {offset} has a capsule_id the index cannot hold") from exc
+                if known:
                     skipped.append(offset)
                 else:
                     try:
@@ -896,7 +916,7 @@ class LedgerStore(LedgerAPI):
         cur = self._conn.cursor()
         cur.row_factory = sqlite3.Row
         added: list[int] = []
-        for row in cur.execute("SELECT * FROM records ORDER BY seq").fetchall():
+        for row in cur.execute("SELECT * FROM records ORDER BY seq"):
             if row["seq"] in present:
                 continue
             try:
@@ -953,6 +973,7 @@ class LedgerStore(LedgerAPI):
             except BaseException:
                 self._conn.rollback()
                 raise
+            self._needs_recover = False
 
     def _insert_leaves(self, leaves: Iterator[tuple[str, int, dict, str]]) -> None:
         """Replace the records index with ``leaves``, streamed, in one
