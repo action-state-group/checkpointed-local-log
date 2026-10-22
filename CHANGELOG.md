@@ -26,7 +26,10 @@ are documented here. The format follows
   It raises the new `DuplicateRecord` (a `sqlite3.IntegrityError` subclass,
   carrying the stored record) and writes nothing. Before, the line reached the
   segment and only the index insert failed, leaving a line the index never
-  named.
+  named. If the index insert or commit fails, `append` takes the line back off
+  the segment before re-raising, so a retry appends it at the same position;
+  this applies to unmanaged stores too. A failure after the commit keeps the
+  line.
 - `manifest.json` and segment manifests are written atomically (temp file,
   fsync, rename, directory fsync), so a crash or a concurrent reader never sees
   a truncated manifest.

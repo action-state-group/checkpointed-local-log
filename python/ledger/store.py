@@ -576,7 +576,7 @@ class LedgerStore(LedgerAPI):
                 os.fsync(fh.fileno())
 
             try:
-                seq = self._index_line(
+                seq = self._insert_record(
                     to_store,
                     capsule_id=capsule_id,
                     segment=self._write_segment_name,
@@ -584,13 +584,14 @@ class LedgerStore(LedgerAPI):
                     consequential=consequential,
                     authenticity=resolution.authenticity,
                 )
-            except sqlite3.Error:
-                # The line is on disk but not indexed: take it back off, so a
-                # retry appends it at the same position and the segment never
-                # holds a line the index skipped over.
-                self._conn.rollback()
+            except Exception:
+                # Nothing was committed and the line is on disk: take it back
+                # off, so a retry appends it at the same position and the
+                # segment never holds a line the index skipped over. (A crash
+                # here instead leaves the line for recover().)
                 self._unwrite(offset)
                 raise
+            self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=self._write_segment_name, offset=offset)
             record = LedgerRecord(
                 seq=seq,
                 capsule_id=capsule_id,
@@ -639,10 +640,36 @@ class LedgerStore(LedgerAPI):
         authenticity: str,
     ) -> int:
         """Index one line already written at ``offset`` of ``segment``: the
-        records row, then the lookup index. Returns its seq."""
+        records row (:meth:`_insert_record`), then the lookup index. Returns
+        its seq."""
+        seq = self._insert_record(
+            to_store,
+            capsule_id=capsule_id,
+            segment=segment,
+            offset=offset,
+            consequential=consequential,
+            authenticity=authenticity,
+        )
+        self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=segment, offset=offset)
+        return seq
+
+    def _insert_record(
+        self,
+        to_store: dict,
+        *,
+        capsule_id: str,
+        segment: str,
+        offset: int,
+        consequential: bool,
+        authenticity: str,
+    ) -> int:
+        """Insert and commit the records row for one line. On any failure the
+        transaction is rolled back and nothing is committed, so the caller
+        may take the line back off the segment. Returns its seq."""
         chain = to_store.get("chain") or {}
         disposition = to_store.get("disposition") or {}
-        self._conn.execute(
+        try:
+            cursor = self._conn.execute(
             "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
             "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
             "consequential, authenticity) "
@@ -661,12 +688,12 @@ class LedgerStore(LedgerAPI):
                 1 if consequential else 0,
                 authenticity,
             ),
-        )
-        self._conn.commit()
-        seq = self._conn.execute(
-            "SELECT seq FROM records WHERE capsule_id = ?", (capsule_id,)
-        ).fetchone()[0]
-        self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=segment, offset=offset)
+            )
+            seq = cursor.lastrowid
+            self._conn.commit()
+        except BaseException:
+            self._conn.rollback()
+            raise
         return seq
 
     def _lookup_record(self, seq: int, capsule: dict, *, capsule_id: str, segment: str, offset: int) -> bool:
@@ -750,16 +777,21 @@ class LedgerStore(LedgerAPI):
                 if self._record_row(capsule_id) is not None:
                     skipped.append(offset)
                 else:
-                    indexed.append(
-                        self._index_line(
-                            line,
-                            capsule_id=capsule_id,
-                            segment=name,
-                            offset=offset,
-                            consequential=True,
-                            authenticity=self._reindex_authenticity(line),
+                    try:
+                        indexed.append(
+                            self._index_line(
+                                line,
+                                capsule_id=capsule_id,
+                                segment=name,
+                                offset=offset,
+                                consequential=True,
+                                authenticity=self._reindex_authenticity(line),
+                            )
                         )
-                    )
+                    except sqlite3.OperationalError:
+                        raise  # transient (locked, I/O): rolled back, retry recover()
+                    except Exception as exc:
+                        raise LedgerCorrupt(f"{path}: line at offset {offset} cannot be indexed: {exc}") from exc
                 offset += len(raw) + 1
             if truncated:
                 with open(path, "r+b") as fh:
@@ -839,7 +871,9 @@ class LedgerStore(LedgerAPI):
                 continue
             try:
                 record = self._existing_record(row)
-            except ValueError as exc:
+                if record is not None and not isinstance(record.capsule, dict):
+                    raise TypeError("not a JSON object")
+            except (ValueError, TypeError, AttributeError) as exc:
                 raise LedgerCorrupt(
                     f"{self._segments_dir / row['segment']}: the index names a line at offset "
                     f"{row['byte_offset']} that is not a record"

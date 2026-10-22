@@ -106,7 +106,7 @@ def test_recover_crash_between_segment_write_and_index(tmp_path, monkeypatch):
     def crash(*args, **kwargs):
         raise KeyboardInterrupt
 
-    monkeypatch.setattr(store, "_index_line", crash)
+    monkeypatch.setattr(store, "_insert_record", crash)
     capsule = _capsule()
     with pytest.raises(KeyboardInterrupt):
         store.append(capsule)
@@ -388,7 +388,7 @@ def test_duplicate_of_a_record_in_an_archived_segment(tmp_path):
 def test_failed_index_write_takes_the_line_back(tmp_path, monkeypatch):
     store = _managed(tmp_path)
     store.append(_capsule(event="e0"))
-    real = store._index_line
+    real = store._insert_record
     calls = {"n": 0}
 
     def flaky(*args, **kwargs):
@@ -397,7 +397,7 @@ def test_failed_index_write_takes_the_line_back(tmp_path, monkeypatch):
             raise sqlite3.OperationalError("database is locked")
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(store, "_index_line", flaky)
+    monkeypatch.setattr(store, "_insert_record", flaky)
     retry = _capsule(event="e1")
     with pytest.raises(sqlite3.OperationalError):
         store.append(dict(retry))
@@ -462,4 +462,66 @@ def test_reindex_rolls_back_a_failed_commit(tmp_path):
     with pytest.raises(sqlite3.OperationalError):
         store.reindex()
     assert [r.capsule["event"] for r in store.scan()] == ["kept"]
+    store.close()
+
+
+def test_a_non_sqlite_failure_before_commit_takes_the_line_back(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    seg = _segment(tmp_path)
+    before = seg.read_bytes()
+    with pytest.raises(OverflowError):
+        store.append(_capsule(capsule_id="9a" * 32, timestamp=10**30))
+    assert seg.read_bytes() == before
+    store.append(_capsule())
+    assert _seqs(store) == [1, 2]
+    store.close()
+
+
+def test_a_failure_after_commit_keeps_the_line(tmp_path, monkeypatch):
+    store = _managed(tmp_path)
+
+    def boom(**kwargs):
+        raise RuntimeError("after the commit")
+
+    monkeypatch.setattr(store._lookup, "record", boom)
+    capsule = _capsule()
+    with pytest.raises(RuntimeError):
+        store.append(capsule)
+    monkeypatch.undo()
+    assert [r.capsule["event"] for r in store.scan()] == [capsule["event"]]
+    assert _segment(tmp_path).read_bytes().count(b"\n") == 1
+    store.close()
+
+
+def test_recover_reports_a_tail_line_it_cannot_index_and_rolls_back(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write((json.dumps(_capsule(capsule_id="9b" * 32, timestamp=10**30), separators=(",", ":")) + "\n").encode())
+
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt, match="cannot be indexed"):
+        store.recover()
+    assert not store._conn.in_transaction
+    assert _seqs(store) == [1]
+    store.close()
+
+
+def test_recover_reports_a_lookup_gap_whose_line_is_not_a_record(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    second = store.append(_capsule())
+    store.close()
+    seg = _segment(tmp_path)
+    first_line = seg.read_bytes().split(b"\n")[0] + b"\n"
+    replacement = b"[1]" + b" " * (len(seg.read_bytes()) - len(first_line) - 4) + b"\n"
+    seg.write_bytes(first_line + replacement)
+    with sqlite3.connect(tmp_path / "index.sqlite") as conn:
+        conn.execute("DELETE FROM records WHERE seq = ?", (second.seq,))
+
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt, match="not a record"):
+        store.recover()
     store.close()
