@@ -28,7 +28,9 @@ are documented here. The format follows
   `except sqlite3.IntegrityError` handlers still catch it. Before, the line reached the
   segment and only the index insert failed, leaving a line the index never
   named. `append` also checks, before writing, that every value its index row
-  binds is one SQLite can hold (`ValueError` otherwise). If writing the line,
+  binds is one SQLite can hold, that a `capsule_id` it carries is a non-empty
+  string, and, for a signed entry, that it is the recomputed id (`ValueError`
+  otherwise, before anything is written). If writing the line,
   or its index insert or commit, fails, that instance refuses further appends
   (`LedgerCorrupt`) until `recover()` (managed stores) or `reindex()`
   (unmanaged) reconciles the segment, so no later line lands after bytes the
