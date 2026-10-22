@@ -104,6 +104,14 @@ class LookupIndex:
             self._conn.execute("INSERT INTO correlations (correlation_id, seq) VALUES (?, ?)", (cid, seq))
         self._conn.commit()
 
+    def seqs_summary(self) -> tuple[int, int]:
+        """``(count, highest seq)`` of the rows indexed here, ``(0, 0)`` when empty."""
+        return tuple(self._conn.execute("SELECT COUNT(*), COALESCE(MAX(seq), 0) FROM records").fetchone())
+
+    def seqs(self) -> set[int]:
+        """Every seq indexed here."""
+        return {row[0] for row in self._conn.execute("SELECT seq FROM records")}
+
     def rebuild(self, rows: Iterable[tuple[int, str | None, str, str, int, dict]]) -> None:
         """Wipe and reinsert from ``rows`` -- ``(seq, ts, record_digest,
         segment, byte_offset, capsule)`` in seq order. The caller (see

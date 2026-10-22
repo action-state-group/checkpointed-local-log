@@ -7,8 +7,48 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **`LedgerStore.recover()`** reconciles a managed store's active segment with
+  its indexes after a crash: it truncates a torn last line, indexes complete
+  lines the index lacks, skips a line whose `capsule_id` is already indexed,
+  and catches the lookup index (`index.sqlite`) up to the records index. A
+  complete line that is not a JSON object, or an indexed line the segment does
+  not hold in full, raises the new `LedgerCorrupt` before anything is
+  truncated. It reads only the segment's unindexed tail and returns a
+  `RecoveryReport`.
+  It never runs on open. The caller must keep other writers out while it
+  runs; capsule-emit will do this under its writer lock (capsule-emit#358).
+
 ### Changed
 
+- **Breaking:** an unmanaged `LedgerStore` (`rotate_at_checkpoint=False`) over
+  a directory that has `manifest.json` now raises `SegmentRotationError` on
+  `append`, `reindex()` and `rebuild_lookup_index()`, and never touches a
+  segment; it still reads the store. Before, its record-count rotation could
+  create a segment the manifest did not list.
+- **`LedgerStore.append` checks for a duplicate `capsule_id` before writing.**
+  It raises the new `DuplicateRecord`, carrying the stored record, and writes
+  nothing. `DuplicateRecord` subclasses `sqlite3.IntegrityError`, so existing
+  `except sqlite3.IntegrityError` handlers still catch it. Before, the line
+  reached the segment and only the index insert failed, leaving a line the
+  index never named. `append` also checks, before writing, that every value
+  its index row binds is one SQLite can hold, that a `capsule_id` it carries is
+  a non-empty string, and, for a signed entry, that the `capsule_id` equals the
+  id recomputed from the entry (`ValueError` otherwise, before anything is
+  written). If writing the line, or its index insert or commit, fails, that
+  instance refuses further appends (`LedgerCorrupt`) until `recover()`
+  (managed stores) or `reindex()` (unmanaged) reconciles the segment, so no
+  later line lands after a line the index never recorded. A `recover()` that
+  raises leaves the instance refusing appends too.
+- `manifest.json` and segment manifests are written atomically (temp file,
+  fsync, rename, directory fsync), so a crash or a concurrent reader never sees
+  a truncated manifest.
+- `reindex()` and `rebuild_lookup_index()` index the first line per
+  `capsule_id`, as `append` now allows, so a line a duplicate append left before
+  this release no longer makes `reindex()` fail or shifts the lookup index's
+  seqs. `reindex()` replaces the index in one transaction, so a failure leaves
+  the old index in place.
 - Requires `scitt-cose>=0.4.3` (was `>=0.2.0`). Its receipt verifier, which
   the witness-stamp check uses, now rejects a receipt whose payload is
   attached, and one whose ES256 or ES384 signature is under a key on another

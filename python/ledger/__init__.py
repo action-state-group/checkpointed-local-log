@@ -40,7 +40,7 @@ from .segments import (
     StoreManifest,
     verify_segment,
 )
-from .store import LedgerStore
+from .store import DuplicateRecord, LedgerCorrupt, LedgerStore, RecoveryReport
 
 __all__ = [
     "LedgerAPI",
@@ -48,6 +48,9 @@ __all__ = [
     "LedgerRecord",
     "ChainGap",
     "LedgerStore",
+    "DuplicateRecord",
+    "LedgerCorrupt",
+    "RecoveryReport",
     "LookupIndex",
     "extract_correlation_ids",
     "AdmissionRequest",
