@@ -657,3 +657,22 @@ def test_a_falsy_capsule_id_is_refused_before_writing(tmp_path, bad_id):
         store.append(_capsule(capsule_id=bad_id))
     assert _segment(tmp_path).read_bytes() == before
     store.close()
+
+
+def test_a_signed_append_carrying_another_capsule_id_is_refused(tmp_path, envelope_signer):
+    from agent_action_capsule import compute_capsule_id
+    from cll.ledger import SIGNED, AdmissionRequest, ProducerEnvelope
+    from tests.ledger.conftest import sign_producer_envelope
+
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    before = _segment(tmp_path).read_bytes()
+    capsule = _capsule()
+    real_id = compute_capsule_id(capsule)
+    envelope, key_id = sign_producer_envelope(envelope_signer, real_id)
+    request = AdmissionRequest(mode=SIGNED, envelopes=(ProducerEnvelope(envelope=envelope, key_id=key_id),))
+    with pytest.raises(ValueError, match="not the recomputed"):
+        store.append(dict(capsule, capsule_id="ab" * 32), admission=request)
+    assert _segment(tmp_path).read_bytes() == before
+    assert store.append(dict(capsule, capsule_id=real_id), admission=request).capsule_id == real_id
+    store.close()

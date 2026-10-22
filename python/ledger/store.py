@@ -585,8 +585,10 @@ class LedgerStore(LedgerAPI):
             # index never named. So is every value the index row binds, and
             # the id itself, by the rule recover() reads lines with.
             problem = _line_id_problem(to_store)
-            if problem is None and (not isinstance(capsule_id, str) or not capsule_id):
-                problem = f"capsule_id {capsule_id!r} is not a non-empty string"
+            if problem is None and to_store.get("capsule_id") not in (None, capsule_id):
+                # A signed entry is indexed under its recomputed id; a stored
+                # line carrying another one would be read back under that one.
+                problem = f"capsule_id {to_store['capsule_id']!r} is not the recomputed {capsule_id!r}"
             if problem is not None:
                 raise ValueError(problem)
             existing = self._record_row(capsule_id)
