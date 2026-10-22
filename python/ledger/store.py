@@ -37,6 +37,7 @@ import threading
 from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from dataclasses import dataclass, field
 from typing import Any
 
 from agent_action_capsule import Finding, VerificationResult, compute_capsule_id
@@ -66,7 +67,61 @@ from .segments import (
     verify_segment,
 )
 
-__all__ = ["LedgerStore"]
+__all__ = ["DuplicateRecord", "LedgerCorrupt", "LedgerStore", "RecoveryReport"]
+
+
+class DuplicateRecord(sqlite3.IntegrityError):
+    """:meth:`LedgerStore.append` found ``capsule_id`` already in the index and
+    wrote nothing. ``record`` is the stored entry (``None`` when its segment is
+    unmounted). Subclasses ``sqlite3.IntegrityError``, which a duplicate append
+    raised before this check existed (after its line had already been written)."""
+
+    def __init__(self, capsule_id: str, record: LedgerRecord | None) -> None:
+        super().__init__(f"capsule_id {capsule_id} is already in the ledger")
+        self.capsule_id = capsule_id
+        self.record = record
+
+
+class LedgerCorrupt(RuntimeError):
+    """:meth:`LedgerStore.recover` found segment bytes and the index in a state
+    it cannot reconcile without guessing (a complete line that is not a record,
+    or an indexed offset the segment does not reach)."""
+
+
+@dataclass(frozen=True)
+class RecoveryReport:
+    """What :meth:`LedgerStore.recover` changed. ``truncated_bytes`` is the
+    length of the torn last line it cut off; ``indexed_seqs`` are the seqs it
+    gave to complete lines the index lacked; ``skipped_offsets`` are byte
+    offsets of lines whose ``capsule_id`` was already indexed (left by a
+    duplicate append before :meth:`LedgerStore.append` checked first);
+    ``lookup_seqs`` are the seqs it added to the lookup index."""
+
+    truncated_bytes: int = 0
+    indexed_seqs: tuple[int, ...] = ()
+    skipped_offsets: tuple[int, ...] = ()
+    lookup_seqs: tuple[int, ...] = field(default_factory=tuple)
+
+    @property
+    def changed(self) -> bool:
+        return bool(self.truncated_bytes or self.indexed_seqs or self.lookup_seqs)
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Replace ``path`` with ``text`` so a crash or a concurrent reader sees the
+    old content or the new, never a truncated file: write a sibling temp file,
+    fsync it, rename it over ``path``, fsync the directory."""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(text)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp, path)
+    dir_fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
 
 _LOG = logging.getLogger(__name__)
 
@@ -207,6 +262,10 @@ class LedgerStore(LedgerAPI):
                 self._manifest = StoreManifest(log_id=self._log_id)
         else:
             self._manifest = None
+        # An unmanaged instance over a directory that a managed store owns
+        # (manifest.json present) reads it but never writes: its record-count
+        # rotation would touch a segment the manifest does not list.
+        self._read_only_unmanaged = not self._rotate_at_checkpoint and self._manifest_path.exists()
 
         self._correlation_fields = self._resolve_correlation_fields(correlation_fields)
         try:
@@ -220,7 +279,8 @@ class LedgerStore(LedgerAPI):
             )
             self._lookup = None
 
-        self._sync_write_segment()
+        if not self._read_only_unmanaged:
+            self._sync_write_segment()
 
     def set_checkpointer(self, checkpointer: Checkpointer) -> None:
         """Attach the :class:`~cll.ledger.segments.Checkpointer` rotation
@@ -329,7 +389,7 @@ class LedgerStore(LedgerAPI):
         return f"seg-{len(self._manifest.segments) + 1:06d}.jsonl"
 
     def _save_store_manifest(self) -> None:
-        self._manifest_path.write_text(json.dumps(self._manifest.to_dict(), indent=2))
+        _atomic_write_text(self._manifest_path, json.dumps(self._manifest.to_dict(), indent=2))
 
     def _resolve_segment_path(self, segment: str) -> Path:
         """Where ``segment``'s bytes actually live -- ``segments/`` if
@@ -414,7 +474,7 @@ class LedgerStore(LedgerAPI):
             range_proof=range_proof,
         )
         manifest_name = manifest_filename(self._log_id, cp.mmr_size)
-        (self._segments_dir / manifest_name).write_text(json.dumps(seg_manifest.to_dict(), indent=2))
+        _atomic_write_text(self._segments_dir / manifest_name, json.dumps(seg_manifest.to_dict(), indent=2))
 
         entry = self._manifest.entry(name)
         entry.manifest = f"segments/{manifest_name}"
@@ -472,6 +532,11 @@ class LedgerStore(LedgerAPI):
             preimage-excluded ``signature``/``key_id`` fields) so
             re-verify-from-storage needs nothing but the stored record.
         """
+        if self._read_only_unmanaged:
+            raise SegmentRotationError(
+                f"{self._root} is a managed store ({self._manifest_path.name} present); "
+                "open it with rotate_at_checkpoint=True to append"
+            )
         if admission is None:
             admission = AdmissionRequest(mode=UNSIGNED)
 
@@ -495,6 +560,12 @@ class LedgerStore(LedgerAPI):
             capsule_id = capsule.get("capsule_id") or compute_capsule_id(capsule)
 
         with self._lock:
+            # Checked before any byte is written: a duplicate used to reach the
+            # segment and only then fail the UNIQUE insert, leaving a line the
+            # index never named.
+            existing = self._record_row(capsule_id)
+            if existing is not None:
+                raise DuplicateRecord(capsule_id, self._existing_record(existing))
             self._sync_write_segment()
             fh = self._write_fh
             offset = fh.tell()
@@ -504,33 +575,14 @@ class LedgerStore(LedgerAPI):
             if consequential:
                 os.fsync(fh.fileno())
 
-            chain = to_store.get("chain") or {}
-            disposition = to_store.get("disposition") or {}
-            self._conn.execute(
-                "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
-                "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
-                "consequential, authenticity) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    capsule_id,
-                    self._write_segment_name,
-                    offset,
-                    to_store.get("timestamp"),
-                    to_store.get("operator"),
-                    to_store.get("developer"),
-                    to_store.get("action_type"),
-                    disposition.get("verdict_class"),
-                    chain.get("parent_capsule_id"),
-                    chain.get("relation"),
-                    1 if consequential else 0,
-                    resolution.authenticity,
-                ),
+            seq = self._index_line(
+                to_store,
+                capsule_id=capsule_id,
+                segment=self._write_segment_name,
+                offset=offset,
+                consequential=consequential,
+                authenticity=resolution.authenticity,
             )
-            self._conn.commit()
-
-            seq = self._conn.execute(
-                "SELECT seq FROM records WHERE capsule_id = ?", (capsule_id,)
-            ).fetchone()[0]
             record = LedgerRecord(
                 seq=seq,
                 capsule_id=capsule_id,
@@ -541,27 +593,190 @@ class LedgerStore(LedgerAPI):
                 envelopes=resolution.verified_envelopes,
             )
 
-            if self._lookup is not None:
-                try:
-                    self._lookup.record(
-                        seq=seq,
-                        ts=to_store.get("timestamp"),
-                        record_digest=capsule_id,
-                        segment=record.segment,
-                        byte_offset=offset,
-                        capsule=to_store,
-                    )
-                except sqlite3.DatabaseError:
-                    _LOG.warning(
-                        "lookup index write failed -- treating it as corrupt; lookups fall back "
-                        "to a full scan until `cll index rebuild`"
-                    )
-                    self._lookup = None
-
             if self._rotate_at_checkpoint and fh.tell() >= self._max_segment_bytes:
                 self._rotate_segment()
 
             return record
+
+    def _record_row(self, capsule_id: str) -> sqlite3.Row | None:
+        cur = self._conn.cursor()
+        cur.row_factory = sqlite3.Row
+        return cur.execute("SELECT * FROM records WHERE capsule_id = ?", (capsule_id,)).fetchone()
+
+    def _existing_record(self, row: sqlite3.Row) -> LedgerRecord | None:
+        try:
+            return self._row_to_record(row)
+        except SegmentUnmounted:
+            return None
+
+    def _index_line(
+        self,
+        to_store: dict,
+        *,
+        capsule_id: str,
+        segment: str,
+        offset: int,
+        consequential: bool,
+        authenticity: str,
+    ) -> int:
+        """Index one line already written at ``offset`` of ``segment``: the
+        records row, then the lookup index. Returns its seq."""
+        chain = to_store.get("chain") or {}
+        disposition = to_store.get("disposition") or {}
+        self._conn.execute(
+            "INSERT INTO records (capsule_id, segment, byte_offset, timestamp, operator, "
+            "developer, action_type, verdict_class, parent_capsule_id, chain_relation, "
+            "consequential, authenticity) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                capsule_id,
+                segment,
+                offset,
+                to_store.get("timestamp"),
+                to_store.get("operator"),
+                to_store.get("developer"),
+                to_store.get("action_type"),
+                disposition.get("verdict_class"),
+                chain.get("parent_capsule_id"),
+                chain.get("relation"),
+                1 if consequential else 0,
+                authenticity,
+            ),
+        )
+        self._conn.commit()
+        seq = self._conn.execute(
+            "SELECT seq FROM records WHERE capsule_id = ?", (capsule_id,)
+        ).fetchone()[0]
+        self._lookup_record(seq, to_store, capsule_id=capsule_id, segment=segment, offset=offset)
+        return seq
+
+    def _lookup_record(self, seq: int, capsule: dict, *, capsule_id: str, segment: str, offset: int) -> None:
+        if self._lookup is None:
+            return
+        try:
+            self._lookup.record(
+                seq=seq,
+                ts=capsule.get("timestamp"),
+                record_digest=capsule_id,
+                segment=segment,
+                byte_offset=offset,
+                capsule=capsule,
+            )
+        except sqlite3.DatabaseError:
+            _LOG.warning(
+                "lookup index write failed -- treating it as corrupt; lookups fall back "
+                "to a full scan until `cll index rebuild`"
+            )
+            self._lookup = None
+
+    def recover(self) -> RecoveryReport:
+        """Reconcile the active segment with the indexes after a crash. Managed
+        stores only.
+
+        Run it while holding whatever lock keeps other writers out: it is
+        recovery, not a read, and never runs on open. It truncates a torn last
+        line (one with no ``\\n``); indexes, in order, complete lines past the
+        index; skips a line whose ``capsule_id`` is already indexed (a
+        duplicate append left it before :meth:`append` checked first); and
+        catches the lookup index up to the records index. A complete line that
+        is not a JSON object, or an indexed offset the segment
+        does not reach, raises :class:`LedgerCorrupt` and changes nothing
+        further. Repeating it changes nothing.
+        """
+        if not self._rotate_at_checkpoint:
+            raise ValueError("recover() needs a managed store (rotate_at_checkpoint=True)")
+        with self._lock:
+            self._sync_write_segment()
+            name = self._write_segment_name
+            path = self._segments_dir / name
+            for key in [k for k in self._open_fhs if k.startswith(f"{name}:")]:
+                self._open_fhs.pop(key).close()
+            self._write_fh = None
+            self._write_segment_name = None
+
+            data = path.read_bytes()
+            keep = data.rfind(b"\n") + 1
+            truncated = len(data) - keep
+            if truncated:
+                with open(path, "r+b") as fh:
+                    fh.truncate(keep)
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                data = data[:keep]
+
+            rows = self._conn.execute(
+                "SELECT byte_offset FROM records WHERE segment = ? ORDER BY byte_offset DESC LIMIT 1",
+                (name,),
+            ).fetchone()
+            start = 0
+            if rows is not None:
+                last = rows[0]
+                end = data.find(b"\n", last)
+                if last >= len(data) or end < 0:
+                    raise LedgerCorrupt(
+                        f"{path}: the index names offset {last}, which the segment ({len(data)} bytes) does not reach"
+                    )
+                start = end + 1
+
+            indexed: list[int] = []
+            skipped: list[int] = []
+            offset = start
+            for raw in data[start:].splitlines(keepends=True):
+                try:
+                    line = json.loads(raw)
+                except ValueError as exc:
+                    raise LedgerCorrupt(f"{path}: line at offset {offset} is not JSON") from exc
+                if not isinstance(line, dict):
+                    raise LedgerCorrupt(f"{path}: line at offset {offset} is not a record")
+                # The id the line was indexed under: carried, else recomputed,
+                # as append and reindex derive it.
+                try:
+                    capsule_id = line.get("capsule_id") or compute_capsule_id(line)
+                except (TypeError, ValueError) as exc:
+                    raise LedgerCorrupt(f"{path}: line at offset {offset} has no capsule_id") from exc
+                if self._record_row(capsule_id) is not None:
+                    skipped.append(offset)
+                else:
+                    indexed.append(
+                        self._index_line(
+                            line,
+                            capsule_id=capsule_id,
+                            segment=name,
+                            offset=offset,
+                            consequential=True,
+                            authenticity=self._reindex_authenticity(line),
+                        )
+                    )
+                offset += len(raw)
+
+            lookup_seqs = self._catch_up_lookup()
+            self._sync_write_segment()
+            return RecoveryReport(
+                truncated_bytes=truncated,
+                indexed_seqs=tuple(indexed),
+                skipped_offsets=tuple(skipped),
+                lookup_seqs=lookup_seqs,
+            )
+
+    def _catch_up_lookup(self) -> tuple[int, ...]:
+        """Add to the lookup index the records rows it lacks: a crash between
+        the records commit and the lookup write leaves it behind."""
+        if self._lookup is None:
+            return ()
+        done = self._lookup.max_seq()
+        cur = self._conn.cursor()
+        cur.row_factory = sqlite3.Row
+        missing = cur.execute("SELECT * FROM records WHERE seq > ? ORDER BY seq", (done,)).fetchall()
+        added: list[int] = []
+        for row in missing:
+            record = self._existing_record(row)
+            if record is None:
+                continue
+            self._lookup_record(
+                row["seq"], record.capsule, capsule_id=row["capsule_id"], segment=row["segment"], offset=row["byte_offset"]
+            )
+            added.append(row["seq"])
+        return tuple(added)
 
     def import_jsonl(self, path: str | os.PathLike, *, consequential: bool = False) -> int:
         """Append every record from an external JSONL file, in file order.

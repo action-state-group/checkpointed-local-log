@@ -7,8 +7,31 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- **`LedgerStore.recover()`** reconciles a managed store's active segment with
+  its indexes after a crash: it truncates a torn last line, indexes complete
+  lines the index lacks, skips a line whose `capsule_id` is already indexed,
+  and catches the lookup index (`index.sqlite`) up to the records index. A
+  complete line that is not a JSON object, or an indexed offset past the end of
+  the segment, raises the new `LedgerCorrupt`. It returns a `RecoveryReport`.
+  It never runs on open: call it while holding the lock that keeps other
+  writers out (capsule-emit#358).
+
 ### Changed
 
+- **`LedgerStore.append` checks for a duplicate `capsule_id` before writing.**
+  It raises the new `DuplicateRecord` (a `sqlite3.IntegrityError` subclass,
+  carrying the stored record) and writes nothing. Before, the line reached the
+  segment and only the index insert failed, leaving a line the index never
+  named.
+- `manifest.json` and segment manifests are written atomically (temp file,
+  fsync, rename, directory fsync), so a crash or a concurrent reader never sees
+  a truncated manifest.
+- An unmanaged `LedgerStore` (`rotate_at_checkpoint=False`) over a directory
+  that has `manifest.json` reads the store but no longer touches a segment, and
+  its `append` raises `SegmentRotationError`. Before, its record-count rotation
+  could create a segment the manifest did not list.
 - Requires `scitt-cose>=0.4.3` (was `>=0.2.0`). Its receipt verifier, which
   the witness-stamp check uses, now rejects a receipt whose payload is
   attached, and one whose ES256 or ES384 signature is under a key on another

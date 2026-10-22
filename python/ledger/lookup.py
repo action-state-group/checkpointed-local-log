@@ -104,6 +104,11 @@ class LookupIndex:
             self._conn.execute("INSERT INTO correlations (correlation_id, seq) VALUES (?, ?)", (cid, seq))
         self._conn.commit()
 
+    def max_seq(self) -> int:
+        """The highest seq indexed here, 0 when empty."""
+        row = self._conn.execute("SELECT MAX(seq) FROM records").fetchone()
+        return row[0] or 0
+
     def rebuild(self, rows: Iterable[tuple[int, str | None, str, str, int, dict]]) -> None:
         """Wipe and reinsert from ``rows`` -- ``(seq, ts, record_digest,
         segment, byte_offset, capsule)`` in seq order. The caller (see
