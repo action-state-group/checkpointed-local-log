@@ -575,14 +575,22 @@ class LedgerStore(LedgerAPI):
             if consequential:
                 os.fsync(fh.fileno())
 
-            seq = self._index_line(
-                to_store,
-                capsule_id=capsule_id,
-                segment=self._write_segment_name,
-                offset=offset,
-                consequential=consequential,
-                authenticity=resolution.authenticity,
-            )
+            try:
+                seq = self._index_line(
+                    to_store,
+                    capsule_id=capsule_id,
+                    segment=self._write_segment_name,
+                    offset=offset,
+                    consequential=consequential,
+                    authenticity=resolution.authenticity,
+                )
+            except sqlite3.Error:
+                # The line is on disk but not indexed: take it back off, so a
+                # retry appends it at the same position and the segment never
+                # holds a line the index skipped over.
+                self._conn.rollback()
+                self._unwrite(offset)
+                raise
             record = LedgerRecord(
                 seq=seq,
                 capsule_id=capsule_id,
@@ -597,6 +605,17 @@ class LedgerStore(LedgerAPI):
                 self._rotate_segment()
 
             return record
+
+    def _unwrite(self, offset: int) -> None:
+        """Cut the active segment back to ``offset`` and reopen its write
+        handle there. Caller holds ``_lock``."""
+        name = self._write_segment_name
+        for key in [k for k in self._open_fhs if k.startswith(f"{name}:")]:
+            self._open_fhs.pop(key).close()
+        self._write_fh = None
+        self._write_segment_name = None
+        os.truncate(self._segments_dir / name, offset)
+        self._sync_write_segment()
 
     def _record_row(self, capsule_id: str) -> sqlite3.Row | None:
         cur = self._conn.cursor()
@@ -692,7 +711,6 @@ class LedgerStore(LedgerAPI):
         if not self._rotate_at_checkpoint:
             raise ValueError("recover() needs a managed store (rotate_at_checkpoint=True)")
         with self._lock:
-            lookup_seqs = self._catch_up_lookup()
             self._sync_write_segment()
             name = self._write_segment_name
             path = self._segments_dir / name
@@ -719,6 +737,7 @@ class LedgerStore(LedgerAPI):
                     start = last[0] + len(indexed_line)
                 fh.seek(start)
                 tail = fh.read()
+            lookup_seqs = self._catch_up_lookup()
 
             keep = tail.rfind(b"\n") + 1
             truncated = len(tail) - keep
@@ -818,7 +837,13 @@ class LedgerStore(LedgerAPI):
         for row in cur.execute("SELECT * FROM records ORDER BY seq").fetchall():
             if row["seq"] in present:
                 continue
-            record = self._existing_record(row)
+            try:
+                record = self._existing_record(row)
+            except ValueError as exc:
+                raise LedgerCorrupt(
+                    f"{self._segments_dir / row['segment']}: the index names a line at offset "
+                    f"{row['byte_offset']} that is not a record"
+                ) from exc
             if record is None:
                 continue
             if not self._lookup_record(
@@ -858,17 +883,16 @@ class LedgerStore(LedgerAPI):
                 if self._rotate_at_checkpoint
                 else self._existing_segments()
             )
-            leaves = list(self._leaves(segments))
             try:
-                self._insert_leaves(leaves)
+                self._insert_leaves(self._leaves(segments))
+                self._conn.commit()
             except BaseException:
                 self._conn.rollback()
                 raise
-            self._conn.commit()
 
-    def _insert_leaves(self, leaves: list) -> None:
-        """Replace the records index with ``leaves``, in one transaction the
-        caller commits."""
+    def _insert_leaves(self, leaves: Iterator[tuple[str, int, dict, str]]) -> None:
+        """Replace the records index with ``leaves``, streamed, in one
+        transaction the caller commits or rolls back."""
         self._conn.execute("DELETE FROM records")
         for segment, offset, capsule, capsule_id in leaves:
             chain = capsule.get("chain") or {}

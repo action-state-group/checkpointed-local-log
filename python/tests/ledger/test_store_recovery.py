@@ -383,3 +383,83 @@ def test_duplicate_of_a_record_in_an_archived_segment(tmp_path):
         store.append(dict(first.capsule))
     assert info.value.record is None
     store.close()
+
+
+def test_failed_index_write_takes_the_line_back(tmp_path, monkeypatch):
+    store = _managed(tmp_path)
+    store.append(_capsule(event="e0"))
+    real = store._index_line
+    calls = {"n": 0}
+
+    def flaky(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise sqlite3.OperationalError("database is locked")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(store, "_index_line", flaky)
+    retry = _capsule(event="e1")
+    with pytest.raises(sqlite3.OperationalError):
+        store.append(dict(retry))
+    store.append(_capsule(event="e2"))
+    store.append(dict(retry))
+    monkeypatch.undo()
+    before = [(r.seq, r.capsule["event"]) for r in store.scan()]
+    assert before == [(1, "e0"), (2, "e2"), (3, "e1")]
+
+    store.reindex()
+    store.rebuild_lookup_index()
+    assert [(r.seq, r.capsule["event"]) for r in store.scan()] == before
+    assert [(r.seq, r.capsule["event"]) for r in store.by_seq_range(1, 10)] == before
+    store.close()
+
+
+def test_recover_reports_corruption_when_a_lookup_gap_names_a_missing_line(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    second = store.append(_capsule())
+    store.close()
+    seg = _segment(tmp_path)
+    seg.write_bytes(seg.read_bytes().split(b"\n")[0] + b"\n")
+    with sqlite3.connect(tmp_path / "index.sqlite") as conn:
+        conn.execute("DELETE FROM records WHERE seq = ?", (second.seq,))
+
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt):
+        store.recover()
+    store.close()
+
+
+class _CommitFails:
+    """A connection whose commit fails once, delegating everything else."""
+
+    def __init__(self, conn):
+        object.__setattr__(self, "_conn", conn)
+        object.__setattr__(self, "armed", True)
+
+    def commit(self):
+        if self.armed:
+            object.__setattr__(self, "armed", False)
+            raise sqlite3.OperationalError("disk I/O error")
+        return self._conn.commit()
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def __setattr__(self, name, value):
+        setattr(self._conn, name, value)
+
+
+def test_reindex_rolls_back_a_failed_commit(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule(event="kept"))
+    store.close()
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write((json.dumps(_capsule(event="new"), separators=(",", ":")) + "\n").encode())
+
+    store = _managed(tmp_path)
+    store._conn = _CommitFails(store._conn)
+    with pytest.raises(sqlite3.OperationalError):
+        store.reindex()
+    assert [r.capsule["event"] for r in store.scan()] == ["kept"]
+    store.close()
