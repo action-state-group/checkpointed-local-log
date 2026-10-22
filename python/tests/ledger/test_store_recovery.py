@@ -9,8 +9,10 @@ import json
 import sqlite3
 
 import pytest
-from cll.ledger import DuplicateRecord, LedgerCorrupt, LedgerStore, SegmentRotationError
+from cll.checkpoint import MmrLedger
+from cll.ledger import DuplicateRecord, LedgerCorrupt, LedgerStore, MmrCheckpointer, SegmentRotationError
 from cll.ledger import store as store_module
+from cll.signing import LocalSigner
 
 _counter = itertools.count()
 
@@ -170,7 +172,7 @@ def test_recover_refuses_an_index_past_the_segment_end(tmp_path):
     seg.write_bytes(first_line)
 
     store = _managed(tmp_path)
-    with pytest.raises(LedgerCorrupt, match="does not reach"):
+    with pytest.raises(LedgerCorrupt, match="does not hold in full"):
         store.recover()
     store.close()
 
@@ -197,6 +199,7 @@ def test_manifest_write_is_atomic(tmp_path, monkeypatch):
     monkeypatch.undo()
 
     assert (tmp_path / "manifest.json").read_text() == before
+    assert not list(tmp_path.glob(".*.tmp"))
     store.close()
 
 
@@ -221,3 +224,162 @@ def test_unmanaged_instance_over_managed_store_reads_and_never_writes(tmp_path):
     reader.close()
 
     assert sorted(p.name for p in (tmp_path / "segments").iterdir()) == before
+
+
+def _with_orphan(root) -> tuple[dict, dict]:
+    """A store whose segment holds A, a pre-fix orphan copy of A, then B."""
+    store = _managed(root)
+    a = store.append(_capsule())
+    store.close()
+    with open(_segment(root), "ab") as fh:
+        fh.write((json.dumps(a.capsule, separators=(",", ":")) + "\n").encode())
+    store = _managed(root)
+    store.recover()
+    b = store.append(_capsule())
+    store.close()
+    return a.capsule, b.capsule
+
+
+def test_reindex_keeps_the_first_line_per_capsule_id(tmp_path):
+    a, b = _with_orphan(tmp_path)
+    store = _managed(tmp_path)
+    store.reindex()
+    assert [(r.seq, r.capsule["event"]) for r in store.scan()] == [(1, a["event"]), (2, b["event"])]
+    store.close()
+
+
+def test_rebuild_lookup_index_agrees_with_the_records_index(tmp_path):
+    a, b = _with_orphan(tmp_path)
+    store = _managed(tmp_path)
+    b_id = next(r.capsule_id for r in store.scan() if r.capsule["event"] == b["event"])
+    store.rebuild_lookup_index()
+    assert [r.capsule["event"] for r in store.by_seq_range(2, 2)] == [b["event"]]
+    assert store.by_digest(b_id).seq == 2
+    store.close()
+
+
+def test_reindex_failure_leaves_the_index_intact(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write(b"not json\n")
+    store = _managed(tmp_path)
+    with pytest.raises(ValueError):
+        store.reindex()
+    assert _seqs(store) == [1]
+    store.close()
+
+
+def test_recover_never_truncates_an_indexed_line(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.append(_capsule())
+    store.close()
+    seg = _segment(tmp_path)
+    data = seg.read_bytes()
+    seg.write_bytes(data[:-5])
+    before = seg.read_bytes()
+
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt, match="does not hold in full"):
+        store.recover()
+    assert seg.read_bytes() == before
+    store.close()
+
+
+def test_recover_refuses_a_record_whose_id_cannot_be_derived(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write(b'{"not":"a capsule"}\n')
+    store = _managed(tmp_path)
+    with pytest.raises(LedgerCorrupt, match="no capsule_id"):
+        store.recover()
+    store.close()
+
+
+def test_recover_fills_a_lookup_gap_and_an_unindexed_line_together(tmp_path):
+    store = _managed(tmp_path)
+    a = store.append(_capsule())
+    store.append(_capsule())
+    store.close()
+    with sqlite3.connect(tmp_path / "index.sqlite") as conn:
+        conn.execute("DELETE FROM records WHERE seq = ?", (a.seq,))
+    with open(_segment(tmp_path), "ab") as fh:
+        fh.write((json.dumps(_capsule(capsule_id="cd" * 32), separators=(",", ":")) + "\n").encode())
+
+    store = _managed(tmp_path)
+    report = store.recover()
+    assert report.lookup_seqs == (a.seq,) and report.indexed_seqs == (3,)
+    assert [r.seq for r in store.by_seq_range(1, 10)] == [1, 2, 3]
+    store.close()
+
+
+def test_recover_reports_only_lookup_rows_it_wrote(tmp_path, monkeypatch):
+    store = _managed(tmp_path)
+    a = store.append(_capsule())
+    store.close()
+    with sqlite3.connect(tmp_path / "index.sqlite") as conn:
+        conn.execute("DELETE FROM records WHERE seq = ?", (a.seq,))
+
+    store = _managed(tmp_path)
+
+    def fail(**kwargs):
+        raise sqlite3.DatabaseError("disk I/O error")
+
+    monkeypatch.setattr(store._lookup, "record", fail)
+    assert store.recover().lookup_seqs == ()
+    assert store._lookup is None
+    store.close()
+
+
+def test_recover_survives_an_unreadable_lookup_index(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    (tmp_path / "index.sqlite").write_bytes(b"not a database" * 100)
+    store = _managed(tmp_path)
+    assert store.recover().changed is False
+    store.close()
+
+
+def test_unmanaged_instance_refuses_reindex_and_lookup_rebuild(tmp_path):
+    store = _managed(tmp_path)
+    store.append(_capsule())
+    store.close()
+    reader = LedgerStore(tmp_path)
+    with pytest.raises(SegmentRotationError, match="reindex"):
+        reader.reindex()
+    with pytest.raises(SegmentRotationError, match="lookup index"):
+        reader.rebuild_lookup_index()
+    reader.close()
+
+
+def _rotating(root):
+    store = LedgerStore(root, rotate_at_checkpoint=True, max_segment_bytes=300)
+    signer = LocalSigner(key_id="test-key", secret=b"secret-bytes-for-hmac-signing-01")
+    store.set_checkpointer(MmrCheckpointer(mmr=MmrLedger(store), signer=signer))
+    return store
+
+
+def test_recover_after_rotation_is_a_no_op_and_manifests_leave_no_temp_files(tmp_path):
+    store = _rotating(tmp_path)
+    while len(store.list_segments()) < 2:
+        store.append(_capsule(detail="x" * 50))
+    assert store.recover().changed is False
+    assert not list(tmp_path.rglob(".*.tmp"))
+    store.close()
+
+
+def test_duplicate_of_a_record_in_an_archived_segment(tmp_path):
+    store = _rotating(tmp_path)
+    first = store.append(_capsule(detail="x" * 50))
+    while len(store.list_segments()) < 2:
+        store.append(_capsule(detail="x" * 50))
+    store.unmount_segment(store.list_segments()[0].name)
+    with pytest.raises(DuplicateRecord) as info:
+        store.append(dict(first.capsule))
+    assert info.value.record is None
+    store.close()
