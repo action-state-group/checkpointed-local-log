@@ -969,7 +969,11 @@ def verify_witness_stamp_tristate(
         )
     except Exception as exc:
         return StampVerdict.INVALID, [f"receipt could not be evaluated: {exc}"]
-    if probe.root is None:
+    # scitt-cose names the failure stage: "signature" means a proof rebuilt a
+    # root for this entry_hash and only the (random-key) signature check
+    # failed, i.e. a well-formed receipt from an unknown key. Anything else is
+    # malformed.
+    if probe.failed_at != "signature":
         return StampVerdict.INVALID, [
             "receipt is not a structurally valid COSE Receipt bound to this checkpoint"
         ] + list(probe.errors)

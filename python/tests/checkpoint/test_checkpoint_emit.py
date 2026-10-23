@@ -431,6 +431,31 @@ def test_verify_witness_stamp_tristate_garbage_receipt_is_invalid_even_unpinned(
     assert verdict is StampVerdict.INVALID
 
 
+def test_verify_witness_stamp_tristate_malformed_receipt_is_invalid_even_unpinned():
+    """A genuine receipt with a malformed trailing inclusion proof decodes and
+    reaches scitt-cose, which reports a structure failure (failed_at is not
+    "signature"), so the unpinned probe gives INVALID, not UNVERIFIED."""
+    import base64
+
+    import cbor2
+
+    from cll.checkpoint.emit import StampVerdict, verify_witness_stamp_tristate
+
+    cp = _cp_for_stamp_tests()
+    genuine = _genuine_witness_record(cp)
+    protected, unprotected, payload, signature = cbor2.loads(base64.b64decode(genuine.receipt_b64)).value
+    proofs = list(unprotected[396][-1]) + [cbor2.dumps([0, 0, []])]
+    malformed = cbor2.dumps(cbor2.CBORTag(18, [protected, {396: {-1: proofs}}, payload, signature]))
+    stamp = WitnessRecord(
+        ts_url=genuine.ts_url, entry_hash=genuine.entry_hash,
+        receipt_b64=base64.b64encode(malformed).decode(),
+        leaf_index=genuine.leaf_index, tree_size=genuine.tree_size,
+    )
+    verdict, errors = verify_witness_stamp_tristate(cp, stamp)
+    assert verdict is StampVerdict.INVALID
+    assert any("not a structurally valid COSE Receipt" in e for e in errors)
+
+
 def test_no_witness_has_a_built_in_key(monkeypatch):
     """A stamp is trusted only under a key the caller supplies -- whatever its
     URL, including the deprecated DEFAULT_TS_URL, and even when the deprecated
