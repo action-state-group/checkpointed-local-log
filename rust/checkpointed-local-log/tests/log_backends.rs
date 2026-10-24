@@ -580,8 +580,9 @@ mod sqlite {
         );
     }
 
-    /// A failure after the metadata row was updated rolls the whole change
-    /// back: the colliding node row makes the insert fail late.
+    /// A failure after the metadata row and the nodes were written rolls the
+    /// whole change back: a trigger makes the last insert (the witness row)
+    /// fail.
     #[test]
     fn a_failed_append_cll_rolls_back() {
         let dir = tempfile::tempdir().unwrap();
@@ -595,14 +596,16 @@ mod sqlite {
             ..StateAppend::default()
         };
         let conn = Connection::open(&path).unwrap();
-        conn.execute(
-            "INSERT INTO cll_nodes(log_id,position,node) VALUES('rollback',0,?)",
-            [node(9)],
+        conn.execute_batch(
+            "CREATE TRIGGER fail_witness BEFORE INSERT ON cll_witnesses
+             BEGIN SELECT RAISE(ABORT, 'injected'); END",
         )
         .unwrap();
-        assert!(store.append_cll(0, None, &update).is_err());
-        conn.execute("DELETE FROM cll_nodes WHERE log_id='rollback'", [])
-            .unwrap();
+        assert_eq!(
+            store.append_cll(0, None, &update).unwrap_err().code(),
+            ErrorCode::Storage
+        );
+        conn.execute_batch("DROP TRIGGER fail_witness").unwrap();
         // Nothing of the failed change remains, and the log accepts it now.
         assert_eq!(store.load_cll().unwrap(), State::default());
         store.append_cll(0, None, &update).unwrap();
