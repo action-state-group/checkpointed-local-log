@@ -46,6 +46,16 @@ pub(crate) fn witness_from_row(row: &WitnessRow) -> Result<WitnessState> {
     wire::witness_from_wire(&wire)
 }
 
+/// Decodes the metadata row alone: the state without nodes and witness rows,
+/// whose `size` is the number of stored nodes.
+pub(crate) fn header_from_metadata(metadata: &[u8]) -> Result<State> {
+    let mut wire: WireState = serde_json::from_slice(metadata)
+        .map_err(|e| Error::corrupt(format!("decode CLL metadata: {e}")))?;
+    wire.nodes.clear();
+    wire.witnesses.clear();
+    wire::decode_state(&wire, super::ErrorCode::Corrupt)
+}
+
 /// Assembles and validates the full state from metadata, ordered node rows
 /// and witness rows.
 pub(crate) fn state_from_rows(

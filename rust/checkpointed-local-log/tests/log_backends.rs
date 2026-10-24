@@ -4,8 +4,8 @@
 //! writer exclusion and torn tails, and SQL coexistence.
 
 use cll::log::{
-    AppendInput, AppendOutcome, Backend, CheckpointStateStore, EntrySource, EntryStore, ErrorCode,
-    State, Timestamp, WitnessState, WitnessStateStore,
+    AppendInput, AppendOutcome, Backend, CheckpointState, CheckpointStateStore, EntrySource,
+    EntryStore, ErrorCode, State, StateAppend, Timestamp, WitnessState, WitnessStateStore,
 };
 use std::sync::Arc;
 
@@ -120,12 +120,138 @@ fn identical_witness_commit(store: &dyn Backend) {
     assert_eq!(store.get_witness("primary", 1).unwrap(), Some(row));
 }
 
+fn node(byte: u8) -> Vec<u8> {
+    vec![byte; 32]
+}
+
+fn checkpoint(size: u64, indexed_seq: u64) -> CheckpointState {
+    CheckpointState {
+        bytes: vec![size as u8; 8],
+        size,
+        indexed_seq,
+        peaks: vec![node(9)],
+    }
+}
+
+/// `append_cll` is `commit_cll` for a caller holding only the change: the
+/// same compare-and-set and transition rules, and failed calls change nothing.
+fn append_cll_checks(store: &dyn Backend) {
+    let first = StateAppend {
+        nodes: vec![node(1)],
+        indexed_seq: 1,
+        ..StateAppend::default()
+    };
+    store.append_cll(0, None, &first).unwrap();
+    let mut second = StateAppend {
+        nodes: vec![node(2), node(3)],
+        indexed_seq: 2,
+        checkpoint: Some(checkpoint(3, 2)),
+        witnesses: vec![witness("primary", 3)],
+        ..StateAppend::default()
+    };
+    store.append_cll(1, None, &second).unwrap();
+    let expected = State {
+        size: 3,
+        nodes: vec![node(1), node(2), node(3)],
+        indexed_seq: 2,
+        checkpoint: Some(checkpoint(3, 2)),
+        witnesses: vec![witness("primary", 3)],
+        ..State::default()
+    };
+    assert_eq!(store.load_cll().unwrap(), expected);
+
+    let cp = checkpoint(3, 2).bytes;
+    let grown = |nodes: Vec<Vec<u8>>, indexed_seq: u64| StateAppend {
+        nodes,
+        indexed_seq,
+        checkpoint: Some(checkpoint(3, 2)),
+        ..StateAppend::default()
+    };
+    // Compare-and-set: a stale size or checkpoint is contention.
+    let one = grown(vec![node(4)], 3);
+    for (size, bytes) in [
+        (1, Some(cp.as_slice())),
+        (3, None),
+        (3, Some(&b"other"[..])),
+    ] {
+        assert_eq!(
+            store.append_cll(size, bytes, &one).unwrap_err().code(),
+            ErrorCode::Contention
+        );
+    }
+    // Invalid changes: a node of the wrong width, a size that is not an MMR
+    // of indexedSeq leaves, indexedSeq moving backward.
+    for (bad, code) in [
+        (grown(vec![vec![4; 31]], 3), ErrorCode::Invalid),
+        (grown(vec![node(4), node(5)], 3), ErrorCode::Invalid),
+        (grown(vec![], 1), ErrorCode::Invalid),
+    ] {
+        assert_eq!(
+            store.append_cll(3, Some(&cp), &bad).unwrap_err().code(),
+            code
+        );
+    }
+    // Checkpoint rules: it cannot be removed, move back or change in place.
+    let mut removed = grown(vec![node(4)], 3);
+    removed.checkpoint = None;
+    let mut backward = grown(vec![node(4)], 3);
+    backward.checkpoint = Some(checkpoint(1, 1));
+    let mut changed = grown(vec![node(4)], 3);
+    changed.checkpoint = Some(CheckpointState {
+        bytes: b"other".to_vec(),
+        ..checkpoint(3, 2)
+    });
+    for bad in [removed, backward, changed] {
+        assert_eq!(
+            store.append_cll(3, Some(&cp), &bad).unwrap_err().code(),
+            ErrorCode::Contention
+        );
+    }
+    // A witness key that exists with different checkpoint bytes is contention.
+    let mut conflicting = grown(vec![node(4)], 3);
+    let mut row = witness("primary", 3);
+    row.checkpoint = b"different".to_vec();
+    conflicting.witnesses = vec![row];
+    assert_eq!(
+        store
+            .append_cll(3, Some(&cp), &conflicting)
+            .unwrap_err()
+            .code(),
+        ErrorCode::Contention
+    );
+    assert_eq!(store.load_cll().unwrap(), expected);
+
+    // The same key with identical checkpoint bytes keeps the stored row; a
+    // new key is added with the new node.
+    let mut attempted = witness("primary", 3);
+    attempted.attempts = 5;
+    second = grown(vec![node(4)], 3);
+    second.witnesses = vec![attempted, witness("secondary", 3)];
+    store.append_cll(3, Some(&cp), &second).unwrap();
+    let loaded = store.load_cll().unwrap();
+    assert_eq!(loaded.size, 4);
+    assert_eq!(loaded.nodes.len(), 4);
+    assert_eq!(loaded.indexed_seq, 3);
+    assert_eq!(loaded.witnesses.len(), 2);
+    assert_eq!(
+        store.get_witness("primary", 3).unwrap(),
+        Some(witness("primary", 3))
+    );
+    assert_eq!(
+        store.get_witness("secondary", 3).unwrap(),
+        Some(witness("secondary", 3))
+    );
+    // commit_cll still accepts the grown state it produced.
+    store.commit_cll(4, Some(&cp), &loaded).unwrap();
+}
+
 #[test]
 fn memory_backend() {
     use cll::log::memory::MemoryStore;
     concurrent_appends(Arc::new(MemoryStore::new()));
     results_are_copies(&MemoryStore::new());
     identical_witness_commit(&MemoryStore::new());
+    append_cll_checks(&MemoryStore::new());
 }
 
 #[cfg(unix)]
@@ -151,6 +277,7 @@ mod jsonl {
         concurrent_appends(Arc::new(JsonlStore::open(fresh(dir.path(), "a")).unwrap()));
         results_are_copies(&JsonlStore::open(fresh(dir.path(), "b")).unwrap());
         identical_witness_commit(&JsonlStore::open(fresh(dir.path(), "c")).unwrap());
+        append_cll_checks(&JsonlStore::open(fresh(dir.path(), "e")).unwrap());
     }
 
     #[test]
@@ -360,7 +487,7 @@ mod sqlite {
     fn shared_checks() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("db.sqlite");
-        for log in ["a", "b", "c", "d"] {
+        for log in ["a", "b", "c", "d", "e"] {
             SqliteStore::init(&path, log).unwrap();
         }
         concurrent_appends(Arc::new(SqliteStore::open(&path, "a").unwrap()));
@@ -370,6 +497,7 @@ mod sqlite {
             &SqliteStore::open(&path, "c").unwrap(),
         );
         identical_witness_commit(&SqliteStore::open(&path, "d").unwrap());
+        append_cll_checks(&SqliteStore::open(&path, "e").unwrap());
         // Other logs are untouched.
         assert_eq!(
             SqliteStore::open(&path, "c")
@@ -379,6 +507,50 @@ mod sqlite {
                 .len(),
             2
         );
+    }
+
+    /// One cut: a leaf, a checkpoint at the new size and two witness rows.
+    fn cut(store: &SqliteStore, leaves: u64) {
+        let size = cll::mmr::node_count(leaves);
+        let before = cll::mmr::node_count(leaves - 1);
+        let held = (leaves > 1).then(|| checkpoint(before, leaves - 1).bytes);
+        let update = StateAppend {
+            nodes: (before..size).map(|i| node(i as u8)).collect(),
+            indexed_seq: leaves,
+            checkpoint: Some(checkpoint(size, leaves)),
+            witnesses: ["a", "b"].map(|id| witness(id, size)).to_vec(),
+            ..StateAppend::default()
+        };
+        store.append_cll(before, held.as_deref(), &update).unwrap();
+    }
+
+    /// The cost of a commit does not grow with history: the last cuts of a
+    /// log ten times longer take about as long as those of a short one. The
+    /// full-state read this replaced grew linearly (about tenfold here).
+    #[test]
+    fn append_cll_cost_does_not_grow_with_history() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.sqlite");
+        SqliteStore::init(&path, "cuts").unwrap();
+        let store = SqliteStore::open(&path, "cuts").unwrap();
+        let mut leaves = 0;
+        let mut window = |until: u64| {
+            let started = std::time::Instant::now();
+            while leaves < until {
+                leaves += 1;
+                cut(&store, leaves);
+            }
+            started.elapsed()
+        };
+        window(300);
+        let short = window(400);
+        window(3_000);
+        let long = window(3_100);
+        assert!(
+            long < short * 3,
+            "100 cuts took {short:?} at 400 cuts of history and {long:?} at 3100"
+        );
+        assert_eq!(store.load_cll().unwrap().indexed_seq, 3_100);
     }
 
     #[test]

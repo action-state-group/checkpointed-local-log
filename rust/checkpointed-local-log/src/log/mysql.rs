@@ -16,8 +16,8 @@ use super::engine;
 use super::sql::{self, WitnessRow};
 use super::{
     validate_identifier, AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore,
-    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, Timestamp, WitnessState,
-    WitnessStateStore,
+    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend, Timestamp,
+    WitnessState, WitnessStateStore,
 };
 use ::mysql::consts::CapabilityFlags;
 use ::mysql::prelude::FromRow;
@@ -402,6 +402,54 @@ impl CheckpointStateStore for MysqlStore {
                 .map_err(classify)?;
             }
             for row in witnesses {
+                tx.exec_drop(
+                    "INSERT INTO cll_witnesses(log_id,witness_id,checkpoint_size,attempts,witness) VALUES(?,?,?,?,?)",
+                    (
+                        log_id,
+                        &row.witness_id,
+                        row.checkpoint_size.to_string(),
+                        row.attempts,
+                        sql::witness_json(row)?,
+                    ),
+                )
+                .map_err(classify)?;
+            }
+            Ok(())
+        })
+    }
+
+    /// Reads the metadata row and the rows for the keys in `update` only, so
+    /// its cost does not grow with the log's history.
+    fn append_cll(
+        &self,
+        expected_size: u64,
+        expected_checkpoint: Option<&[u8]>,
+        update: &StateAppend,
+    ) -> Result<()> {
+        self.write(|tx, log_id| {
+            let metadata = lock_metadata(tx, log_id)?;
+            let current = sql::header_from_metadata(&metadata)?;
+            let next = engine::apply_append(&current, expected_size, expected_checkpoint, update)?;
+            let mut added = Vec::new();
+            for row in &update.witnesses {
+                let stored = find_witness(tx, log_id, &row.witness_id, row.checkpoint_size)?;
+                if engine::merge_witness(stored.as_ref(), row)? {
+                    added.push(row);
+                }
+            }
+            tx.exec_drop(
+                "UPDATE cll_meta SET state=? WHERE log_id=?",
+                (sql::metadata_json(&next)?, log_id),
+            )
+            .map_err(classify)?;
+            for (offset, node) in update.nodes.iter().enumerate() {
+                tx.exec_drop(
+                    "INSERT INTO cll_nodes(log_id,position,node) VALUES(?,?,?)",
+                    (log_id, current.size + offset as u64, node),
+                )
+                .map_err(classify)?;
+            }
+            for row in added {
                 tx.exec_drop(
                     "INSERT INTO cll_witnesses(log_id,witness_id,checkpoint_size,attempts,witness) VALUES(?,?,?,?,?)",
                     (
