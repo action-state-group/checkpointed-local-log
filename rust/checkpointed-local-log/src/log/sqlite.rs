@@ -12,8 +12,8 @@ use super::engine;
 use super::sql::{self, WitnessRow};
 use super::{
     validate_identifier, AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore,
-    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, Timestamp, WitnessState,
-    WitnessStateStore,
+    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend, Timestamp,
+    WitnessState, WitnessStateStore,
 };
 use rusqlite::types::ValueRef;
 use rusqlite::{
@@ -227,16 +227,19 @@ fn witness_rows(tx: &Transaction<'_>, log_id: &str) -> Result<Vec<WitnessRow>> {
     rows.collect::<rusqlite::Result<_>>().map_err(classify)
 }
 
+fn metadata_row(tx: &Transaction<'_>, log_id: &str) -> Result<Vec<u8>> {
+    tx.query_row(
+        "SELECT state FROM cll_meta WHERE log_id=?",
+        [log_id],
+        |row| bytes(row.get_ref(0)?),
+    )
+    .optional()
+    .map_err(classify)?
+    .ok_or_else(|| Error::corrupt("missing CLL metadata; call init"))
+}
+
 fn load_state(tx: &Transaction<'_>, log_id: &str) -> Result<State> {
-    let metadata = tx
-        .query_row(
-            "SELECT state FROM cll_meta WHERE log_id=?",
-            [log_id],
-            |row| bytes(row.get_ref(0)?),
-        )
-        .optional()
-        .map_err(classify)?
-        .ok_or_else(|| Error::corrupt("missing CLL metadata; call init"))?;
+    let metadata = metadata_row(tx, log_id)?;
     let mut statement = tx
         .prepare("SELECT position,node FROM cll_nodes WHERE log_id=? ORDER BY position")
         .map_err(classify)?;
@@ -415,6 +418,73 @@ impl CheckpointStateStore for SqliteStore {
             }
             Ok(())
         })
+    }
+
+    /// Reads the metadata row and the rows for the keys in `update` only, so
+    /// its cost does not grow with the log's history.
+    fn append_cll(
+        &self,
+        expected_size: u64,
+        expected_checkpoint: Option<&[u8]>,
+        update: &StateAppend,
+    ) -> Result<()> {
+        self.write(|tx, log_id| {
+            Self::append_cll_in(tx, log_id, expected_size, expected_checkpoint, update)
+        })
+    }
+}
+
+impl SqliteStore {
+    fn append_cll_in(
+        tx: &Transaction<'_>,
+        log_id: &str,
+        expected_size: u64,
+        expected_checkpoint: Option<&[u8]>,
+        update: &StateAppend,
+    ) -> Result<()> {
+        let current = sql::header_from_metadata(&metadata_row(tx, log_id)?)?;
+        let last: Option<i64> = tx
+            .query_row(
+                "SELECT MAX(position) FROM cll_nodes WHERE log_id=?",
+                [log_id],
+                |row| row.get(0),
+            )
+            .map_err(classify)?;
+        engine::check_header(&current, last.map(|last| last as u64))?;
+        let next = engine::apply_append(&current, expected_size, expected_checkpoint, update)?;
+        let mut added = Vec::new();
+        for row in &update.witnesses {
+            let stored = find_witness(tx, log_id, &row.witness_id, row.checkpoint_size)?;
+            if engine::merge_witness(stored.as_ref(), row)? {
+                added.push(row);
+            }
+        }
+        tx.execute(
+            "UPDATE cll_meta SET state=? WHERE log_id=?",
+            params![sql::metadata_json(&next)?, log_id],
+        )
+        .map_err(classify)?;
+        for (offset, node) in update.nodes.iter().enumerate() {
+            tx.execute(
+                "INSERT INTO cll_nodes(log_id,position,node) VALUES(?,?,?)",
+                params![log_id, (current.size + offset as u64) as i64, node],
+            )
+            .map_err(classify)?;
+        }
+        for row in added {
+            tx.execute(
+                "INSERT INTO cll_witnesses(log_id,witness_id,checkpoint_size,attempts,witness) VALUES(?,?,?,?,?)",
+                params![
+                    log_id,
+                    row.witness_id,
+                    row.checkpoint_size.to_string(),
+                    row.attempts,
+                    sql::witness_json(row)?
+                ],
+            )
+            .map_err(classify)?;
+        }
+        Ok(())
     }
 }
 

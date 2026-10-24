@@ -310,6 +310,21 @@ pub struct WitnessState {
     pub last_error: Option<String>,
 }
 
+/// What [`CheckpointStateStore::append_cll`] adds to the stored state: the
+/// new nodes and witness rows, and the new scalar fields. The stored size
+/// plus `nodes.len()` is the new `size`.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StateAppend {
+    pub nodes: Vec<Vec<u8>>,
+    pub indexed_seq: u64,
+    pub first_pending_at: Option<Timestamp>,
+    pub checkpoint: Option<CheckpointState>,
+    /// Rows to add. A key the store already holds is accepted when its
+    /// checkpoint bytes are identical (the stored row is kept) and is
+    /// `contention` otherwise, as in [`CheckpointStateStore::commit_cll`].
+    pub witnesses: Vec<WitnessState>,
+}
+
 /// `EntrySource`: bounded scans after a dense sequence position.
 pub trait EntrySource {
     /// Entries with `seq > after_seq`, ascending, at most `limit`
@@ -342,6 +357,38 @@ pub trait CheckpointStateStore {
         expected_checkpoint: Option<&[u8]>,
         next: &State,
     ) -> Result<()>;
+
+    /// [`commit_cll`](Self::commit_cll) for a caller that holds only the
+    /// change: the same compare-and-set and transition rules, as if `next`
+    /// were the stored state extended by `update`. The SQL backends override
+    /// it so the cost of a commit does not grow with the log's history;
+    /// the default loads the state and calls `commit_cll`.
+    fn append_cll(
+        &self,
+        expected_size: u64,
+        expected_checkpoint: Option<&[u8]>,
+        update: &StateAppend,
+    ) -> Result<()> {
+        let mut next = self.load_cll()?;
+        next.size = next
+            .size
+            .checked_add(update.nodes.len() as u64)
+            .ok_or_else(|| Error::invalid("CLL size overflows"))?;
+        next.nodes.extend(update.nodes.iter().cloned());
+        next.indexed_seq = update.indexed_seq;
+        next.first_pending_at = update.first_pending_at;
+        next.checkpoint = update.checkpoint.clone();
+        // Rows for keys the store holds are replaced by the update's, so a
+        // differing checkpoint surfaces as contention; all of the update's
+        // rows are kept, so a repeated key is invalid, as in SQL.
+        next.witnesses.retain(|held| {
+            !update.witnesses.iter().any(|row| {
+                row.witness_id == held.witness_id && row.checkpoint_size == held.checkpoint_size
+            })
+        });
+        next.witnesses.extend(update.witnesses.iter().cloned());
+        self.commit_cll(expected_size, expected_checkpoint, &next)
+    }
 }
 
 /// `WitnessStateStore`: independent witness-delivery state.

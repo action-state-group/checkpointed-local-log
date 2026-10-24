@@ -9,8 +9,9 @@
 
 use super::{
     AppendInput, AppendOutcome, AppendResult, CheckpointState, Entry, Error, ErrorCode, Result,
-    State, Timestamp, WitnessState, ENTRY_BYTES, MAX_CHECKPOINT_BYTES, MAX_PORTABLE_INTEGER,
-    MAX_REASON_BYTES, MAX_SCAN_LIMIT, MAX_WITNESSES, MAX_WITNESS_RESPONSE_BYTES,
+    State, StateAppend, Timestamp, WitnessState, ENTRY_BYTES, MAX_CHECKPOINT_BYTES,
+    MAX_PORTABLE_INTEGER, MAX_REASON_BYTES, MAX_SCAN_LIMIT, MAX_WITNESSES,
+    MAX_WITNESS_RESPONSE_BYTES,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -240,9 +241,8 @@ pub(crate) fn apply_cll(
     })
 }
 
-/// The checkpoint and witness-merge rules shared by live commits and journal
-/// replay. Returns the witness rows `next` adds.
-fn validate_transition(current: &State, next: &State) -> Result<Vec<WitnessState>> {
+/// The checkpoint rule shared by every commit path.
+fn validate_checkpoint_transition(current: &State, next: &State) -> Result<()> {
     if next.indexed_seq < current.indexed_seq {
         return Err(Error::invalid("CLL state is not append-only"));
     }
@@ -258,6 +258,74 @@ fn validate_transition(current: &State, next: &State) -> Result<Vec<WitnessState
         }
         _ => {}
     }
+    Ok(())
+}
+
+/// Rejects a stored header (`size` the node count, `nodes` and `witnesses`
+/// empty) that breaks the state invariants, or whose node rows do not end at
+/// `size - 1` (`max_position` is `None` for no rows): durable `corrupt`
+/// data, as loading the whole state would report it.
+pub(crate) fn check_header(header: &State, max_position: Option<u64>) -> Result<()> {
+    validate_state_metadata(header, header.size, ErrorCode::Corrupt)?;
+    if max_position != header.size.checked_sub(1) {
+        return Err(Error::corrupt("stored node positions are not dense"));
+    }
+    Ok(())
+}
+
+/// The `append_cll` compare-and-set against the stored header (checked with
+/// [`check_header`]): compares, validates the change and
+/// applies the checkpoint rule. Returns the new header (`size`, scalar fields
+/// and checkpoint; `nodes` empty, `witnesses` the rows to resolve with
+/// [`merge_witness`]).
+pub(crate) fn apply_append(
+    current: &State,
+    expected_size: u64,
+    expected_checkpoint: Option<&[u8]>,
+    update: &StateAppend,
+) -> Result<State> {
+    if current.size != expected_size
+        || !same_checkpoint(current.checkpoint.as_ref(), expected_checkpoint)
+    {
+        return Err(Error::contention("CLL state changed"));
+    }
+    let size = current
+        .size
+        .checked_add(update.nodes.len() as u64)
+        .ok_or_else(|| Error::invalid("CLL size overflows"))?;
+    let next = State {
+        size,
+        nodes: Vec::new(),
+        indexed_seq: update.indexed_seq,
+        first_pending_at: update.first_pending_at,
+        checkpoint: update.checkpoint.clone(),
+        witnesses: update.witnesses.clone(),
+    };
+    validate_state_metadata(&next, size, ErrorCode::Invalid)?;
+    if update.nodes.iter().any(|node| node.len() != ENTRY_BYTES) {
+        return Err(Error::invalid("node has the wrong width"));
+    }
+    validate_checkpoint_transition(current, &next)?;
+    Ok(next)
+}
+
+/// Whether an added witness row `row` must be inserted, given the stored row
+/// for its key: `true` when none, `false` when the stored row has the same
+/// checkpoint bytes, and `contention` when it differs.
+pub(crate) fn merge_witness(stored: Option<&WitnessState>, row: &WitnessState) -> Result<bool> {
+    match stored {
+        None => Ok(true),
+        Some(held) if held.checkpoint != row.checkpoint => {
+            Err(Error::contention("witness checkpoint changed"))
+        }
+        Some(_) => Ok(false),
+    }
+}
+
+/// The checkpoint and witness-merge rules shared by live commits and journal
+/// replay. Returns the witness rows `next` adds.
+fn validate_transition(current: &State, next: &State) -> Result<Vec<WitnessState>> {
+    validate_checkpoint_transition(current, next)?;
     let existing: HashMap<(&str, u64), &WitnessState> = current
         .witnesses
         .iter()
