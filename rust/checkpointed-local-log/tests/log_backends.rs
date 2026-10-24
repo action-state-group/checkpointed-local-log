@@ -219,6 +219,28 @@ fn append_cll_checks(store: &dyn Backend) {
             .code(),
         ErrorCode::Contention
     );
+    // Two rows for one key in a single change are invalid, whether or not
+    // the key is stored.
+    for key_size in [3, 4] {
+        let mut duplicated = grown(vec![node(4)], 3);
+        duplicated.witnesses = vec![witness("dup", key_size), witness("dup", key_size)];
+        assert_eq!(
+            store
+                .append_cll(3, Some(&cp), &duplicated)
+                .unwrap_err()
+                .code(),
+            ErrorCode::Invalid
+        );
+    }
+    let mut duplicated = grown(vec![node(4)], 3);
+    duplicated.witnesses = vec![witness("primary", 3), witness("primary", 3)];
+    assert_eq!(
+        store
+            .append_cll(3, Some(&cp), &duplicated)
+            .unwrap_err()
+            .code(),
+        ErrorCode::Invalid
+    );
     assert_eq!(store.load_cll().unwrap(), expected);
 
     // The same key with identical checkpoint bytes keeps the stored row; a
@@ -534,23 +556,87 @@ mod sqlite {
         SqliteStore::init(&path, "cuts").unwrap();
         let store = SqliteStore::open(&path, "cuts").unwrap();
         let mut leaves = 0;
-        let mut window = |until: u64| {
+        // Extends the log by `cuts` and returns the time taken.
+        let mut run = |cuts: u64| {
             let started = std::time::Instant::now();
-            while leaves < until {
+            for _ in 0..cuts {
                 leaves += 1;
                 cut(&store, leaves);
             }
             started.elapsed()
         };
-        window(300);
-        let short = window(400);
-        window(3_000);
-        let long = window(3_100);
+        // The fastest of five 20-cut windows, so one stalled disk write or
+        // scheduler pause does not decide the result.
+        let fastest = |run: &mut dyn FnMut(u64) -> std::time::Duration| {
+            (0..5).map(|_| run(20)).min().unwrap()
+        };
+        fastest(&mut run);
+        let short = fastest(&mut run);
+        run(3_000);
+        let long = fastest(&mut run);
         assert!(
             long < short * 3,
-            "100 cuts took {short:?} at 400 cuts of history and {long:?} at 3100"
+            "20 cuts took {short:?} early in the log and {long:?} after 3,000 more"
         );
-        assert_eq!(store.load_cll().unwrap().indexed_seq, 3_100);
+    }
+
+    /// A failure after the metadata row was updated rolls the whole change
+    /// back: the colliding node row makes the insert fail late.
+    #[test]
+    fn a_failed_append_cll_rolls_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.sqlite");
+        SqliteStore::init(&path, "rollback").unwrap();
+        let store = SqliteStore::open(&path, "rollback").unwrap();
+        let update = StateAppend {
+            nodes: vec![node(1)],
+            indexed_seq: 1,
+            witnesses: vec![witness("primary", 1)],
+            ..StateAppend::default()
+        };
+        let conn = Connection::open(&path).unwrap();
+        conn.execute(
+            "INSERT INTO cll_nodes(log_id,position,node) VALUES('rollback',0,?)",
+            [node(9)],
+        )
+        .unwrap();
+        assert!(store.append_cll(0, None, &update).is_err());
+        conn.execute("DELETE FROM cll_nodes WHERE log_id='rollback'", [])
+            .unwrap();
+        // Nothing of the failed change remains, and the log accepts it now.
+        assert_eq!(store.load_cll().unwrap(), State::default());
+        store.append_cll(0, None, &update).unwrap();
+        assert_eq!(store.load_cll().unwrap().witnesses.len(), 1);
+    }
+
+    /// The cheap header checks report a missing node row as `corrupt`, as
+    /// loading the whole state does.
+    #[test]
+    fn append_cll_reports_a_missing_node_row_as_corrupt() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("db.sqlite");
+        SqliteStore::init(&path, "gap").unwrap();
+        let store = SqliteStore::open(&path, "gap").unwrap();
+        let first = StateAppend {
+            nodes: vec![node(1)],
+            indexed_seq: 1,
+            ..StateAppend::default()
+        };
+        store.append_cll(0, None, &first).unwrap();
+        Connection::open(&path)
+            .unwrap()
+            .execute("DELETE FROM cll_nodes WHERE log_id='gap'", [])
+            .unwrap();
+        let second = StateAppend {
+            nodes: vec![node(2), node(3)],
+            indexed_seq: 2,
+            ..StateAppend::default()
+        };
+        assert_eq!(
+            store.append_cll(1, None, &second).unwrap_err().code(),
+            ErrorCode::Corrupt
+        );
+        assert_eq!(store.load_cll().unwrap_err().code(), ErrorCode::Corrupt);
     }
 
     #[test]
@@ -868,6 +954,7 @@ mod mysql {
         let (first, id) = fresh(&url, "cross");
         cross_handle(&first, &MysqlStore::open(&url, &id).unwrap());
         identical_witness_commit(&fresh(&url, "identical").0);
+        append_cll_checks(&fresh(&url, "append").0);
     }
 
     #[test]

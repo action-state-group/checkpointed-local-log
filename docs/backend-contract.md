@@ -33,6 +33,11 @@ qualify them with the module (`cll.Entry`, `cll.Backend`). `cll.Backend` and
 | Checkpoint store | entry source + checkpoint state + witness state | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` |
 | Full backend | entry log + checkpoint state + witness state + `close` | `Backend` | `CllBackend` | `Backend` | `Backend` |
 
+Rust only: `CheckpointStateStore` also has `append_cll`, which takes the new
+nodes and witness rows instead of the whole `next` state and applies
+`commitCll`'s rules; it is a cost optimization for the SQL backends, not part
+of the contract, and its default implementation calls `commitCll`.
+
 A checkpoint runner needs only `CheckpointStore`. An application that appends
 identities needs only `EntryStore`. A store may implement a subset; it then
 runs the matching subset of the conformance suite.

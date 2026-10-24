@@ -261,8 +261,20 @@ fn validate_checkpoint_transition(current: &State, next: &State) -> Result<()> {
     Ok(())
 }
 
-/// The `appendCll` compare-and-set against the stored header (`size` the node
-/// count, `nodes` and `witnesses` empty): compares, validates the change and
+/// Rejects a stored header (`size` the node count, `nodes` and `witnesses`
+/// empty) that breaks the state invariants, or whose node rows do not end at
+/// `size - 1` (`max_position` is `None` for no rows): durable `corrupt`
+/// data, as loading the whole state would report it.
+pub(crate) fn check_header(header: &State, max_position: Option<u64>) -> Result<()> {
+    validate_state_metadata(header, header.size, ErrorCode::Corrupt)?;
+    if max_position != header.size.checked_sub(1) {
+        return Err(Error::corrupt("stored node positions are not dense"));
+    }
+    Ok(())
+}
+
+/// The `append_cll` compare-and-set against the stored header (checked with
+/// [`check_header`]): compares, validates the change and
 /// applies the checkpoint rule. Returns the new header (`size`, scalar fields
 /// and checkpoint; `nodes` empty, `witnesses` the rows to resolve with
 /// [`merge_witness`]).

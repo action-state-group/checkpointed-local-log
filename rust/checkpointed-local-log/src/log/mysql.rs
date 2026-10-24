@@ -429,6 +429,13 @@ impl CheckpointStateStore for MysqlStore {
         self.write(|tx, log_id| {
             let metadata = lock_metadata(tx, log_id)?;
             let current = sql::header_from_metadata(&metadata)?;
+            let last = first::<Option<u64>>(
+                tx,
+                "SELECT MAX(position) FROM cll_nodes WHERE log_id=?",
+                (log_id,),
+            )?
+            .flatten();
+            engine::check_header(&current, last)?;
             let next = engine::apply_append(&current, expected_size, expected_checkpoint, update)?;
             let mut added = Vec::new();
             for row in &update.witnesses {

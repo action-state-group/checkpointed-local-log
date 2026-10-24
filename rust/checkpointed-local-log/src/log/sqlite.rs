@@ -443,6 +443,14 @@ impl SqliteStore {
         update: &StateAppend,
     ) -> Result<()> {
         let current = sql::header_from_metadata(&metadata_row(tx, log_id)?)?;
+        let last: Option<i64> = tx
+            .query_row(
+                "SELECT MAX(position) FROM cll_nodes WHERE log_id=?",
+                [log_id],
+                |row| row.get(0),
+            )
+            .map_err(classify)?;
+        engine::check_header(&current, last.map(|last| last as u64))?;
         let next = engine::apply_append(&current, expected_size, expected_checkpoint, update)?;
         let mut added = Vec::new();
         for row in &update.witnesses {

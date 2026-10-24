@@ -378,15 +378,15 @@ pub trait CheckpointStateStore {
         next.indexed_seq = update.indexed_seq;
         next.first_pending_at = update.first_pending_at;
         next.checkpoint = update.checkpoint.clone();
-        for row in &update.witnesses {
-            match next.witnesses.iter_mut().find(|held| {
-                held.witness_id == row.witness_id && held.checkpoint_size == row.checkpoint_size
-            }) {
-                // Replaced, so a differing checkpoint surfaces as contention.
-                Some(held) => *held = row.clone(),
-                None => next.witnesses.push(row.clone()),
-            }
-        }
+        // Rows for keys the store holds are replaced by the update's, so a
+        // differing checkpoint surfaces as contention; all of the update's
+        // rows are kept, so a repeated key is invalid, as in SQL.
+        next.witnesses.retain(|held| {
+            !update.witnesses.iter().any(|row| {
+                row.witness_id == held.witness_id && row.checkpoint_size == held.checkpoint_size
+            })
+        });
+        next.witnesses.extend(update.witnesses.iter().cloned());
         self.commit_cll(expected_size, expected_checkpoint, &next)
     }
 }

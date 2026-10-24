@@ -63,11 +63,7 @@ pub(crate) fn state_from_rows(
     nodes: Vec<(u64, Vec<u8>)>,
     witnesses: &[WitnessRow],
 ) -> Result<State> {
-    let mut wire: WireState = serde_json::from_slice(metadata)
-        .map_err(|e| Error::corrupt(format!("decode CLL metadata: {e}")))?;
-    wire.nodes.clear();
-    wire.witnesses.clear();
-    let mut state = wire::decode_state(&wire, super::ErrorCode::Corrupt)?;
+    let mut state = header_from_metadata(metadata)?;
     for (expected, (position, node)) in nodes.into_iter().enumerate() {
         if position != expected as u64 {
             return Err(Error::corrupt("stored node positions are not dense"));
