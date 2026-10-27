@@ -14,10 +14,11 @@ later entry. `verify_checkpoint_cose_offline` decodes every map it is handed
 this way.
 
 This departs from draft-mih-scitt-checkpointed-local-log-01, Section 3, in one
-case.
-Claims the verifier does not understand are refused when two of their keys
-are such a pair, or when a map inside one of them has such keys, although the
-draft says verifiers MUST ignore claims they do not understand. Go also refuses that statement, and more broadly: it refuses any
+respect. Claims the verifier does not understand are refused when two of
+their keys are such a pair, when a key holds a string-reference or
+value-sharing tag (25, 28, 29, 256), or when a map inside one of them has such
+keys, although the draft says verifiers MUST ignore claims they do not
+understand. Go also refuses that statement, and more broadly: it refuses any
 claim it does not define, which departs from the same sentence
 ([#99](https://github.com/action-state-group/checkpointed-local-log/issues/99)).
 

@@ -13,7 +13,9 @@ are documented here. The format follows
   raises `cll.cbor.DuplicateMapKeyError` (a `ValueError`) when any map in it,
   at any depth, has two keys that are equal as Python values: `1` and `true`,
   `0` and `false`, `1` and `1.0`, an integer and an equal bignum, or a
-  repeated key. `cbor2.loads` keeps only the later of such entries
+  repeated key. `cbor2.loads` keeps only the later of such entries. It also
+  refuses a map key that holds a string-reference or value-sharing tag (25,
+  28, 29, 256), whose value depends on the rest of the item
   (checkpointed-local-log#104).
 
 ### Fixed
@@ -26,10 +28,11 @@ are documented here. The format follows
   RFC 8392 §3), so a `true` label is no longer found by a lookup of label 1.
   Before, `{1: "a", true: "b"}` read as `{1: "b"}`, and a lone `true` label
   read as `alg`.
-- **Departure from draft-mih-scitt-checkpointed-local-log-01, Section 3:** claims the
-  verifier does not understand are still refused when two of their keys
-  collide in Python (claims `1` and `true`), or when a map inside one has
-  such keys. The draft says verifiers MUST ignore such claims;
+- **Departure from draft-mih-scitt-checkpointed-local-log-01, Section 3:**
+  claims the verifier does not understand are still refused when two of their
+  keys collide in Python (claims `1` and `true`), when a key holds a
+  string-reference or value-sharing tag (25, 28, 29, 256), or when a map
+  inside one has such keys. The draft says verifiers MUST ignore such claims;
   Python cannot hold both keys in one dict, so this verifier refuses rather
   than read the claim back changed. Go also refuses that statement, and more
   broadly: it refuses any claim it does not define, which departs from the
