@@ -28,6 +28,7 @@ qualify them with the module (`cll.Entry`, `cll.Backend`). `cll.Backend` and
 |---|---|---|---|---|---|
 | Entry source | `scanEntries` | `EntrySource` | `EntrySource` | `EntrySource` | `EntrySource` |
 | Entry log | entry source + `append`, `getEntry` | `EntryStore` | `EntryStore` | `EntryStore` | `EntryStore` |
+| Entry count | `entryCount` | `EntryCounter` | `EntryCounter` | `cll.log.counter.EntryCounter` | `EntryCounter` |
 | Checkpoint state | `loadCll`, `commitCll` | `CheckpointStateStore` | `CheckpointStateStore` | `CheckpointStateStore` | `CheckpointStateStore` |
 | Witness state | `pendingWitnesses`, `getWitness`, `commitWitness` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` |
 | Checkpoint store | entry source + checkpoint state + witness state | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` |
@@ -39,7 +40,10 @@ nodes and witness rows instead of the whole `next` state and applies
 of the contract, and its default implementation calls `commitCll`.
 
 A checkpoint runner needs only `CheckpointStore`. An application that appends
-identities needs only `EntryStore`. A store may implement a subset; it then
+identities needs only `EntryStore`. The entry count is an interface of its own,
+outside `EntryStore` and `Backend`, so that stores written before it still
+implement them; every built-in backend implements it. Python keeps it in
+`cll.log.counter`, beside the `cll.log` protocols. A store may implement a subset; it then
 runs the matching subset of the conformance suite.
 
 Arguments keep this order in every language:
@@ -48,6 +52,7 @@ Arguments keep this order in every language:
 scanEntries(afterSeq, limit)            -> Entry[]
 append(input{value, appendedAt})        -> AppendResult{entry, outcome}
 getEntry(value)                         -> Entry
+entryCount()                            -> count
 loadCll()                               -> State
 commitCll(expectedSize, expectedCheckpoint, next)
 pendingWitnesses(now, limit)            -> WitnessState[]
@@ -170,6 +175,7 @@ same code when one call breaks several rules.
 | `getEntry` of a value that is not 32 bytes | `invalid` |
 | `scanEntries(afterSeq, limit)` | Entries with `seq > afterSeq` in ascending order, at most `limit`. `afterSeq` beyond the last entry returns an empty list. |
 | `scanEntries` with `afterSeq` above `MaxPortableInteger`, or `limit` outside 1..`MaxScanLimit` | `invalid` |
+| `entryCount` | The number of entries: 0 for a new log, otherwise the last `seq`, because sequences are dense. An idempotent or failed `append` leaves it unchanged. SQL backends answer it from `MAX(seq)` rather than by counting rows. |
 
 ### Checkpoint state
 

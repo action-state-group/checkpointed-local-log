@@ -20,9 +20,9 @@ python3 backend-conformance-vectors/generate.py --check
 ## Format
 
 Each case names the interfaces it needs (`entries`, `checkpoint`, `witness`,
-`close`), the capabilities it requires (`requires`) and those that exclude it
-(`unless`). A runner skips a case that does not apply to its backend. The steps
-run in order against one fresh, empty backend. Each step is one contract
+`count`, `close`), the capabilities it requires (`requires`) and those that
+exclude it (`unless`). A runner skips a case that does not apply to its
+backend. The steps run in order against one fresh, empty backend. Each step is one contract
 operation with its arguments under their contract names, plus `expect`, which
 is either `{"result": ...}` or `{"error": "<code>"}`.
 

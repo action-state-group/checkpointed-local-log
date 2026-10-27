@@ -12,8 +12,8 @@ use super::engine;
 use super::sql::{self, WitnessRow};
 use super::{
     validate_identifier, AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore,
-    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend, Timestamp,
-    WitnessState, WitnessStateStore,
+    Entry, EntryCounter, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend,
+    Timestamp, WitnessState, WitnessStateStore,
 };
 use rusqlite::types::ValueRef;
 use rusqlite::{
@@ -297,6 +297,23 @@ fn find_witness(
         })
     })
     .transpose()
+}
+
+/// Sequences are dense, so the last one is the count, and the primary key
+/// answers it without a scan.
+impl EntryCounter for SqliteStore {
+    fn entry_count(&self) -> Result<u64> {
+        self.read(|tx, log_id| {
+            let last: Option<i64> = tx
+                .query_row(
+                    "SELECT MAX(seq) FROM cll_entries WHERE log_id=?",
+                    [log_id],
+                    |row| row.get(0),
+                )
+                .map_err(classify)?;
+            sql::entry_count(last.map(i128::from))
+        })
+    }
 }
 
 impl EntrySource for SqliteStore {

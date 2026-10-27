@@ -240,6 +240,11 @@ class JsonlStore:
         with self._lock:
             return self._read().get_entry(value)
 
+    def entry_count(self) -> int:
+        with self._lock:
+            # The engine's snapshot starts with its entry count, read in O(1).
+            return self._read().snapshot()[0]
+
     def scan_entries(self, after_seq: int, limit: int) -> list:
         with self._lock:
             return self._read().scan_entries(after_seq, limit)

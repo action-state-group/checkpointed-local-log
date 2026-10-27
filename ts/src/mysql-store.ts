@@ -17,6 +17,7 @@ import {
 import { cllToWire, entryToWire, witnessToWire } from "./serde.js";
 import {
   cllFromSqlRows,
+  countFromMaximum,
   entryFromSqlRow,
   witnessFromSqlRow,
   type SqlNodeRow,
@@ -28,6 +29,7 @@ import {
   type AppendInput,
   type AppendResult,
   type CllBackend,
+  type EntryCounter,
   type CllEntry,
   type CllState,
   type WitnessState,
@@ -40,7 +42,7 @@ interface MysqlEntryRow {
 }
 
 /** MySQL 8 backend with one log-scoped metadata row lock per write. */
-export class MysqlStore implements CllBackend {
+export class MysqlStore implements CllBackend, EntryCounter {
   private closed = false;
   private closing: Promise<void> | undefined;
 
@@ -310,6 +312,18 @@ export class MysqlStore implements CllBackend {
         value: row.value,
         appendedAt: row.appended_at,
       });
+    });
+  }
+
+  /** Sequences are dense, so the last one is the count. */
+  public entryCount(): Promise<bigint> {
+    return this.read(async (query) => {
+      const [rows] = await query.execute(
+        "SELECT MAX(seq) AS maximum FROM cll_entries WHERE log_id=?",
+        [this.logId],
+      );
+      const row = (rows as { maximum: number | string | bigint | null }[])[0];
+      return countFromMaximum(row?.maximum ?? null);
     });
   }
 

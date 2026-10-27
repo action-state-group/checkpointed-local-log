@@ -190,6 +190,19 @@ def get_entry(cursor: Any, log_id: str, value: bytes) -> Entry:
     return found
 
 
+def entry_count(cursor: Any, log_id: str) -> int:
+    """Sequences are dense, so the last one is the count, and the primary key
+    answers it without a scan."""
+    cursor.execute("SELECT MAX(seq) FROM cll_entries WHERE log_id=?", (log_id,))
+    maximum = cursor.fetchone()[0]
+    if maximum is None:
+        return 0
+    count = int(maximum)
+    if count < 1 or count > MAX_PORTABLE_INTEGER:
+        raise CorruptError("stored entry sequence is outside the portable range")
+    return count
+
+
 def scan_entries(cursor: Any, log_id: str, after_seq: int, limit: int) -> list:
     check_scan(after_seq, limit)
     cursor.execute(

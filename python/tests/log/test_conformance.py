@@ -63,6 +63,10 @@ def _ledger_store(tmp_path_factory):
     return LedgerEntryStore(LedgerStore(tmp_path_factory.mktemp("ledger")), owns_store=True)
 
 
+# Every built-in backend also implements EntryCounter.
+WITH_COUNT = (*conformance.BACKEND_INTERFACES, "count")
+
+
 def _configs(tmp_path_factory):
     def jsonl_target():
         return (str(tmp_path_factory.mktemp("jsonl") / "log.jsonl"),)
@@ -81,10 +85,10 @@ def _configs(tmp_path_factory):
         return Durable(mysql, mysql_target)
 
     return {
-        "memory": lambda: conformance.cases(MemoryStore),
-        "jsonl": lambda: conformance.cases(durable["jsonl"].open, durable["jsonl"].reopen),
-        "sqlite": lambda: conformance.cases(durable["sqlite"].open, durable["sqlite"].reopen),
-        "mysql": lambda: (lambda d: conformance.cases(d.open, d.reopen))(mysql_durable()),
+        "memory": lambda: conformance.cases(MemoryStore, interfaces=WITH_COUNT),
+        "jsonl": lambda: conformance.cases(durable["jsonl"].open, durable["jsonl"].reopen, interfaces=WITH_COUNT),
+        "sqlite": lambda: conformance.cases(durable["sqlite"].open, durable["sqlite"].reopen, interfaces=WITH_COUNT),
+        "mysql": lambda: (lambda d: conformance.cases(d.open, d.reopen, interfaces=WITH_COUNT))(mysql_durable()),
         "entry-only": lambda: conformance.cases(EntryOnly, interfaces=("entries",)),
         "ledger": lambda: conformance.cases(
             lambda: _ledger_store(tmp_path_factory), digest_append=False, interfaces=("entries",)
@@ -113,12 +117,16 @@ def test_conformance_vector(backend, name, tmp_path_factory):
 def test_expected_skips_are_exactly_the_documented_differences():
     """Python lacks only ``extended-years``; the memory backend lacks only
     ``reopen``; a store without digest append runs the unsupported case."""
-    skipped = {case.name: case.skip for case in conformance.cases(MemoryStore) if case.skip}
+    skipped = {case.name: case.skip for case in conformance.cases(MemoryStore, interfaces=WITH_COUNT) if case.skip}
     assert skipped == {
         "entries/extended-years": "backend lacks capability extended-years",
         "entries/digest-append-unsupported": "case applies only without capability digest-append",
         "lifecycle/reopen": "backend lacks capability reopen",
+        "count/reopen": "backend lacks capability reopen",
     }
+    # The default is a full Backend, which need not implement EntryCounter.
+    uncounted = {case.name for case in conformance.cases(MemoryStore) if case.skip == "backend does not implement count"}
+    assert uncounted == {"count/entries", "count/reopen", "count/closed"}
     ledger = {case.name for case in conformance.cases(MemoryStore, digest_append=False, interfaces=("entries",))
               if not case.skip}
     assert ledger == {"entries/empty-log", "entries/invalid-values", "entries/digest-append-unsupported"}

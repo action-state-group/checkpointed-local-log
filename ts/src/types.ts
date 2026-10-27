@@ -72,6 +72,14 @@ export interface EntrySource {
   scanEntries(afterSeq: bigint, limit: number): Promise<readonly CllEntry[]>;
 }
 
+/**
+ * Reports the number of entries in the log. Sequences are dense and 1-based,
+ * so the count is also the last sequence.
+ */
+export interface EntryCounter {
+  entryCount(): Promise<bigint>;
+}
+
 export interface EntryStore extends EntrySource {
   append(input: AppendInput): Promise<AppendResult>;
   getEntry(value: Uint8Array): Promise<CllEntry>;

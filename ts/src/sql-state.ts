@@ -54,6 +54,17 @@ export function entryFromSqlRow(row: SqlEntryRow): CllEntry {
   }
 }
 
+/** The entry count from `MAX(seq)`, which is null for an empty log. */
+export function countFromMaximum(
+  maximum: number | string | bigint | null,
+): bigint {
+  if (maximum === null) return 0n;
+  const count = BigInt(maximum);
+  if (count < 1n || count > BigInt(Number.MAX_SAFE_INTEGER))
+    throw corrupt("stored entry sequence is outside the portable range");
+  return count;
+}
+
 function witnessWireFromSqlRow(row: SqlWitnessRow): WireWitness {
   try {
     const wire = JSON.parse(text(row.witness)) as WireWitness;

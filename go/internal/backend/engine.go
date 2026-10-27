@@ -74,7 +74,10 @@ func (e *Engine) DeltaSince(snapshot Snapshot) (cll.State, error) {
 }
 
 func (e *Engine) Entries() []cll.Entry { return cloneEntries(e.entries) }
-func (e *Engine) State() cll.State     { return CloneState(e.state) }
+
+// EntryCount is the number of entries, which is also the last sequence.
+func (e *Engine) EntryCount() uint64 { return uint64(len(e.entries)) }
+func (e *Engine) State() cll.State   { return CloneState(e.state) }
 
 func (e *Engine) Replace(entries []cll.Entry, state cll.State) error {
 	seen := make(map[string]struct{}, len(entries))

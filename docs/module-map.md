@@ -45,7 +45,7 @@ reference binding.
 
 | Capability | Module | Notes |
 |---|---|---|
-| interfaces, values, errors, limits | `cll.log` | The Python column of [`backend-contract.md`](backend-contract.md), the source of truth shared with Go and TypeScript. Loads no database driver. |
+| interfaces, values, errors, limits | `cll.log`, `cll.log.counter` | The Python column of [`backend-contract.md`](backend-contract.md), the source of truth shared with Go and TypeScript. Loads no database driver. `cll.log.counter` holds `EntryCounter`, kept out of `cll.log` so the `EntrySource` and `EntryStore` protocols are unchanged. |
 | transition rules and portable encodings | `cll.log.engine`, `cll.log.wire`, `cll.log.sql` | One engine (a port of Go's `internal/backend`) used by every backend, so all report the same error codes in the contract's check order. |
 | backends | `cll.log.memory`, `cll.log.jsonl`, `cll.log.sqlite`, `cll.log.mysql` | JSONL v4 and the shared SQL DDL interoperate with Go and TypeScript (`go/scripts/check-storage-interop.sh`). |
 | conformance | `cll.log.conformance` | Runs the shared `backend-conformance-vectors/` against any backend. |

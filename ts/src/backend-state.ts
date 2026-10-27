@@ -285,6 +285,11 @@ export class BackendState {
     return cloneEntry(entry);
   }
 
+  /** The number of entries, which is also the last sequence. */
+  public entryCount(): bigint {
+    return BigInt(this.entries_.length);
+  }
+
   public scanEntries(afterSeq: bigint, limit: number): readonly CllEntry[] {
     validateEntryScan(afterSeq, limit);
     const start =

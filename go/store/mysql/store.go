@@ -414,6 +414,25 @@ func (s *Store) ScanEntries(ctx context.Context, afterSeq uint64, limit int) (re
 	return result, err
 }
 
+// EntryCount implements cll.EntryCounter. Sequences are dense, so the last
+// one is the count, and the primary key answers it without a scan.
+func (s *Store) EntryCount(ctx context.Context) (count uint64, err error) {
+	err = s.read(ctx, func(q queryer) error {
+		var maximum sql.NullInt64
+		if err := q.QueryRowContext(ctx, "SELECT MAX(seq) FROM cll_entries WHERE log_id=?", s.logID).Scan(&maximum); err != nil {
+			return err
+		}
+		if maximum.Valid {
+			if maximum.Int64 < 1 || uint64(maximum.Int64) > cll.MaxPortableInteger {
+				return fmt.Errorf("%w: stored entry sequence is out of range", cll.ErrCorrupt)
+			}
+			count = uint64(maximum.Int64)
+		}
+		return nil
+	})
+	return count, err
+}
+
 func (s *Store) LoadCLL(ctx context.Context) (result cll.State, err error) {
 	err = s.readState(ctx, func(state cll.State) error { result = state; return nil })
 	return result, err
@@ -566,4 +585,7 @@ func classify(err error) error {
 	return err
 }
 
-var _ cll.Backend = (*Store)(nil)
+var (
+	_ cll.Backend      = (*Store)(nil)
+	_ cll.EntryCounter = (*Store)(nil)
+)

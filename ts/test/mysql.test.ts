@@ -41,6 +41,7 @@ describe("MySQL backend", () => {
     const logs = new WeakMap<object, string>();
     let count = 0;
     for (const item of conformanceCases({
+      interfaces: ["entries", "checkpoint", "witness", "count", "close"],
       open: async () => {
         count += 1;
         const logId = `conformance-${count}`;

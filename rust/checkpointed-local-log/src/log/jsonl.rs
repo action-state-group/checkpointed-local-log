@@ -20,9 +20,9 @@
 use super::engine::{self, Engine};
 use super::wire::{self, WireEntry, WireState, WireWitness};
 use super::{
-    AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore, Entry, EntrySource,
-    EntryStore, Error, ErrorCode, Result, State, Timestamp, WitnessState, WitnessStateStore,
-    MAX_JOURNAL_EVENT_BYTES,
+    AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore, Entry, EntryCounter,
+    EntrySource, EntryStore, Error, ErrorCode, Result, State, Timestamp, WitnessState,
+    WitnessStateStore, MAX_JOURNAL_EVENT_BYTES,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
@@ -299,6 +299,12 @@ impl Inner {
 impl EntrySource for JsonlStore {
     fn scan_entries(&self, after_seq: u64, limit: usize) -> Result<Vec<Entry>> {
         self.lock()?.engine.scan_entries(after_seq, limit)
+    }
+}
+
+impl EntryCounter for JsonlStore {
+    fn entry_count(&self) -> Result<u64> {
+        Ok(self.lock()?.engine.entry_count() as u64)
     }
 }
 

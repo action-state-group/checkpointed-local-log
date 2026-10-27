@@ -23,7 +23,9 @@ closes ``current`` and opens the same durable state again; leave it ``None``
 for a backend without durable state. ``digest_append=False`` declares a store
 whose ``append`` refuses identities it does not already hold. ``interfaces``
 names what the backend implements (``entries``, ``checkpoint``, ``witness``,
-``close``); cases needing more are skipped.
+``count``, ``close``); cases needing more are skipped. The default is a full
+``Backend``; add ``count`` for a backend that also implements
+``cll.log.counter.EntryCounter``.
 
 Python backends lack the ``extended-years`` capability: ``datetime`` holds
 only years 1..9999 (an intentional difference recorded in the contract).
@@ -47,15 +49,19 @@ from .wire import (
     witness_to_wire,
 )
 
-__all__ = ["Case", "cases", "load_vectors", "INTERFACES"]
+__all__ = ["Case", "cases", "load_vectors", "INTERFACES", "BACKEND_INTERFACES"]
 
 #: Interface names the vectors use, and the operations each requires.
 INTERFACES = {
     "entries": ("append", "get_entry", "scan_entries"),
     "checkpoint": ("load_cll", "commit_cll"),
     "witness": ("pending_witnesses", "get_witness", "commit_witness"),
+    "count": ("entry_count",),
     "close": ("close",),
 }
+
+#: The interfaces of a full ``Backend``, the default for ``cases``.
+BACKEND_INTERFACES = ("entries", "checkpoint", "witness", "close")
 
 
 @dataclass(frozen=True)
@@ -81,7 +87,7 @@ def cases(
     open: Callable[[], Any],
     reopen: Callable[[Any], Any] | None = None,
     digest_append: bool = True,
-    interfaces: Iterable[str] = tuple(INTERFACES),
+    interfaces: Iterable[str] = BACKEND_INTERFACES,
 ) -> list:
     """One runnable ``Case`` per vector, skipped where it does not apply."""
     implemented = set(interfaces)
@@ -156,6 +162,8 @@ def _execute(subject: Any, step: dict) -> Any:
     if op == "scanEntries":
         after_seq = parse_decimal(step["afterSeq"], InvalidError)
         return [entry_to_wire(entry) for entry in subject.scan_entries(after_seq, step["limit"])]
+    if op == "entryCount":
+        return str(subject.entry_count())
     if op == "loadCll":
         return state_to_wire(subject.load_cll())
     if op == "commitCll":

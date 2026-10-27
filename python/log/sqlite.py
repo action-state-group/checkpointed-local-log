@@ -161,6 +161,10 @@ class SqliteStore:
         with self._read() as cursor:
             return sql.get_entry(cursor, self._log_id, value)
 
+    def entry_count(self) -> int:
+        with self._read() as cursor:
+            return sql.entry_count(cursor, self._log_id)
+
     def scan_entries(self, after_seq: int, limit: int) -> list:
         with self._read() as cursor:
             return sql.scan_entries(cursor, self._log_id, after_seq, limit)

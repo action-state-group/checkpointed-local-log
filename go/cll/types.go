@@ -112,6 +112,12 @@ type EntrySource interface {
 	ScanEntries(context.Context, uint64, int) ([]Entry, error)
 }
 
+// EntryCounter reports the number of entries in the log. Sequences are dense
+// and 1-based, so the count is also the last sequence.
+type EntryCounter interface {
+	EntryCount(context.Context) (uint64, error)
+}
+
 // EntryStore is the entry log: it appends opaque identities and looks them up.
 type EntryStore interface {
 	EntrySource

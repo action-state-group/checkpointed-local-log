@@ -7,7 +7,9 @@
 //! against a fresh backend from [`Config::open`]. A backend exposes the
 //! interfaces it implements through [`Target`]; every [`Backend`] does so
 //! automatically, and an entry-log-only store implements
-//! [`Target::entry_store`] alone and runs only the cases that need it.
+//! [`Target::entry_store`] alone and runs only the cases that need it. A store
+//! that also implements [`EntryCounter`] runs the `count` cases when its
+//! config says so with [`Config::with_entry_counter`].
 //!
 //! ```
 //! use cll::log::{conformance, memory::MemoryStore};
@@ -19,8 +21,8 @@
 
 use super::wire::{self, WireState, WireWitness};
 use super::{
-    AppendInput, Backend, CheckpointStateStore, EntryStore, Error, ErrorCode, Result, Timestamp,
-    WitnessStateStore,
+    AppendInput, Backend, CheckpointStateStore, EntryCounter, EntryStore, Error, ErrorCode, Result,
+    Timestamp, WitnessStateStore,
 };
 use serde_json::Value;
 use std::fmt;
@@ -72,6 +74,9 @@ impl<B: Backend> Target for B {
     }
 }
 
+/// Reads a store's entry count; see [`Config::entry_count`].
+pub type CountFn<'a, T> = Box<dyn Fn(&T) -> Result<u64> + 'a>;
+
 /// The store under test.
 pub struct Config<'a, T> {
     /// Returns a fresh, empty store for one case. The runner closes it when
@@ -83,6 +88,9 @@ pub struct Config<'a, T> {
     /// Whether `append` stores a bare identity (the `digest-append`
     /// capability). Without it, `append` of a new identity is `unsupported`.
     pub digest_append: bool,
+    /// Reads the store's entry count (`count` cases). `None` for a store that
+    /// does not implement [`EntryCounter`]; cases that need it are skipped.
+    pub entry_count: Option<CountFn<'a, T>>,
 }
 
 impl<'a, T> Config<'a, T> {
@@ -92,12 +100,22 @@ impl<'a, T> Config<'a, T> {
             open: Box::new(open),
             reopen: None,
             digest_append: true,
+            entry_count: None,
         }
     }
 
     /// Declares durable state that `reopen` closes and opens again.
     pub fn with_reopen(mut self, reopen: impl FnMut(T) -> T + 'a) -> Self {
         self.reopen = Some(Box::new(reopen));
+        self
+    }
+
+    /// Declares that the store implements [`EntryCounter`].
+    pub fn with_entry_counter(mut self) -> Self
+    where
+        T: EntryCounter,
+    {
+        self.entry_count = Some(Box::new(|store: &T| store.entry_count()));
         self
     }
 
@@ -241,7 +259,10 @@ fn run_case<T: Target>(config: &mut Config<'_, T>, case: &Value) -> Status {
             Ok(())
         }
     };
-    if let Some(interface) = strings(&case["interfaces"]).find(|i| !implements(&subject, i)) {
+    let counts = config.entry_count.is_some();
+    if let Some(interface) =
+        strings(&case["interfaces"]).find(|i| !(*i == "count" && counts || implements(&subject, i)))
+    {
         let _ = close(&subject);
         return Status::Skipped(format!("store does not implement {interface}"));
     }
@@ -253,7 +274,10 @@ fn run_case<T: Target>(config: &mut Config<'_, T>, case: &Value) -> Status {
             subject = reopen(subject);
             continue;
         }
-        let actual = execute(&subject, op, step);
+        let actual = match (op, &config.entry_count) {
+            ("entryCount", Some(count)) => count(&subject).map(|n| Value::String(n.to_string())),
+            _ => execute(&subject, op, step),
+        };
         if let Err(message) = compare(op, &step["expect"], actual) {
             outcome = Status::Failed(format!("step {index} ({op}): {message}"));
             break;

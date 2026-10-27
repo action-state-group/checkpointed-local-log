@@ -3,12 +3,13 @@ import {
   CllError,
   type AppendInput,
   type CllBackend,
+  type EntryCounter,
   type CllState,
   type WitnessState,
 } from "./types.js";
 
 /** In-memory implementation of the complete generic backend contract. */
-export class MemoryStore implements CllBackend {
+export class MemoryStore implements CllBackend, EntryCounter {
   private readonly state = new BackendState();
   private closed = false;
   private queue: Promise<void> = Promise.resolve();
@@ -39,6 +40,11 @@ export class MemoryStore implements CllBackend {
   public async getEntry(value: Uint8Array) {
     this.ensureOpen();
     return this.state.getEntry(value);
+  }
+
+  public async entryCount(): Promise<bigint> {
+    this.ensureOpen();
+    return this.state.entryCount();
   }
 
   public async scanEntries(afterSeq: bigint, limit: number) {
