@@ -332,6 +332,15 @@ pub trait EntrySource {
     fn scan_entries(&self, after_seq: u64, limit: usize) -> Result<Vec<Entry>>;
 }
 
+/// `EntryCounter`: the number of entries in the log. Sequences are dense and
+/// 1-based, so the count is also the last sequence. It is a trait of its own,
+/// beside [`EntrySource`], so that stores written before it still implement
+/// the entry log traits; every built-in backend implements it.
+pub trait EntryCounter {
+    /// The number of entries.
+    fn entry_count(&self) -> Result<u64>;
+}
+
 /// `EntryStore`: the entry log. Appends opaque identities and looks them up.
 pub trait EntryStore: EntrySource {
     /// Appends `input.value`, or returns its original entry as

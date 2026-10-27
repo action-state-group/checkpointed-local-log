@@ -310,6 +310,19 @@ func (s *Store) ScanEntries(ctx context.Context, afterSeq uint64, limit int) ([]
 	return s.engine.ScanEntries(afterSeq, limit)
 }
 
+// EntryCount implements cll.EntryCounter.
+func (s *Store) EntryCount(ctx context.Context) (uint64, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return 0, cll.ErrClosed
+	}
+	return s.engine.EntryCount(), nil
+}
+
 func (s *Store) LoadCLL(ctx context.Context) (cll.State, error) {
 	if err := ctx.Err(); err != nil {
 		return cll.State{}, err
@@ -429,4 +442,7 @@ func (s *Store) closeFile() error {
 	return errors.Join(syscall.Flock(int(s.file.Fd()), syscall.LOCK_UN), s.file.Close())
 }
 
-var _ cll.Backend = (*Store)(nil)
+var (
+	_ cll.Backend      = (*Store)(nil)
+	_ cll.EntryCounter = (*Store)(nil)
+)

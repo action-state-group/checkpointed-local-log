@@ -152,6 +152,17 @@ impl State {
     }
 }
 
+/// The entry count from the log's `MAX(seq)`, `None` for an empty log.
+pub(crate) fn entry_count(last: Option<i128>) -> Result<u64> {
+    match last {
+        None => Ok(0),
+        Some(seq) if (1..=i128::from(MAX_PORTABLE_INTEGER)).contains(&seq) => Ok(seq as u64),
+        Some(_) => Err(Error::corrupt(
+            "stored entry sequence is outside the portable range",
+        )),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -177,5 +188,19 @@ mod tests {
         assert_eq!(gap.unwrap_err().code(), super::super::ErrorCode::Corrupt);
         assert!(check_entry_row(1, 2, 32, "2026-09-01T12:00:00.000Z").is_err());
         assert!(entry_from_row(1, vec![0; 32], "2026-09-01T12:00:00Z").is_err());
+    }
+
+    #[test]
+    fn entry_count_is_the_last_portable_sequence() {
+        assert_eq!(entry_count(None).unwrap(), 0);
+        assert_eq!(entry_count(Some(3)).unwrap(), 3);
+        let max = i128::from(MAX_PORTABLE_INTEGER);
+        assert_eq!(entry_count(Some(max)).unwrap(), MAX_PORTABLE_INTEGER);
+        for bad in [0, -1, max + 1] {
+            assert_eq!(
+                entry_count(Some(bad)).unwrap_err().code(),
+                super::super::ErrorCode::Corrupt
+            );
+        }
     }
 }

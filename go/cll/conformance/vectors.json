@@ -6,6 +6,7 @@
   "entries": "EntryStore: append, getEntry, scanEntries",
   "checkpoint": "CheckpointStateStore: loadCll, commitCll",
   "witness": "WitnessStateStore: pendingWitnesses, getWitness, commitWitness",
+  "count": "EntryCounter: entryCount",
   "close": "close"
  },
  "capabilities": {
@@ -3050,6 +3051,227 @@
      "limit": 33,
      "expect": {
       "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "count/entries",
+   "description": "entryCount is the number of entries: 0 for a new log, unchanged by an idempotent append.",
+   "interfaces": [
+    "entries",
+    "count"
+   ],
+   "requires": [
+    "digest-append"
+   ],
+   "steps": [
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "0"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "1"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T13:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "idempotent"
+      }
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "2"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw==",
+      "appendedAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "3"
+     }
+    }
+   ]
+  },
+  {
+   "name": "count/reopen",
+   "description": "A persistent backend reports the same entryCount after it reopens.",
+   "interfaces": [
+    "entries",
+    "count",
+    "close"
+   ],
+   "requires": [
+    "digest-append",
+    "reopen"
+   ],
+   "steps": [
+    {
+     "op": "append",
+     "input": {
+      "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+      "appendedAt": "2026-09-01T12:00:00.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "1",
+        "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+        "appendedAt": "2026-09-01T12:00:00.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+      "appendedAt": "2026-09-01T12:00:01.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "2",
+        "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+        "appendedAt": "2026-09-01T12:00:01.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "reopen",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "2"
+     }
+    },
+    {
+     "op": "append",
+     "input": {
+      "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+      "appendedAt": "2026-09-01T12:00:02.000Z"
+     },
+     "expect": {
+      "result": {
+       "entry": {
+        "seq": "3",
+        "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+        "appendedAt": "2026-09-01T12:00:02.000Z"
+       },
+       "outcome": "inserted"
+      }
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "result": "3"
+     }
+    }
+   ]
+  },
+  {
+   "name": "count/closed",
+   "description": "entryCount after close fails closed.",
+   "interfaces": [
+    "count",
+    "close"
+   ],
+   "steps": [
+    {
+     "op": "close",
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "entryCount",
+     "expect": {
+      "error": "closed"
      }
     }
    ]

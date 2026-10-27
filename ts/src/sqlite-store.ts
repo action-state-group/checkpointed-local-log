@@ -13,6 +13,7 @@ import {
 import { cllToWire, entryToWire, witnessToWire } from "./serde.js";
 import {
   cllFromSqlRows,
+  countFromMaximum,
   entryFromSqlRow,
   witnessFromSqlRow,
   type SqlNodeRow,
@@ -24,6 +25,7 @@ import {
   type AppendInput,
   type AppendResult,
   type CllBackend,
+  type EntryCounter,
   type CllEntry,
   type CllState,
   type WitnessState,
@@ -41,7 +43,7 @@ interface SqliteEntryRow {
 }
 
 /** SQLite backend with WAL durability and log-scoped transactions. */
-export class SqliteStore implements CllBackend {
+export class SqliteStore implements CllBackend, EntryCounter {
   private static readonly locks = new Map<string, SharedLock>();
   private queue: Promise<void> = Promise.resolve();
   private closed = false;
@@ -278,6 +280,16 @@ export class SqliteStore implements CllBackend {
         value: row.value,
         appendedAt: row.appended_at,
       });
+    });
+  }
+
+  /** Sequences are dense, so the last one is the count. */
+  public entryCount(): Promise<bigint> {
+    return this.read(() => {
+      const row = this.db
+        .prepare("SELECT MAX(seq) AS maximum FROM cll_entries WHERE log_id=?")
+        .get(this.logId) as { maximum: number | bigint | null };
+      return countFromMaximum(row.maximum);
     });
   }
 

@@ -19,14 +19,27 @@ it("pins the repository conformance vectors", () => {
 const temp = (name: string) =>
   join(mkdtempSync(join(tmpdir(), `cll-conformance-${name}-`)), name);
 
+// Every built-in backend also implements EntryCounter.
+const withCount = [
+  "entries",
+  "checkpoint",
+  "witness",
+  "count",
+  "close",
+] as const;
+
 describe("conformance vectors: Memory", () => {
-  for (const item of conformanceCases({ open: () => new MemoryStore() }))
+  for (const item of conformanceCases({
+    interfaces: withCount,
+    open: () => new MemoryStore(),
+  }))
     it.skipIf(item.skip !== undefined)(item.name, item.run);
 });
 
 describe("conformance vectors: JSONL", () => {
   const paths = new WeakMap<object, string>();
   for (const item of conformanceCases({
+    interfaces: withCount,
     open: async () => {
       const path = temp("cll.jsonl");
       const store = await JsonlStore.open(path);
@@ -47,6 +60,7 @@ describe("conformance vectors: JSONL", () => {
 describe("conformance vectors: SQLite", () => {
   const paths = new WeakMap<object, string>();
   for (const item of conformanceCases({
+    interfaces: withCount,
     open: () => {
       const path = temp("cll.sqlite");
       const store = SqliteStore.open(path, "conformance");
@@ -87,9 +101,15 @@ it("skips exactly the cases a subset backend cannot run", () => {
   const runnable = cases.filter((item) => item.skip === undefined);
   expect(runnable.length).toBeGreaterThan(0);
   expect(runnable.every((item) => item.name.startsWith("entries/"))).toBe(true);
+  // The default is a full CllBackend, which need not implement EntryCounter.
   expect(
-    conformanceCases({ open: () => new MemoryStore() }).filter((item) =>
-      item.skip?.startsWith("backend does not implement"),
-    ),
+    conformanceCases({ open: () => new MemoryStore() })
+      .filter((item) => item.skip?.startsWith("backend does not implement"))
+      .map((item) => item.name),
+  ).toEqual(["count/entries", "count/reopen", "count/closed"]);
+  expect(
+    conformanceCases({ interfaces: withCount, open: () => new MemoryStore() })
+      .filter((item) => item.skip?.startsWith("backend does not implement"))
+      .map((item) => item.name),
   ).toEqual([]);
 });

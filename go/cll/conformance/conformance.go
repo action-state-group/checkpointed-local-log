@@ -147,6 +147,9 @@ func implements(subject any, name string) bool {
 	case "witness":
 		_, ok := subject.(cll.WitnessStateStore)
 		return ok
+	case "count":
+		_, ok := subject.(cll.EntryCounter)
+		return ok
 	case "close":
 		_, ok := subject.(interface{ Close() error })
 		return ok
@@ -203,6 +206,12 @@ func execute(ctx context.Context, subject any, step stepArgs) (any, error) {
 			}
 		}
 		return wire, nil
+	case "entryCount":
+		count, err := subject.(cll.EntryCounter).EntryCount(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return strconv.FormatUint(count, 10), nil
 	case "loadCll":
 		state, err := subject.(cll.CheckpointStateStore).LoadCLL(ctx)
 		if err != nil {

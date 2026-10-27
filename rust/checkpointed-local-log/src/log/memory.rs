@@ -3,8 +3,8 @@
 
 use super::engine::{self, Engine};
 use super::{
-    AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore, Entry, EntrySource,
-    EntryStore, Error, Result, State, Timestamp, WitnessState, WitnessStateStore,
+    AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore, Entry, EntryCounter,
+    EntrySource, EntryStore, Error, Result, State, Timestamp, WitnessState, WitnessStateStore,
 };
 use std::sync::{Mutex, MutexGuard};
 
@@ -41,6 +41,12 @@ impl MemoryStore {
 impl EntrySource for MemoryStore {
     fn scan_entries(&self, after_seq: u64, limit: usize) -> Result<Vec<Entry>> {
         self.open()?.engine.scan_entries(after_seq, limit)
+    }
+}
+
+impl EntryCounter for MemoryStore {
+    fn entry_count(&self) -> Result<u64> {
+        Ok(self.open()?.engine.entry_count() as u64)
     }
 }
 

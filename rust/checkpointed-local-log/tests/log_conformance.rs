@@ -9,7 +9,7 @@ use cll::log::{
 };
 use std::sync::Mutex;
 
-const CASES: usize = 23;
+const CASES: usize = 26;
 
 fn check(report: &Report, passed: usize) {
     report.assert_ok();
@@ -32,8 +32,11 @@ fn pinned_vectors_equal_the_repository_copy() {
 
 #[test]
 fn memory() {
-    // Everything except reopen and the no-digest-append case.
-    check(&conformance::run(Config::new(MemoryStore::new)), CASES - 2);
+    // Everything except the two reopen cases and the no-digest-append case.
+    check(
+        &conformance::run(Config::new(MemoryStore::new).with_entry_counter()),
+        CASES - 3,
+    );
 }
 
 #[cfg(unix)]
@@ -53,7 +56,8 @@ fn jsonl_with_reopen() {
     .with_reopen(|store| {
         cll::log::Backend::close(&store).unwrap();
         JsonlStore::open(&*current.borrow()).unwrap()
-    });
+    })
+    .with_entry_counter();
     check(&conformance::run(config), CASES - 1);
 }
 
@@ -76,7 +80,8 @@ fn sqlite_with_reopen() {
     .with_reopen(|store| {
         cll::log::Backend::close(&store).unwrap();
         SqliteStore::open(&path, &current.borrow()).unwrap()
-    });
+    })
+    .with_entry_counter();
     check(&conformance::run(config), CASES - 1);
 }
 
@@ -119,7 +124,8 @@ fn mysql_with_reopen() {
     .with_reopen(|store| {
         cll::log::Backend::close(&store).unwrap();
         MysqlStore::open(&url, &current.borrow()).unwrap()
-    });
+    })
+    .with_entry_counter();
     check(&conformance::run(config), CASES - 1);
 }
 

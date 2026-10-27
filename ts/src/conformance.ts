@@ -17,6 +17,7 @@ import type {
   CheckpointStateStore,
   CllError,
   CllState,
+  EntryCounter,
   EntryStore,
   WitnessState,
   WitnessStateStore,
@@ -34,7 +35,8 @@ export interface ConformanceConfig {
   digestAppend?: boolean;
   /**
    * The contract interfaces the backend implements; cases that need another
-   * are skipped. Defaults to all of them, a full `CllBackend`.
+   * are skipped. Defaults to those of a full `CllBackend`; list `count` as
+   * well for a backend that also implements `EntryCounter`.
    */
   interfaces?: readonly ConformanceInterface[];
 }
@@ -43,6 +45,7 @@ export type ConformanceInterface =
   | "entries"
   | "checkpoint"
   | "witness"
+  | "count"
   | "close";
 
 export interface ConformanceCase {
@@ -69,8 +72,10 @@ const operations: Record<string, readonly string[]> = {
   entries: ["append", "getEntry", "scanEntries"],
   checkpoint: ["loadCll", "commitCll"],
   witness: ["pendingWitnesses", "getWitness", "commitWitness"],
+  count: ["entryCount"],
   close: ["close"],
 };
+const backendInterfaces = ["entries", "checkpoint", "witness", "close"];
 
 /** Returns one runnable case per vector, skipped where it does not apply. */
 export function conformanceCases(
@@ -79,9 +84,7 @@ export function conformanceCases(
   const capabilities = new Set<string>(["extended-years"]);
   if (config.digestAppend !== false) capabilities.add("digest-append");
   if (config.reopen !== undefined) capabilities.add("reopen");
-  const implemented = new Set<string>(
-    config.interfaces ?? Object.keys(operations),
-  );
+  const implemented = new Set<string>(config.interfaces ?? backendInterfaces);
   return (vectors.cases as Case[]).map((item) => {
     const absent = item.interfaces.find((name) => !implemented.has(name));
     const missing = (item.requires ?? []).find((c) => !capabilities.has(c));
@@ -170,6 +173,8 @@ async function execute(
           step["limit"] as number,
         )
       ).map((entry) => ({ ...entryToWire(entry) }));
+    case "entryCount":
+      return String(await (subject as unknown as EntryCounter).entryCount());
     case "loadCll":
       return toJson(cllToWire(await checkpoints.loadCll()));
     case "commitCll":

@@ -25,6 +25,7 @@ import {
   limits,
   type AppendInput,
   type CllBackend,
+  type EntryCounter,
   type CllState,
   type WitnessState,
 } from "./types.js";
@@ -47,7 +48,7 @@ type JournalEvent =
     };
 
 /** Single-writer append-only JSONL backend with fsync per complete event. */
-export class JsonlStore implements CllBackend {
+export class JsonlStore implements CllBackend, EntryCounter {
   private readonly state = new BackendState();
   private queue: Promise<void> = Promise.resolve();
   private closed = false;
@@ -224,6 +225,11 @@ export class JsonlStore implements CllBackend {
   public async getEntry(value: Uint8Array) {
     this.ensureOpen();
     return this.state.getEntry(value);
+  }
+
+  public async entryCount(): Promise<bigint> {
+    this.ensureOpen();
+    return this.state.entryCount();
   }
 
   public async scanEntries(afterSeq: bigint, limit: number) {

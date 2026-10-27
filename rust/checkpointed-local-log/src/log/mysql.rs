@@ -16,8 +16,8 @@ use super::engine;
 use super::sql::{self, WitnessRow};
 use super::{
     validate_identifier, AppendInput, AppendOutcome, AppendResult, Backend, CheckpointStateStore,
-    Entry, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend, Timestamp,
-    WitnessState, WitnessStateStore,
+    Entry, EntryCounter, EntrySource, EntryStore, Error, ErrorCode, Result, State, StateAppend,
+    Timestamp, WitnessState, WitnessStateStore,
 };
 use ::mysql::consts::CapabilityFlags;
 use ::mysql::prelude::FromRow;
@@ -298,6 +298,22 @@ fn find_witness(
         })
     })
     .transpose()
+}
+
+/// Sequences are dense, so the last one is the count, and the primary key
+/// answers it without a scan.
+impl EntryCounter for MysqlStore {
+    fn entry_count(&self) -> Result<u64> {
+        self.read(|conn, log_id| {
+            let last: Option<u64> = first::<Option<u64>>(
+                conn,
+                "SELECT MAX(seq) FROM cll_entries WHERE log_id=?",
+                (log_id,),
+            )?
+            .flatten();
+            sql::entry_count(last.map(i128::from))
+        })
+    }
 }
 
 impl EntrySource for MysqlStore {

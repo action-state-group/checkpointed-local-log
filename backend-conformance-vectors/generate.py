@@ -466,6 +466,48 @@ def witness_cases() -> list[dict]:
     ]
 
 
+def count_cases() -> list[dict]:
+    return [
+        {
+            "name": "count/entries",
+            "description": "entryCount is the number of entries: 0 for a new log, unchanged by an idempotent append.",
+            "interfaces": ["entries", "count"],
+            "requires": ["digest-append"],
+            "steps": [
+                step("entryCount", {}, "0"),
+                append(1, T0, {"entry": entry(1, 1, T0), "outcome": "inserted"}),
+                step("entryCount", {}, "1"),
+                append(2, T1, {"entry": entry(2, 2, T1), "outcome": "inserted"}),
+                append(1, LATER, {"entry": entry(1, 1, T0), "outcome": "idempotent"}),
+                step("entryCount", {}, "2"),
+                append(3, T2, {"entry": entry(3, 3, T2), "outcome": "inserted"}),
+                append(3, T2, error="invalid", width=31),
+                step("entryCount", {}, "3"),
+            ],
+        },
+        {
+            "name": "count/reopen",
+            "description": "A persistent backend reports the same entryCount after it reopens.",
+            "interfaces": ["entries", "count", "close"],
+            "requires": ["digest-append", "reopen"],
+            "steps": [
+                append(1, T0, {"entry": entry(1, 1, T0), "outcome": "inserted"}),
+                append(2, T1, {"entry": entry(2, 2, T1), "outcome": "inserted"}),
+                ok("reopen"),
+                step("entryCount", {}, "2"),
+                append(3, T2, {"entry": entry(3, 3, T2), "outcome": "inserted"}),
+                step("entryCount", {}, "3"),
+            ],
+        },
+        {
+            "name": "count/closed",
+            "description": "entryCount after close fails closed.",
+            "interfaces": ["count", "close"],
+            "steps": [ok("close"), fail("entryCount", "closed")],
+        },
+    ]
+
+
 def lifecycle_cases() -> list[dict]:
     closed_steps = [
         fail("append", "closed", input={"value": v(8), "appendedAt": T0}),
@@ -523,6 +565,7 @@ def build() -> dict:
             "entries": "EntryStore: append, getEntry, scanEntries",
             "checkpoint": "CheckpointStateStore: loadCll, commitCll",
             "witness": "WitnessStateStore: pendingWitnesses, getWitness, commitWitness",
+            "count": "EntryCounter: entryCount",
             "close": "close",
         },
         "capabilities": {
@@ -530,7 +573,7 @@ def build() -> dict:
             "reopen": "the runner can close the backend and open the same durable state again (the reopen step)",
             "extended-years": "times outside years 0001..9999 are representable",
         },
-        "cases": entry_cases() + checkpoint_cases() + witness_cases() + lifecycle_cases(),
+        "cases": entry_cases() + checkpoint_cases() + witness_cases() + count_cases() + lifecycle_cases(),
     }
 
 
