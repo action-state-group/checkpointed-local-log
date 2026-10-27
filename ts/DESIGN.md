@@ -23,7 +23,9 @@ section summarizes the TypeScript side.
 
 `CllBackend` combines four narrow structural interfaces: `EntryStore`,
 `EntrySource`, `CheckpointStateStore`, and `WitnessStateStore`. Every included
-backend implements that interface directly. Durable backends compose the
+backend implements that interface directly, and also `EntryCounter`
+(`entryCount()`), which stays outside `CllBackend` so that existing backends
+still satisfy it. Durable backends compose the
 internal invariant engine; they do not inherit operations from Memory.
 
 Append is atomic. A new value receives the next dense 1-based sequence. The same
