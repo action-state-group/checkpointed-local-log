@@ -5,6 +5,23 @@ The installed package is `cll`, including `checkpoint`, `ledger`, `log`,
 `revocation` and `signing`; the command is `cll`. From the repository root, use
 `pip install ./python`. Run tests here with `uv run --extra dev pytest`.
 
+## Decoding untrusted CBOR
+
+`cll.cbor.loads` decodes one CBOR data item like `cbor2.loads`, but refuses a
+map whose keys are distinct in CBOR and equal in Python, such as `1` and
+`true` or `0` and `false`, at any depth. `cbor2.loads` would keep only the
+later entry. `verify_checkpoint_cose_offline` decodes every map it is handed
+this way.
+
+This departs from draft-mih-scitt-checkpointed-local-log-01, Section 3, in one
+respect. Claims the verifier does not understand are refused when two of
+their keys are such a pair, when a key holds a string-reference or
+value-sharing tag (25, 28, 29, 256), or when a map inside one of them has such
+keys, although the draft says verifiers MUST ignore claims they do not
+understand. Go also refuses that statement, and more broadly: it refuses any
+claim it does not define, which departs from the same sentence
+([#99](https://github.com/action-state-group/checkpointed-local-log/issues/99)).
+
 ## CLL storage backends
 
 `cll.log` implements the [CLL backend contract](https://github.com/action-state-group/checkpointed-local-log/blob/main/docs/backend-contract.md)

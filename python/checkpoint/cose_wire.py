@@ -138,6 +138,7 @@ from dataclasses import dataclass, field
 
 import cbor2
 
+from ..cbor import loads as cbor_loads
 from .core import ConsistencyProof, commitment_object, root_from_peaks, verify_consistency
 from .emit import CheckpointRecord
 
@@ -166,6 +167,9 @@ WIRE_KIND = "cll-checkpoint"
 #: rather than imported, matching the existing convention in
 #: ``capsule_emit.signing.LocalKeypairSigner.sign_envelope``.
 _HDR_KID = 4
+
+#: COSE header label for CWT_Claims (RFC 9597), whose map holds iss and sub.
+_HDR_CWT_CLAIMS = 15
 
 
 def _consistency_proof_to_cbor(p: ConsistencyProof) -> dict:
@@ -426,21 +430,44 @@ def _extract_kid(cose_bytes: bytes) -> bytes | None:
     ``scitt_cose.cose_sign1.strict_decode`` for the outer structure (the
     same malleability-resistant decoder ``verify_sign1`` itself uses) --
     never a lenient/hand-rolled parse. Raises ``scitt_cose.CoseError`` on a
-    malformed message; returns ``None`` if the message is well-formed but
-    carries no ``kid``.
+    malformed message, and ``ValueError`` on a map whose keys collide as
+    Python values (:func:`cll.cbor.loads`) or a header label that is not an
+    integer or text string; returns ``None`` if the message is well-formed
+    but carries no ``kid``.
     """
     from scitt_cose.cose_sign1 import strict_decode
 
     outer = strict_decode(cose_bytes)
+    # strict_decode's re-encoded-length check misses a key collapse whose
+    # lost bytes another item's longer re-encoding makes up
+    # (checkpointed-local-log#104), so check every map in the message, the
+    # unprotected header included, here too.
+    cbor_loads(cose_bytes)
     value = outer.value
     if not isinstance(value, (list, tuple)) or len(value) != 4:
         return None
+    _check_labels(value[1], "unprotected header")
     protected_bstr = value[0]
     if not protected_bstr:
         return None
-    protected = cbor2.loads(bytes(protected_bstr))
+    protected = cbor_loads(bytes(protected_bstr))
+    _check_labels(protected, "protected header")
+    if hasattr(protected, "get"):
+        _check_labels(protected.get(_HDR_CWT_CLAIMS, {}), "CWT claims")
     kid = protected.get(_HDR_KID) if hasattr(protected, "get") else None
     return bytes(kid) if isinstance(kid, (bytes, bytearray)) else None
+
+
+def _check_labels(header: object, what: str) -> None:
+    """Refuse a header map (or the CWT claims map) with a label that is not
+    an integer or a text string (RFC 9052 §3 ``label = int / tstr``; RFC 8392
+    §3 claim keys). Without this, a ``true`` label is found by a lookup of
+    label 1 (``alg``, or ``iss`` among the CWT claims), since ``True == 1``."""
+    if not hasattr(header, "keys"):
+        return
+    for label in header.keys():
+        if isinstance(label, bool) or not isinstance(label, (int, str)):
+            raise ValueError(f"{what} label {label!r} is not an integer or a text string")
 
 
 def _ed25519_pubkey_pem(raw: bytes) -> bytes:
@@ -455,10 +482,10 @@ def _decode_commitment(raw: bytes, *, what: str) -> tuple:
     """Decode a ``core.commitment_object``-encoded bstr claim back into its
     peak-hash list. ``commitment_object`` is exactly ``cbor2.dumps(peaks,
     canonical=True)`` (see its docstring/tests), so decoding is the inverse:
-    ``cbor2.loads``, then the same shape checks ``commitment_object`` itself
+    :func:`cll.cbor.loads`, then the same shape checks ``commitment_object`` itself
     enforces on encode (a list of 32-byte strings)."""
     try:
-        peaks = cbor2.loads(bytes(raw))
+        peaks = cbor_loads(bytes(raw))
     except Exception as exc:  # noqa: BLE001 -- total verifier, never raises
         raise ValueError(f"{what} is not valid CBOR: {exc}") from exc
     if not isinstance(peaks, list) or not all(
@@ -608,7 +635,7 @@ def verify_checkpoint_cose_offline(cose_bytes: bytes) -> CoseCheckpointVerificat
         return result
 
     try:
-        claims = cbor2.loads(parsed["payload"])
+        claims = cbor_loads(parsed["payload"])
     except Exception as exc:  # noqa: BLE001
         result.errors.append(f"payload is not valid CBOR: {exc}")
         return result
