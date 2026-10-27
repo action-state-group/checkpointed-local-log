@@ -23,11 +23,21 @@
 //! `docs/backend-contract.md`), their in-memory, JSONL, SQLite (feature
 //! `sqlite`) and MySQL (feature `mysql`) backends, and the conformance runner
 //! for any backend.
+//!
+//! [`runner`] and [`witness_delivery`] are the host-run loops over those
+//! interfaces, ports of the Go runners: [`runner::CheckpointRunner`] indexes
+//! entries and signs checkpoints on a cadence, and
+//! [`witness_delivery::DeliveryRunner`] delivers each checkpoint to its
+//! witnesses (over [`witness_delivery::HttpWitnessClient`] or any
+//! [`witness_delivery::Submitter`]) with bounded retry. The shared
+//! `runner-conformance-vectors/` pin their behavior.
 
 pub mod checkpoint;
 pub mod log;
 pub mod mmr;
 pub mod node_store;
 pub mod range_proof;
+pub mod runner;
 pub mod store;
 pub mod witness;
+pub mod witness_delivery;

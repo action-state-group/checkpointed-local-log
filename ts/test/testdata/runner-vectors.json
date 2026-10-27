@@ -1,0 +1,1151 @@
+{
+ "version": 1,
+ "description": "Checkpoint and witness runner cases. Each case runs its steps in order against a fresh, empty backend with the case's runner configuration. Times and bytes use the backend contract's portable encodings; loadCll results are in its portable state form, with witnesses sorted by checkpointSize then witnessId and every lastError replaced by \"\u003cset\u003e\".",
+ "signingKeySeed": "0707070707070707070707070707070707070707070707070707070707070707",
+ "logId": "runner-vectors",
+ "capabilities": {
+  "bounded-run": "a checkpoint pass scans one batch of scanLimit entries and checkpoints it when due",
+  "stop-after-retryable": "a retryable failure ends that witness's delivery pass"
+ },
+ "cases": [
+  {
+   "name": "checkpoint/empty-log",
+   "description": "A pass over an empty log commits nothing.",
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 60000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 8000
+   },
+   "steps": [
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "0",
+       "indexedSeq": "0",
+       "nodes": [],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/entry-cadence",
+   "description": "Entries are indexed as they arrive; a checkpoint is signed once cadenceEntries are uncheckpointed, queues one row per witness, and the next checkpoint carries a consistency proof from the previous one.",
+   "config": {
+    "cadenceEntries": 3,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a",
+     "w-b"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 8000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:01.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:02.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "firstPendingAt": "2026-10-01T12:00:00.000Z",
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "append",
+     "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+     "appendedAt": "2026-10-01T12:00:03.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:04.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+       "checkpointSize": "4",
+       "checkpointIndexedSeq": "3",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:05.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+       "checkpointSize": "4",
+       "checkpointIndexedSeq": "3",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "append",
+     "value": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+     "appendedAt": "2026-10-01T12:00:06.000Z"
+    },
+    {
+     "op": "append",
+     "value": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU=",
+     "appendedAt": "2026-10-01T12:00:07.000Z"
+    },
+    {
+     "op": "append",
+     "value": "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY=",
+     "appendedAt": "2026-10-01T12:00:08.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:09.500Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "10",
+       "indexedSeq": "6",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY=",
+        "HaAzv4kn7Wk3bZFTN0hJT39eiMIGA97eKvyb/UPUbxc=",
+        "345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAho=",
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I=",
+        "86tVXQamewirJQOf2+Km/LMFyDvBZUks6B096hPsH78=",
+        "URxlYpgsm/oFukFFyl8ruoWhGheKQTG1zr3ibdn/5wQ=",
+        "EHMWuQwjpW9liKPygeDxD8wyVzvB532oRZ1ojJVqoSs="
+       ],
+       "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+       "checkpointSize": "10",
+       "checkpointIndexedSeq": "6",
+       "checkpointPeaks": [
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I=",
+        "EHMWuQwjpW9liKPygeDxD8wyVzvB532oRZ1ojJVqoSs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:04.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "10",
+         "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:09.500Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "10",
+         "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:09.500Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/age-cadence",
+   "description": "A checkpoint is signed once the oldest uncheckpointed entry has waited cadenceAgeMs, also by a pass that scans no new entry.",
+   "config": {
+    "cadenceEntries": 100,
+    "cadenceAgeMs": 60000,
+    "scanLimit": 10,
+    "witnessIds": null,
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 8000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:30.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "firstPendingAt": "2026-10-01T12:00:00.000Z",
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:01:00.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDE6MDBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1JeD5btol8Z99JVQox7pgINocS30ZjETtadiOyfJO+bB7bzJvLTmzBHBbybzAukZjUULcsybkx/B6e4ZrAHUBw==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:01:01.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:01:02.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "firstPendingAt": "2026-10-01T12:01:01.000Z",
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDE6MDBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1JeD5btol8Z99JVQox7pgINocS30ZjETtadiOyfJO+bB7bzJvLTmzBHBbybzAukZjUULcsybkx/B6e4ZrAHUBw==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:02:01.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAyOjAxWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWECYOGuQNzFjrOlTo7up1jMTsm8zQ+XvnJuCBgZjZjVsrBTTGZjfKskAyPveduXfTRfy5HjeGnEnUvfs+jGxP5UP",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "checkpoint/bounded-batches",
+   "description": "Each pass scans at most scanLimit entries and checkpoints that batch when it is due.",
+   "requires": [
+    "bounded-run"
+   ],
+   "config": {
+    "cadenceEntries": 2,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 2,
+    "witnessIds": null,
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 8000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:01.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+     "appendedAt": "2026-10-01T12:00:02.000Z"
+    },
+    {
+     "op": "append",
+     "value": "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ=",
+     "appendedAt": "2026-10-01T12:00:03.000Z"
+    },
+    {
+     "op": "append",
+     "value": "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU=",
+     "appendedAt": "2026-10-01T12:00:04.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:11.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "7",
+       "indexedSeq": "4",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY=",
+        "HaAzv4kn7Wk3bZFTN0hJT39eiMIGA97eKvyb/UPUbxc=",
+        "345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAho=",
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjN6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUHaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjExWmlwcmV2X3NpemUDamNvbW1pdG1lbnRYI4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCb3ByZXZfY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtxY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQNmc2l6ZV9iB2d3aXRuZXNzgYFYIN+OaLE9LvYpONiLFHjR1hRkNek0TzScx821sRabUAIaaW5ld19wZWFrc4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCaW9sZF9wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWEDp09avljvrC0wHMS2rruOzbYCfD/lbEE0qJGrUsoOVEH2RKzX39RL2SuIlqZGhG5lXxWBKfJIBIFhv09R9zIoG",
+       "checkpointSize": "7",
+       "checkpointIndexedSeq": "4",
+       "checkpointPeaks": [
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I="
+       ],
+       "witnesses": []
+      }
+     }
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:12.000Z"
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "8",
+       "indexedSeq": "5",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY=",
+        "HaAzv4kn7Wk3bZFTN0hJT39eiMIGA97eKvyb/UPUbxc=",
+        "345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAho=",
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I=",
+        "86tVXQamewirJQOf2+Km/LMFyDvBZUks6B096hPsH78="
+       ],
+       "firstPendingAt": "2026-10-01T12:00:04.000Z",
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjN6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUHaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjExWmlwcmV2X3NpemUDamNvbW1pdG1lbnRYI4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCb3ByZXZfY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtxY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQNmc2l6ZV9iB2d3aXRuZXNzgYFYIN+OaLE9LvYpONiLFHjR1hRkNek0TzScx821sRabUAIaaW5ld19wZWFrc4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCaW9sZF9wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWEDp09avljvrC0wHMS2rruOzbYCfD/lbEE0qJGrUsoOVEH2RKzX39RL2SuIlqZGhG5lXxWBKfJIBIFhv09R9zIoG",
+       "checkpointSize": "7",
+       "checkpointIndexedSeq": "4",
+       "checkpointPeaks": [
+        "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I="
+       ],
+       "witnesses": []
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/delivery",
+   "description": "Witnesses are delivered independently: a verified receipt completes a row, a retryable failure backs off from baseBackoffMs, and a permanent failure stops the row.",
+   "config": {
+    "cadenceEntries": 2,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-b",
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:01.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:10.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWE=",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1
+        }
+       }
+      ],
+      "w-b": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "verify": {
+      "w-a": [
+       true
+      ]
+     },
+     "expect": {
+      "result": 1
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:10.000Z",
+         "receipt": "cmVjZWlwdCB3LWE=",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:11.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:10.500Z",
+     "limit": 32,
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:11.000Z",
+     "limit": 32,
+     "submit": {
+      "w-b": [
+       {
+        "error": "permanent"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:10.000Z",
+         "receipt": "cmVjZWlwdCB3LWE=",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "attempts": 2,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": true,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:01:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": 0
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/rejected-receipt",
+   "description": "A receipt that fails verification makes the row permanent.",
+   "config": {
+    "cadenceEntries": 2,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:01.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:10.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWE=",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 3,
+         "treeSize": 4
+        }
+       }
+      ]
+     },
+     "verify": {
+      "w-a": [
+       false
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:11.000Z",
+         "permanent": true,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/backoff",
+   "description": "The retry delay doubles per earlier attempt and stops at maxBackoffMs.",
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 2500
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:10.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:11.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:11.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 2,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:13.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 3,
+         "nextAttemptAt": "2026-10-01T12:00:15.500Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:15.500Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "1",
+       "indexedSeq": "1",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpointSize": "1",
+       "checkpointIndexedSeq": "1",
+       "checkpointPeaks": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 4,
+         "nextAttemptAt": "2026-10-01T12:00:18.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/stop-after-retryable",
+   "description": "Rows of one witness are delivered in checkpoint order, and a retryable failure ends that witness's pass.",
+   "requires": [
+    "stop-after-retryable"
+   ],
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:11.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:12.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:12.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:20.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1
+        }
+       },
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2
+        }
+       }
+      ]
+     },
+     "verify": {
+      "w-a": [
+       true,
+       true
+      ]
+     },
+     "expect": {
+      "result": 2
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 2,
+         "nextAttemptAt": "2026-10-01T12:00:20.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:20.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2,
+         "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ ]
+}
