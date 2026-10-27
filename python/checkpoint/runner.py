@@ -89,7 +89,13 @@ def checkpoint_timestamp(value: datetime) -> str:
     """The checkpoint ``issued_at`` text Go's and TypeScript's runners write
     for a millisecond UTC time: RFC 3339 with the fraction's trailing zeros,
     and an all-zero fraction, omitted."""
-    text = value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    value = value.astimezone(timezone.utc)
+    # Built field by field, as cll.log.wire.format_time is: strftime's %Y
+    # zero-padding for years below 1000 depends on the C library.
+    text = (
+        f"{value.year:04d}-{value.month:02d}-{value.day:02d}"
+        f"T{value.hour:02d}:{value.minute:02d}:{value.second:02d}"
+    )
     fraction = f"{value.microsecond // 1000:03d}".rstrip("0")
     return f"{text}.{fraction}Z" if fraction else f"{text}Z"
 
@@ -171,7 +177,7 @@ class CheckpointRunner:
         poll interval. Contention is retried on the next wakeup."""
         while not stop.is_set():
             try:
-                self._catch_up(datetime.now(timezone.utc))
+                self._catch_up(datetime.now(timezone.utc), stop)
             except ContentionError:
                 pass
             self._wake.wait(self._poll_interval)
@@ -184,7 +190,7 @@ class CheckpointRunner:
             now = normalize_time(datetime.now(timezone.utc) if now is None else now)
             return self._advance(now, self._load())
 
-    def _catch_up(self, now: datetime) -> None:
+    def _catch_up(self, now: datetime, stop: threading.Event | None = None) -> None:
         with self._lock:
             # One time for the whole pass, so every checkpoint it signs
             # shares one evaluation time.
@@ -200,7 +206,9 @@ class CheckpointRunner:
                     loaded = self._load()
                     reloaded = True
                     continue
-                if not changed:
+                # A log that grows faster than it is indexed must not keep
+                # the loop from stopping, so stop is checked between batches.
+                if not changed or stop is not None and stop.is_set():
                     return
                 reloaded = False
 
@@ -251,10 +259,13 @@ class CheckpointRunner:
         for entry in entries:
             if entry.seq != indexed + 1:
                 raise CorruptError("CLL entry sequence is not contiguous")
-            core.add_leaf(nodes, core.leaf_hash(entry.value))
+            try:
+                core.add_leaf(nodes, core.leaf_hash(entry.value))
+            except ValueError as exc:
+                raise CorruptError("CLL entry value is invalid") from exc
             indexed = entry.seq
             if first_pending is None:
-                first_pending = entry.appended_at
+                first_pending = normalize_time(entry.appended_at, CorruptError)
         last_checkpointed = state.checkpoint.indexed_seq if state.checkpoint is not None else 0
         uncheckpointed = indexed - last_checkpointed
         due = first_pending is not None and uncheckpointed > 0 and (

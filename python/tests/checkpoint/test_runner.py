@@ -8,6 +8,7 @@ import base64
 import hashlib
 import json
 import threading
+import time
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -31,6 +32,13 @@ from cll.log import (
 from cll.log.memory import MemoryStore
 
 T0 = datetime(2026, 10, 1, 12, 0, tzinfo=timezone.utc)
+
+
+def _wait_for(condition, timeout: float = 5.0) -> None:
+    deadline = time.monotonic() + timeout
+    while not condition():
+        assert time.monotonic() < deadline, "condition not reached"
+        time.sleep(0.01)
 
 
 def _signer(seed: int = 7) -> Ed25519CheckpointSigner:
@@ -96,6 +104,7 @@ def test_checkpoint_timestamp_drops_zero_fraction_digits():
     assert checkpoint_timestamp(T0) == "2026-10-01T12:00:00Z"
     assert checkpoint_timestamp(T0 + timedelta(milliseconds=500)) == "2026-10-01T12:00:00.5Z"
     assert checkpoint_timestamp(T0 + timedelta(milliseconds=12)) == "2026-10-01T12:00:00.012Z"
+    assert checkpoint_timestamp(datetime(5, 1, 2, tzinfo=timezone.utc)) == "0005-01-02T00:00:00Z"
 
 
 def test_a_checkpoint_from_another_key_or_log_is_corrupt():
@@ -122,6 +131,28 @@ def test_tampered_checkpoint_bytes_are_corrupt():
 
     with pytest.raises(CorruptError):
         CheckpointRunner(Tampered(), signer, "log").run_once(T0)
+
+
+def test_catch_up_stops_between_batches_once_asked():
+    store = _store(5)
+    stop = threading.Event()
+    stop.set()
+    CheckpointRunner(store, _signer(), "log", scan_limit=2)._catch_up(T0, stop)
+    assert store.load_cll().indexed_seq == 2
+
+
+def test_a_malformed_entry_value_is_corrupt():
+    store = _store(1)
+
+    class Short(MemoryStore):
+        def load_cll(self):
+            return store.load_cll()
+
+        def scan_entries(self, after_seq, limit):
+            return [replace(entry, value=b"short") for entry in store.scan_entries(after_seq, limit)]
+
+    with pytest.raises(CorruptError):
+        CheckpointRunner(Short(), _signer(), "log").run_once(T0)
 
 
 def test_inconsistent_index_is_corrupt():
@@ -179,12 +210,14 @@ def test_run_stops_and_wakes_on_notify():
     stop = threading.Event()
     thread = threading.Thread(target=runner.run, args=(stop,))
     thread.start()
+    _wait_for(lambda: store.load_cll().checkpoint is not None)
     store.append(AppendInput(bytes([9]) * 32, T0))
+    runner.notify()
+    _wait_for(lambda: store.load_cll().indexed_seq == 3)
     stop.set()
     runner.notify()
     thread.join(timeout=5)
     assert not thread.is_alive()
-    assert store.load_cll().checkpoint is not None
 
 
 # -- delivery runner -------------------------------------------------------------
@@ -278,11 +311,11 @@ def test_delivery_run_stops():
     stop = threading.Event()
     thread = threading.Thread(target=runner.run, args=(stop,))
     thread.start()
+    _wait_for(lambda: store.load_cll().witnesses[0].receipt == RECEIPT)
     stop.set()
     runner.notify()
     thread.join(timeout=5)
     assert not thread.is_alive()
-    assert store.load_cll().witnesses[0].receipt == RECEIPT
 
 
 # -- HTTP client -----------------------------------------------------------------
@@ -338,30 +371,62 @@ def test_client_posts_and_parses_a_receipt():
 
 
 @pytest.mark.parametrize(
-    "status,body,headers,error",
+    "status,body,headers,error,reason",
     [
-        (503, b"busy", None, ContentionError),
-        (429, b"", None, ContentionError),
-        (400, b"bad", None, RejectedError),
-        (302, b"", {"Location": "http://example.invalid/"}, RejectedError),
-        (200, b"not json", None, RejectedError),
-        (200, b"[]", None, RejectedError),
-        (200, _response(entry_hash_scheme="other"), None, RejectedError),
-        (200, _response(entry_hash="AB" * 32), None, RejectedError),
-        (200, _response(leaf_index=1, tree_size=1), None, RejectedError),
-        (200, _response(tree_size=True), None, RejectedError),
-        (200, _response(receipt_b64="!!"), None, RejectedError),
-        (200, _response(receipt_b64=""), None, RejectedError),
-        (200, b"x" * 65, None, RejectedError),
+        (503, b"busy", None, ContentionError, "HTTP 503"),
+        (429, b"", None, ContentionError, "HTTP 429"),
+        (400, b"bad", None, RejectedError, "HTTP 400"),
+        (302, b"", {"Location": "http://example.invalid/"}, RejectedError, "HTTP 302"),
+        (200, b"not json", None, RejectedError, "invalid witness JSON"),
+        (200, b"[]", None, RejectedError, "invalid witness response"),
+        (200, _response(entry_hash_scheme="other"), None, RejectedError, "entry hash scheme"),
+        (200, _response(entry_hash="AB" * 32), None, RejectedError, "invalid entry hash"),
+        (200, _response(leaf_index=1, tree_size=1), None, RejectedError, "transparency position"),
+        (200, _response(tree_size=True), None, RejectedError, "transparency position"),
+        (200, _response(receipt_b64="!!"), None, RejectedError, "receipt base64"),
+        (200, _response(receipt_b64=""), None, RejectedError, "receipt base64"),
     ],
 )
-def test_client_classifies_responses(status, body, headers, error):
+def test_client_classifies_responses(status, body, headers, error, reason):
     statement = _statement()
     server, _ = _serve(status, body, headers)
     try:
-        client = HttpWitnessClient(f"http://127.0.0.1:{server.server_port}", max_response_bytes=64 if len(body) > 64 else 4096)
-        with pytest.raises(error):
-            client.submit(statement)
+        with pytest.raises(error, match=reason):
+            HttpWitnessClient(f"http://127.0.0.1:{server.server_port}").submit(statement)
+    finally:
+        server.shutdown()
+
+
+def test_client_bounds_the_response():
+    statement = _statement()
+    server, _ = _serve(200, _response())
+    try:
+        with pytest.raises(RejectedError, match="exceeds 64 bytes"):
+            HttpWitnessClient(f"http://127.0.0.1:{server.server_port}", max_response_bytes=64).submit(statement)
+    finally:
+        server.shutdown()
+
+
+def test_a_response_cut_off_mid_body_is_retryable():
+    statement = _statement()
+
+    class Truncating(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.rfile.read(int(self.headers["Content-Length"]))
+            self.send_response(200)
+            self.send_header("Content-Length", "1000")
+            self.end_headers()
+            self.wfile.write(b'{"partial":')
+            self.close_connection = True
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Truncating)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        with pytest.raises(ContentionError):
+            HttpWitnessClient(f"http://127.0.0.1:{server.server_port}").submit(statement)
     finally:
         server.shutdown()
 
@@ -413,5 +478,7 @@ def test_receipt_verifier_rejects_wrong_binding_scheme_and_key():
         ReceiptVerifier(public).verify(statement, replace(receipt, entry_hash_scheme=None))
     with pytest.raises(RejectedError):
         ReceiptVerifier(bytes([1]) * 32).verify(statement, receipt)
+    with pytest.raises(RejectedError, match="position"):
+        ReceiptVerifier(public).verify(statement, replace(receipt, leaf_index=1, tree_size=2))
     with pytest.raises(InvalidError):
         ReceiptVerifier(b"short")

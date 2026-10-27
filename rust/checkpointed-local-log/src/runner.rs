@@ -216,7 +216,7 @@ where
     /// set `stop` and then call [`notify`](Self::notify).
     pub fn run(&self, stop: &AtomicBool) -> Result<()> {
         while !stop.load(Ordering::SeqCst) {
-            match self.catch_up(Timestamp::now()) {
+            match self.catch_up_until(Timestamp::now(), Some(stop)) {
                 Err(error) if error.code() != ErrorCode::Contention => return Err(error),
                 _ => {}
             }
@@ -245,6 +245,13 @@ where
     /// reloads the state once; contention again right after the reload is
     /// returned.
     pub fn catch_up(&self, now: Timestamp) -> Result<()> {
+        self.catch_up_until(now, None)
+    }
+
+    /// [`catch_up`](Self::catch_up) that also returns once `stop` is set,
+    /// checked between batches, so a log that grows faster than it is
+    /// indexed cannot keep [`run`](Self::run) from stopping.
+    fn catch_up_until(&self, now: Timestamp, stop: Option<&AtomicBool>) -> Result<()> {
         let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
         let now = runner_time(now)?;
         let mut loaded = self.load()?;
@@ -257,6 +264,7 @@ where
                 }
                 Err(error) => return Err(error),
                 Ok(false) => return Ok(()),
+                Ok(true) if stop.is_some_and(|stop| stop.load(Ordering::SeqCst)) => return Ok(()),
                 Ok(true) => reloaded = false,
             }
         }
@@ -921,6 +929,24 @@ mod tests {
         let error = runner.catch_up(at("2026-10-01T12:00:10.000Z")).unwrap_err();
         assert_eq!(error.code(), ErrorCode::Contention);
         assert_eq!(store.loads.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn catch_up_stops_between_batches_once_asked() {
+        let store = Arc::new(MemoryStore::new());
+        for byte in 1..=5 {
+            append(&store, byte, "2026-10-01T12:00:00.000Z");
+        }
+        let config = RunnerConfig {
+            scan_limit: 2,
+            ..config()
+        };
+        let runner = CheckpointRunner::new(config, store.clone(), key()).unwrap();
+        let stop = AtomicBool::new(true);
+        runner
+            .catch_up_until(at("2026-10-01T12:00:01.000Z"), Some(&stop))
+            .unwrap();
+        assert_eq!(store.load_cll().unwrap().indexed_seq, 2);
     }
 
     #[test]

@@ -10,6 +10,7 @@ package runnervectors
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/ed25519"
 	"encoding/base64"
@@ -18,6 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -239,12 +243,19 @@ func run(ctx context.Context, document Document, item *Case, record bool) error 
 	return nil
 }
 
-// Normalize returns state in the vectors' comparable form.
+// Normalize returns state in the vectors' comparable form: witnesses sorted
+// by numeric checkpointSize, then witnessId, and lastError replaced by
+// LastErrorMarker.
 func Normalize(state cll.State) (backend.WireState, error) {
 	wire, err := backend.StateToWire(state)
 	if err != nil {
 		return backend.WireState{}, err
 	}
+	slices.SortFunc(wire.Witnesses, func(a, b backend.WireWitness) int {
+		left, _ := strconv.ParseUint(a.CheckpointSize, 10, 64)
+		right, _ := strconv.ParseUint(b.CheckpointSize, 10, 64)
+		return cmp.Or(cmp.Compare(left, right), strings.Compare(a.WitnessID, b.WitnessID))
+	})
 	for index := range wire.Witnesses {
 		if wire.Witnesses[index].LastError != "" {
 			wire.Witnesses[index].LastError = LastErrorMarker

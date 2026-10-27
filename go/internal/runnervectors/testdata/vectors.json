@@ -511,8 +511,8 @@
     "cadenceAgeMs": 3600000,
     "scanLimit": 10,
     "witnessIds": [
-     "w-a",
-     "w-b"
+     "w-b",
+     "w-a"
     ],
     "baseBackoffMs": 1000,
     "maxBackoffMs": 4000

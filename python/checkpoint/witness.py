@@ -19,11 +19,13 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import http.client
 import json
 import random
 import re
 import threading
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
@@ -128,11 +130,18 @@ class HttpWitnessClient:
             headers={"Content-Type": CLL_CHECKPOINT_CONTENT_TYPE, "Accept": "application/json"},
         )
         try:
-            with self._opener.open(request, timeout=self._timeout) as response:
-                status, raw = response.status, response.read(self._max_bytes + 1)
-        except urllib.error.HTTPError as exc:
-            status, raw = exc.code, exc.read(self._max_bytes + 1)
-        except OSError as exc:
+            try:
+                with self._opener.open(request, timeout=self._timeout) as response:
+                    status, raw = response.status, response.read(self._max_bytes + 1)
+                    # A bounded read returns short, without raising, when the
+                    # connection closes before the declared Content-Length.
+                    if len(raw) <= self._max_bytes and (getattr(response, "length", None) or 0) > 0:
+                        raise http.client.IncompleteRead(raw, response.length)
+            except urllib.error.HTTPError as exc:
+                status, raw = exc.code, exc.read(self._max_bytes + 1)
+        except (OSError, http.client.HTTPException) as exc:
+            # A refused or reset connection, a timeout, or a response cut off
+            # mid-body: worth retrying.
             raise ContentionError(f"witness request failed: {exc}") from exc
         if len(raw) > self._max_bytes:
             raise RejectedError(f"witness response exceeds {self._max_bytes} bytes")
@@ -199,6 +208,10 @@ class ReceiptVerifier:
         result = verify_receipt(receipt.bytes, leaf_entry_hex=entry_hash, log_public_key_pem=self._pem)
         if not result.ok:
             raise RejectedError(f"receipt failed verification: {result.errors}")
+        # The runner stores the response's position, so it must be the one the
+        # signed proof carries.
+        if result.tree_size != receipt.tree_size or result.leaf_index != receipt.leaf_index:
+            raise RejectedError("receipt position mismatch")
 
 
 def _bounded_text(value: str) -> str:

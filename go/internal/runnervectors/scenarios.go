@@ -104,7 +104,7 @@ func scenarios() []Case {
 			Name: "witness/delivery",
 			Description: "Witnesses are delivered independently: a verified receipt completes a row, a retryable failure " +
 				"backs off from baseBackoffMs, and a permanent failure stops the row.",
-			Config: Config{CadenceEntries: 2, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a", "w-b"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
+			Config: Config{CadenceEntries: 2, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-b", "w-a"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
 			Steps: steps(
 				appendSteps(1, 2, 0),
 				one(
