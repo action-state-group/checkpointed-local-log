@@ -263,9 +263,10 @@ class CheckpointRunner:
                 core.add_leaf(nodes, core.leaf_hash(entry.value))
             except ValueError as exc:
                 raise CorruptError("CLL entry value is invalid") from exc
+            appended_at = normalize_time(entry.appended_at, CorruptError)
             indexed = entry.seq
             if first_pending is None:
-                first_pending = normalize_time(entry.appended_at, CorruptError)
+                first_pending = appended_at
         last_checkpointed = state.checkpoint.indexed_seq if state.checkpoint is not None else 0
         uncheckpointed = indexed - last_checkpointed
         due = first_pending is not None and uncheckpointed > 0 and (

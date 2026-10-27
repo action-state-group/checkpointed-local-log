@@ -155,6 +155,21 @@ def test_a_malformed_entry_value_is_corrupt():
         CheckpointRunner(Short(), _signer(), "log").run_once(T0)
 
 
+def test_a_later_naive_entry_time_is_corrupt():
+    store = _store(2)
+
+    class Naive(MemoryStore):
+        def load_cll(self):
+            return store.load_cll()
+
+        def scan_entries(self, after_seq, limit):
+            first, second = store.scan_entries(after_seq, limit)
+            return [first, replace(second, appended_at=second.appended_at.replace(tzinfo=None))]
+
+    with pytest.raises(CorruptError):
+        CheckpointRunner(Naive(), _signer(), "log").run_once(T0)
+
+
 def test_inconsistent_index_is_corrupt():
     store = _store(1)
 
@@ -407,13 +422,14 @@ def test_client_bounds_the_response():
         server.shutdown()
 
 
-def test_a_response_cut_off_mid_body_is_retryable():
+@pytest.mark.parametrize("status", [200, 400])
+def test_a_response_cut_off_mid_body_is_retryable(status):
     statement = _statement()
 
     class Truncating(BaseHTTPRequestHandler):
         def do_POST(self):
             self.rfile.read(int(self.headers["Content-Length"]))
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("Content-Length", "1000")
             self.end_headers()
             self.wfile.write(b'{"partial":')

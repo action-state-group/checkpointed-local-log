@@ -132,13 +132,9 @@ class HttpWitnessClient:
         try:
             try:
                 with self._opener.open(request, timeout=self._timeout) as response:
-                    status, raw = response.status, response.read(self._max_bytes + 1)
-                    # A bounded read returns short, without raising, when the
-                    # connection closes before the declared Content-Length.
-                    if len(raw) <= self._max_bytes and (getattr(response, "length", None) or 0) > 0:
-                        raise http.client.IncompleteRead(raw, response.length)
+                    status, raw = response.status, self._read(response)
             except urllib.error.HTTPError as exc:
-                status, raw = exc.code, exc.read(self._max_bytes + 1)
+                status, raw = exc.code, self._read(exc)
         except (OSError, http.client.HTTPException) as exc:
             # A refused or reset connection, a timeout, or a response cut off
             # mid-body: worth retrying.
@@ -151,6 +147,18 @@ class HttpWitnessClient:
                 raise ContentionError(message)
             raise RejectedError(message)
         return _parse_receipt(raw)
+
+    def _read(self, response) -> bytes:
+        """Read at most one byte past the limit. A bounded read returns short,
+        without raising, when the connection closes before the declared
+        Content-Length, so that is reported as a cut-off response."""
+        raw = response.read(self._max_bytes + 1)
+        remaining = getattr(response, "length", None)
+        if remaining is None:  # an HTTPError wraps the response in fp
+            remaining = getattr(getattr(response, "fp", None), "length", None)
+        if len(raw) <= self._max_bytes and remaining:
+            raise http.client.IncompleteRead(raw, remaining)
+        return raw
 
 
 def _parse_receipt(raw: bytes) -> WitnessReceipt:
