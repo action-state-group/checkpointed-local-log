@@ -5,6 +5,35 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Added
+
+- **`cll.cbor.loads`** decodes one CBOR data item like `cbor2.loads`, but
+  raises `cll.cbor.DuplicateMapKeyError` (a `ValueError`) when any map in it,
+  at any depth, has two keys that are equal as Python values: `1` and `true`,
+  `0` and `false`, `1` and `1.0`, an integer and an equal bignum, or a
+  repeated key. `cbor2.loads` keeps only the later of such entries
+  (checkpointed-local-log#104).
+
+### Fixed
+
+- **`verify_checkpoint_cose_offline` no longer reads a map whose keys
+  collapsed.** It decodes the protected header, the whole COSE_Sign1 (so the
+  unprotected header too), the claims payload and both commitments with
+  `cll.cbor.loads`. It also refuses a protected or unprotected header label,
+  or a CWT claim key, that is not an integer or a text string (RFC 9052 §3,
+  RFC 8392 §3), so a `true` label is no longer found by a lookup of label 1.
+  Before, `{1: "a", true: "b"}` read as `{1: "b"}`, and a lone `true` label
+  read as `alg`.
+- **Departure from draft-mih-scitt-checkpointed-local-log-01:** claims the
+  verifier does not understand are still refused when two of their keys
+  collide in Python (claims `1` and `true`), or when a map inside one has
+  such keys. The draft says verifiers MUST ignore such claims;
+  Python cannot hold both keys in one dict, so this verifier refuses rather
+  than read the claim back changed. Go refuses the same statement, because it
+  refuses any claim it does not define (checkpointed-local-log#99).
+
 ## 0.7.0 — 2026-10-22
 
 ### Added
