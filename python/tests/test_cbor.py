@@ -61,16 +61,34 @@ def test_malformed_cbor_raises_as_cbor2_does() -> None:
         loads(b"\xa1\x01")  # a map missing its value
 
 
-def test_key_that_cannot_be_decoded_alone_is_refused() -> None:
-    # {"a": 28("x"), 29(0): 1}: the second key refers to a value shared
-    # earlier in the item, so on its own it cannot be checked.
-    data = bytes.fromhex("a26161d81c6178d81d0001")
-    try:
-        cbor2.loads(data)
-    except Exception:  # noqa: BLE001 -- this cbor2 refuses the item itself
-        pytest.skip("installed cbor2 does not decode value-sharing tags as map keys")
-    with pytest.raises(DuplicateMapKeyError, match="cannot be decoded on its own"):
-        loads(data)
+@pytest.mark.parametrize(
+    "hex_item",
+    [
+        # {28("a"): 0, [28("b"), 29(0)]: 1, ["b", "a"]: 2}: decoded alone, the
+        # second key's 29(0) would resolve to "b", not the whole item's "a".
+        "a3d81c61610082d81c6162d81d0001826162616102",
+        "a1d81c616100",  # {28("a"): 0}
+        "a1d81d0000",  # {29(0): 0}
+        "a1d90100a1616100",  # {256({"a": 0}): 0}
+        "a181d8190000",  # {[25(0)]: 0}
+    ],
+)
+def test_key_holding_a_context_tag_is_refused(hex_item: str) -> None:
+    with pytest.raises(DuplicateMapKeyError, match="depends on the rest of the item"):
+        _walk_only(bytes.fromhex(hex_item))
+
+
+def _walk_only(data: bytes) -> None:
+    # Some of these items are not valid on their own (an unresolved
+    # reference), so check the keys without cbor2's whole-item decode.
+    from cll import cbor
+
+    cbor._walk(data, 0)
+
+
+def test_context_tags_outside_keys_are_left_to_cbor2() -> None:
+    data = bytes.fromhex("82d81c6161d81d00")  # [28("a"), 29(0)]
+    assert loads(data) == cbor2.loads(data)
 
 
 def test_deep_nesting_is_refused_not_crashed(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -78,3 +96,11 @@ def test_deep_nesting_is_refused_not_crashed(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(cbor2, "loads", lambda data: None)
     with pytest.raises(DuplicateMapKeyError, match="nested too deeply"):
         loads(b"\x81" * 100_000 + b"\x00")
+
+
+def test_collision_hidden_by_a_shared_reference_is_refused() -> None:
+    # cbor2 decodes this whole item to {"a": 0, ("b", "a"): 2}, losing the
+    # second entry; decoded alone, its key would read ("b", "b") and pass.
+    data = bytes.fromhex("a3d81c61610082d81c6162d81d0001826162616102")
+    with pytest.raises(DuplicateMapKeyError, match="depends on the rest of the item"):
+        loads(data)

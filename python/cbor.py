@@ -32,10 +32,11 @@ def loads(data: bytes) -> object:
     """Decode one CBOR data item, as ``cbor2.loads`` does, but raise
     :class:`DuplicateMapKeyError` if any map in it, at any depth (keys and
     tag contents included), has two keys that decode to equal Python values.
-    A key that cannot be decoded on its own (one that refers to a value
-    shared from elsewhere in the item, tags 25 and 29) is refused the same
-    way, since its value cannot be checked. Malformed CBOR raises whatever
-    ``cbor2.loads`` raises.
+    A key holding a tag whose value depends on the rest of the item (string
+    references, tags 25 and 256; value sharing, tags 28 and 29) is refused
+    the same way: decoded on its own it can resolve to a different value
+    than in the whole item, so its collisions cannot be checked. Malformed
+    CBOR raises whatever ``cbor2.loads`` raises.
     """
     data = bytes(data)
     value = cbor2.loads(data)
@@ -65,8 +66,14 @@ def _head(data: bytes, i: int) -> tuple[int, int | None, int]:
     return major, int.from_bytes(data[i + 1:end], "big"), end
 
 
-def _walk(data: bytes, i: int) -> int:
+#: Tags whose decoded value depends on other parts of the item: stringref
+#: (25, 256) and value sharing (28, 29).
+_CONTEXT_TAGS = frozenset({25, 28, 29, 256})
+
+
+def _walk(data: bytes, i: int, in_key: bool = False) -> int:
     """Check every map in the item at ``i``; return the offset after it.
+    ``in_key`` is true inside a map key, where context tags are refused.
     ``cbor2.loads`` has already accepted ``data``, so it is well formed."""
     major, arg, i = _head(data, i)
     if major in (0, 1, 7):
@@ -79,18 +86,23 @@ def _walk(data: bytes, i: int) -> int:
             i += n
         return i + 1
     if major == 6:
-        return _walk(data, i)
+        if in_key and arg in _CONTEXT_TAGS:
+            raise DuplicateMapKeyError(
+                f"CBOR map key holds tag {arg}, whose value depends on the rest of the item, "
+                "so its key cannot be checked on its own"
+            )
+        return _walk(data, i, in_key)
     if major == 4:
         count = 0
         while (arg is None and data[i] != 0xFF) or (arg is not None and count < arg):
-            i = _walk(data, i)
+            i = _walk(data, i, in_key)
             count += 1
         return i + 1 if arg is None else i
     # major == 5: a map
     keys, count = set(), 0
     while (arg is None and data[i] != 0xFF) or (arg is not None and count < arg):
         start = i
-        i = _walk(data, i)
+        i = _walk(data, i, True)
         raw = data[start:i]
         keys.add(_key(raw))
         count += 1
@@ -100,7 +112,7 @@ def _walk(data: bytes, i: int) -> int:
                 "same map (e.g. 1 and true, or a repeated key) -- refused rather than letting one "
                 "entry replace the other"
             )
-        i = _walk(data, i)
+        i = _walk(data, i, in_key)
     return i + 1 if arg is None else i
 
 

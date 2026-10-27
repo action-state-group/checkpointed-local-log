@@ -26,13 +26,14 @@ are documented here. The format follows
   RFC 8392 §3), so a `true` label is no longer found by a lookup of label 1.
   Before, `{1: "a", true: "b"}` read as `{1: "b"}`, and a lone `true` label
   read as `alg`.
-- **Departure from draft-mih-scitt-checkpointed-local-log-01:** claims the
+- **Departure from draft-mih-scitt-checkpointed-local-log-01, Section 3:** claims the
   verifier does not understand are still refused when two of their keys
   collide in Python (claims `1` and `true`), or when a map inside one has
   such keys. The draft says verifiers MUST ignore such claims;
   Python cannot hold both keys in one dict, so this verifier refuses rather
-  than read the claim back changed. Go refuses the same statement, because it
-  refuses any claim it does not define (checkpointed-local-log#99).
+  than read the claim back changed. Go also refuses that statement, and more
+  broadly: it refuses any claim it does not define, which departs from the
+  same sentence (checkpointed-local-log#99).
 
 ## 0.7.0 — 2026-10-22
 
