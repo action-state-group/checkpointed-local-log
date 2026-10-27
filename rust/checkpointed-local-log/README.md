@@ -27,7 +27,12 @@ use cll::mmr::{add_leaf, MemoryNodeStore};
 - `range_proof`: per-record inclusion proofs and range proofs.
 - `store`, `node_store`: the log store and a durable, file-backed MMR node
   store.
-- `witness`: witness registration of checkpoints.
+- `witness`: witness registration of checkpoint digests (`/v1/digest`).
+- `runner`: the checkpoint runner: indexes a `log` store's entries into its
+  MMR and signs a COSE checkpoint on an entry-count or age cadence.
+- `witness_delivery`: delivers queued checkpoints to witnesses'
+  `/checkpoints` route with bounded exponential retry; the host supplies the
+  receipt verifier.
 - `log`: the storage interfaces shared with the Go, TypeScript and Python
   implementations (entry log, checkpoint state, witness state), with
   `memory` and `jsonl` backends, `sqlite` and `mysql` backends behind Cargo
