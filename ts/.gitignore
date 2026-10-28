@@ -8,3 +8,5 @@ coverage/
 # Local secrets: never commit an env file.
 .env
 .env.*
+.vitest-attachments/
+test/browser/__screenshots__/

@@ -183,6 +183,32 @@ const witnessEntryHash = await checkpointEntryHash(signedCheckpointBytes);
 commitment, consistency-proof, and signature verification. The entry hash is
 the RFC 9162 checkpoint entry identity used by witness receipts.
 
+## In a browser
+
+Under the `browser` export condition, which bundlers such as Vite, esbuild and
+webpack select, `@action-state-group/cll` resolves to an entry with no Node
+imports. It exports the MMR functions above and checkpoint verification:
+`verifyCheckpoint`, `checkpointMetadata` and `CHECKPOINT_CONTENT_TYPE`, with
+the Node entry's signatures and results. Signing, storage, witnesses and
+runners need Node.
+
+```ts
+import { checkpointMetadata } from "@action-state-group/cll";
+
+const metadata = await checkpointMetadata(signedCheckpointBytes);
+if (metadata === undefined) {
+  // Not a valid checkpoint statement.
+}
+```
+
+The browser entry hashes with WebCrypto where the page has it, and with a
+built-in SHA-256 where it does not: `crypto.subtle` exists only in a secure
+context. It checks Ed25519 signatures with `@noble/curves` in every browser
+and refuses every signature the Node entry refuses, including those by
+small-order keys. It does not use WebCrypto's Ed25519, because Chrome's
+accepts a signature by a small-order key, which anyone can make without a
+private key.
+
 ## Compose with capsule-emit
 
 AAC is one possible application of CLL. The two packages are independent. The

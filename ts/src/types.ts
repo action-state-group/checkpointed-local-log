@@ -143,7 +143,7 @@ export class CllError extends Error {
 }
 
 export function validateIdentifier(value: string): void {
-  const length = Buffer.byteLength(value);
+  const length = new TextEncoder().encode(value).length;
   if (
     length < 1 ||
     length > limits.identifier ||
