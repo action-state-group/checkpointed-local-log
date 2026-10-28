@@ -26,9 +26,33 @@ use coset::{
     iana, CoseSign1, CoseSign1Builder, HeaderBuilder, Label, RegisteredLabel,
     TaggedCborSerializable,
 };
-use ed25519_dalek::{SigningKey, Verifier, VerifyingKey};
+use ed25519_dalek::{SigningKey, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as Sha2Digest, Sha256};
+
+/// Whether a 32-byte point encoding has y < p (RFC 8032 section 5.1.3).
+fn canonical_point(encoded: &[u8; 32]) -> bool {
+    !(encoded[0] >= 0xed && encoded[1..31].iter().all(|&b| b == 0xff) && encoded[31] & 0x7f == 0x7f)
+}
+
+/// Ed25519 verification shared with every CLL implementation
+/// (`checkpoint-conformance-vectors/ed25519-vectors.json`). dalek's `verify`
+/// accepts a signature by a small-order public key, which anyone can make
+/// without a private key, so this uses `verify_strict`, which refuses
+/// small-order A and R, S >= L, and checks the cofactorless equation. It also
+/// refuses non-canonical A and R (y >= p), which dalek decodes.
+fn verify_ed25519(public_key: &[u8; 32], message: &[u8], signature: &[u8; 64]) -> bool {
+    let r: &[u8; 32] = signature[..32].try_into().unwrap();
+    if !canonical_point(public_key) || !canonical_point(r) {
+        return false;
+    }
+    let Ok(verifying_key) = VerifyingKey::from_bytes(public_key) else {
+        return false;
+    };
+    verifying_key
+        .verify_strict(message, &ed25519_dalek::Signature::from_bytes(signature))
+        .is_ok()
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum CheckpointError {
@@ -257,14 +281,12 @@ impl CheckpointRecord {
     pub fn verify_signature_offline(&self) -> bool {
         (|| -> Option<bool> {
             let key_bytes: [u8; 32] = hex::decode(&self.key_id).ok()?.try_into().ok()?;
-            let verifying_key = VerifyingKey::from_bytes(&key_bytes).ok()?;
             let sig_bytes: [u8; 64] = hex::decode(&self.signature).ok()?.try_into().ok()?;
-            let signature = ed25519_dalek::Signature::from_bytes(&sig_bytes);
-            Some(
-                verifying_key
-                    .verify(self.digest().as_bytes(), &signature)
-                    .is_ok(),
-            )
+            Some(verify_ed25519(
+                &key_bytes,
+                self.digest().as_bytes(),
+                &sig_bytes,
+            ))
         })()
         .unwrap_or(false)
     }
@@ -677,20 +699,18 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
         return result;
     }
     let key_bytes: [u8; DIGEST_LEN] = kid.clone().try_into().unwrap();
-    let verifying_key = match VerifyingKey::from_bytes(&key_bytes) {
-        Ok(k) => k,
-        Err(e) => {
-            result
-                .errors
-                .push(format!("kid is not a valid Ed25519 public key: {e}"));
-            return result;
-        }
-    };
+    if let Err(e) = VerifyingKey::from_bytes(&key_bytes) {
+        result
+            .errors
+            .push(format!("kid is not a valid Ed25519 public key: {e}"));
+        return result;
+    }
 
     let verify_result = sign1.verify_signature(b"", |sig, tbs| -> Result<(), ()> {
         let sig_bytes: [u8; 64] = sig.try_into().map_err(|_| ())?;
-        let signature = ed25519_dalek::Signature::from_bytes(&sig_bytes);
-        verifying_key.verify(tbs, &signature).map_err(|_| ())
+        verify_ed25519(&key_bytes, tbs, &sig_bytes)
+            .then_some(())
+            .ok_or(())
     });
     if verify_result.is_err() {
         result
@@ -940,4 +960,41 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
     result.decoded = Some(decoded);
     result.ok = true;
     result
+}
+
+#[cfg(test)]
+mod ed25519_tests {
+    use super::verify_ed25519;
+    use serde_json::Value;
+
+    fn bytes<const N: usize>(case: &Value, field: &str) -> [u8; N] {
+        hex::decode(case[field].as_str().unwrap())
+            .unwrap()
+            .try_into()
+            .unwrap()
+    }
+
+    #[test]
+    fn decides_every_shared_raw_case() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../checkpoint-conformance-vectors/ed25519-vectors.json"
+        );
+        let vectors: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let cases = vectors["ed25519_cases"].as_array().unwrap();
+        assert!(!cases.is_empty());
+        for case in cases {
+            let message = hex::decode(case["message_hex"].as_str().unwrap()).unwrap();
+            assert_eq!(
+                verify_ed25519(
+                    &bytes(case, "public_key_hex"),
+                    &message,
+                    &bytes(case, "signature_hex")
+                ),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+    }
 }
