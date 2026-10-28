@@ -64,7 +64,10 @@ encoding, and the signed checkpoint record that wraps a root.
   verifier refuses A or R that is not a canonical encoding (y >= p, or x = 0
   with the sign bit set) or is of small order, and S >= L, and checks the
   cofactorless equation `[S]B = R + [k]A`. The `mixed-order A` cases (a key
-  `aB + T` with a small-order `T`, signed by the holder of `a`) must verify.
+  `aB + T` with a small-order `T`, signed by the holder of `a` with a
+  challenge `k` that is a multiple of 8) must verify. For other `k`,
+  `[k]T` is not the identity and the cofactorless check fails, so such a key
+  is not usable in general.
   `generate_ed25519.py` writes the file with plain RFC 8032 arithmetic, so
   it depends on none of the verifiers it tests; `--check` fails when the
   file is out of date.

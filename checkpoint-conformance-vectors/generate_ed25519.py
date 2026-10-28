@@ -196,6 +196,13 @@ def ed25519_cases() -> list[dict]:
             + ("" if canonical else "; A's encoding is also not canonical"),
         ))
 
+    # y = 2 is below p but on no point of the curve.
+    off_curve = _y(2)
+    cases.append(_case("off-curve A y=2", off_curve, message, signature, False, "A is not a point on the curve"))
+    cases.append(_case(
+        "off-curve R y=2", public, message, off_curve + signature[32:], False, "R is not a point on the curve",
+    ))
+
     for i in range(2, 19):
         encoding = _y(P + i)
         cases.append(_case(
