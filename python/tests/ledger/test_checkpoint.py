@@ -418,8 +418,8 @@ class TestVerifyReceiptOffline:
         fake_result.ok = True
         fake_result.errors = []
 
-        # Patch the scitt_cose module import inside checkpoint to return a success.
-        with mock.patch("scitt_cose.verify_receipt", return_value=fake_result):
+        # Patch the receipt check (scitt_cose plus cll.ed25519) to return a success.
+        with mock.patch("cll.ed25519.verify_receipt", return_value=fake_result):
             ok, errors = verify_receipt_offline(w, ts_pubkey_pem=b"FAKE_PEM")
 
         assert ok
@@ -432,7 +432,7 @@ class TestVerifyReceiptOffline:
         fake_result.ok = False
         fake_result.errors = ["invalid alg"]
 
-        with mock.patch("scitt_cose.verify_receipt", return_value=fake_result):
+        with mock.patch("cll.ed25519.verify_receipt", return_value=fake_result):
             ok, errors = verify_receipt_offline(w, ts_pubkey_pem=b"FAKE_PEM")
 
         assert not ok

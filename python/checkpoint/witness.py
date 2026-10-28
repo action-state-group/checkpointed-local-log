@@ -204,7 +204,7 @@ class ReceiptVerifier:
         self._pem = key.public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
 
     def verify(self, checkpoint: bytes, receipt: WitnessReceipt) -> None:
-        from scitt_cose import verify_receipt
+        from ..ed25519 import verify_receipt
 
         if not 1 <= len(receipt.bytes) <= MAX_WITNESS_RESPONSE_BYTES:
             raise RejectedError("receipt size is invalid")

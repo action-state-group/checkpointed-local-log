@@ -411,7 +411,9 @@ def verify_receipt_offline(
     ``(ok, errors)`` — never raises.
     """
     try:
-        from scitt_cose import verify_receipt
+        import scitt_cose  # noqa: F401
+
+        from ..ed25519 import verify_receipt
     except ImportError:
         return False, ["scitt-cose is not installed; run: pip install 'checkpointed-local-log[checkpoint]'"]
 

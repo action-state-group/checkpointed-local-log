@@ -614,6 +614,12 @@ def verify_checkpoint_cose_offline(cose_bytes: bytes) -> CoseCheckpointVerificat
         )
         return result
 
+    from ..ed25519 import acceptable_signature, cose_sign1_signature
+
+    if not acceptable_signature(kid, cose_sign1_signature(cose_bytes)):
+        result.errors.append("COSE checkpoint signature does not verify under its own kid")
+        return result
+
     try:
         pubkey_pem = _ed25519_pubkey_pem(kid)
     except Exception as exc:  # noqa: BLE001
