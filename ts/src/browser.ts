@@ -1,4 +1,5 @@
-// Browser condition: MMR substrate only. Storage, checkpoints, and witnesses require Node.
+// Browser condition: the MMR substrate and checkpoint verification. Storage,
+// checkpoint signing, witnesses and runners require Node.
 import {
   MmrTree as CoreMmrTree,
   commitmentObject,
@@ -17,6 +18,13 @@ import {
   type MmrRangeProof,
   type MmrStructuredConsistencyProof,
 } from "./mmr.js";
+import {
+  checkpointMetadataWith,
+  verifyCheckpointWith,
+  type CheckpointCrypto,
+  type CheckpointMetadata,
+} from "./checkpoint-verify.js";
+import { verifyEd25519 } from "./ed25519.js";
 import { sha256 } from "./sha256.js";
 
 const join = (...parts: readonly Uint8Array[]): Uint8Array => {
@@ -93,3 +101,18 @@ export const verifyRange = (
   bodyDigests: readonly Uint8Array[],
   proof: MmrRangeProof,
 ) => coreVerifyRange(hash, root, size, fromIndex, toIndex, bodyDigests, proof);
+
+export { CHECKPOINT_CONTENT_TYPE } from "./checkpoint-verify.js";
+export type { CheckpointMetadata };
+const checkpointCrypto: CheckpointCrypto = {
+  hash,
+  verifyEd25519: async (publicKey, message, signature) =>
+    verifyEd25519(publicKey, message, signature),
+};
+export const verifyCheckpoint = (cose: Uint8Array): Promise<boolean> =>
+  verifyCheckpointWith(checkpointCrypto, cose);
+/** Return linkage metadata only after the complete checkpoint validates. */
+export const checkpointMetadata = (
+  cose: Uint8Array,
+): Promise<CheckpointMetadata | undefined> =>
+  checkpointMetadataWith(checkpointCrypto, cose);

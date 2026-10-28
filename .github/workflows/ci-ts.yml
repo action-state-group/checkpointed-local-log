@@ -55,6 +55,20 @@ jobs:
       - run: npx vitest run --coverage --exclude test/mysql.test.ts
         working-directory: ts
 
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
   mysql:
     runs-on: ubuntu-latest
     strategy:
@@ -96,4 +110,4 @@ jobs:
           npm init -y
           npm install "$package_dir"/*.tgz
           node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql"); const { conformanceCases } = await import("@action-state-group/cll/conformance"); if (conformanceCases({ open: () => ({}) }).length === 0) throw new Error("no conformance cases")'
-          node --conditions=browser -e 'await import("@action-state-group/cll")'
+          node --conditions=browser -e 'const { checkpointMetadata } = await import("@action-state-group/cll"); const { readFileSync } = await import("node:fs"); const { cases } = JSON.parse(readFileSync(`${process.env.GITHUB_WORKSPACE}/checkpoint-conformance-vectors/cose-vectors.json`, "utf8")); for (const vector of cases) if ((await checkpointMetadata(Buffer.from(vector.cose_hex, "hex"))) === undefined) throw new Error(`browser entry refused ${vector.name}`)'

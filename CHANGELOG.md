@@ -7,8 +7,27 @@ are documented here. The format follows
 
 ## Unreleased
 
+### Security
+
+- **TypeScript (`@action-state-group/cll`): `verifyCheckpoint` and
+  `checkpointMetadata` no longer use the platform's Ed25519.** In released
+  versions, the Node entry checked signatures with Node's OpenSSL. On some
+  builds, including Node 22 and 24 on Linux, that accepts a signature by a
+  small-order public key, which anyone can make without a private key. So a
+  forged checkpoint naming such a key verified. Both entries now use one
+  strict RFC 8032 verifier on `@noble/curves`. It refuses non-canonical
+  points, small-order keys and R, and S >= L, and checks the cofactorless
+  equation (checkpointed-local-log#106).
+
 ### Added
 
+- **TypeScript: checkpoint verification in the browser entry.** Under the
+  `browser` export condition, `@action-state-group/cll` exports
+  `verifyCheckpoint`, `checkpointMetadata` and `CHECKPOINT_CONTENT_TYPE` with
+  the Node entry's signatures and results, with no Node imports. It hashes
+  with WebCrypto, or a built-in SHA-256 where `crypto.subtle` is missing. New
+  runtime dependencies: `@noble/curves` and `@noble/hashes`
+  (checkpointed-local-log#106).
 - **`cll.cbor.loads`** decodes one CBOR data item like `cbor2.loads`, but
   raises `cll.cbor.DuplicateMapKeyError` (a `ValueError`) when any map in it,
   at any depth, has two keys that are equal as Python values: `1` and `true`,
