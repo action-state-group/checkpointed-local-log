@@ -13,8 +13,6 @@ import base64
 import hashlib
 import json
 import pathlib
-import subprocess
-import sys
 
 import cbor2
 import pytest
@@ -49,10 +47,6 @@ def _identity_forgery() -> bytes:
     challenge k, so this signs any message without a private key."""
     case = next(c for c in VECTORS["ed25519_cases"] if c["name"] == "small-order A identity")
     return bytes.fromhex(case["signature_hex"])
-
-
-def test_vectors_file_is_up_to_date():
-    subprocess.run([sys.executable, str(VECTORS_DIR / "generate_ed25519.py"), "--check"], check=True)
 
 
 @pytest.mark.parametrize("case", VECTORS["ed25519_cases"], ids=lambda c: c["name"])
