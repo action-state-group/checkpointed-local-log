@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/ed25519strict"
 	"github.com/action-state-group/checkpointed-local-log/go/mmr"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/go-cose"
@@ -298,11 +299,7 @@ func (r Record) VerifySignature() error {
 	if err := message.UnmarshalCBOR(r.statement); err != nil {
 		return fmt.Errorf("decode checkpoint signature: %w", err)
 	}
-	verifier, err := cose.NewVerifier(cose.AlgorithmEdDSA, ed25519.PublicKey(public))
-	if err != nil {
-		return err
-	}
-	if err := message.Verify(nil, verifier); err != nil {
+	if err := message.Verify(nil, ed25519strict.NewVerifier(public)); err != nil {
 		return fmt.Errorf("verify checkpoint signature: %w", err)
 	}
 	return nil

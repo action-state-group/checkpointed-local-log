@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
+	"github.com/action-state-group/checkpointed-local-log/go/internal/ed25519strict"
 	"github.com/fxamacker/cbor/v2"
 	"github.com/veraison/go-cose"
 )
@@ -99,11 +100,7 @@ func (v *ReceiptVerifier) Verify(statement []byte, receipt Receipt) error {
 		return fmt.Errorf("receipt inclusion proof is invalid")
 	}
 	message.Payload = root
-	verifier, err := cose.NewVerifier(cose.AlgorithmEdDSA, v.public)
-	if err != nil {
-		return err
-	}
-	if err := message.Verify(nil, verifier); err != nil {
+	if err := message.Verify(nil, ed25519strict.NewVerifier(v.public)); err != nil {
 		return fmt.Errorf("verify receipt authority signature: %w", err)
 	}
 	return nil
