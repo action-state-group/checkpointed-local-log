@@ -120,7 +120,9 @@ are documented here. The format follows
   duplicate witness keys, invalid witness rows, empty or oversized
   checkpoints and short peaks; `commitWitness` validates its `next` row;
   `getWitness("", 0n)` is `invalid` rather than `undefined`; and a JSONL
-  replay reports a bad complete line as `corrupt`. A caller that relied on
+  replay reports a bad complete line as `corrupt`. In the memory and JSONL
+  backends, `pendingWitnesses` orders witnesses with equal checkpoint sizes
+  by witness ID, as the SQL backends do. A caller that relied on
   the old acceptance now gets an error (checkpointed-local-log#77).
 
 ## 0.7.0 — 2026-10-22
