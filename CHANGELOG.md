@@ -9,15 +9,6 @@ are documented here. The format follows
 
 ### Security
 
-- **TypeScript (`@action-state-group/cll`): `verifyCheckpoint` and
-  `checkpointMetadata` no longer use the platform's Ed25519.** In released
-  versions, the Node entry checked signatures with Node's OpenSSL. On some
-  builds, including Node 22 and 24 on Linux, that accepts a signature by a
-  small-order public key, which anyone can make without a private key. So a
-  forged checkpoint naming such a key verified. Both entries now use one
-  strict RFC 8032 verifier on `@noble/curves`. It refuses non-canonical
-  points, small-order keys and R, and S >= L, and checks the cofactorless
-  equation (checkpointed-local-log#106).
 - **Go, Python and Rust checkpoint verifiers, and every receipt verifier,
   refuse Ed25519 signatures by small-order keys.** With a small-order public
   key, anyone can make a valid-looking signature without the private key.
@@ -51,17 +42,10 @@ are documented here. The format follows
     crate is released.
   - **TypeScript** (`@action-state-group/cll`) 0.1.0 through 0.2.2:
     `ReceiptVerifier.verify`, on builds whose OpenSSL accepts such
-    signatures (Node 22 and 24 on Linux).
+    signatures (Node 22 and 24 on Linux). Fixed in 0.3.0.
 
 ### Added
 
-- **TypeScript: checkpoint verification in the browser entry.** Under the
-  `browser` export condition, `@action-state-group/cll` exports
-  `verifyCheckpoint`, `checkpointMetadata` and `CHECKPOINT_CONTENT_TYPE` with
-  the Node entry's signatures and results, with no Node imports. It hashes
-  with WebCrypto, or a built-in SHA-256 where `crypto.subtle` is missing. New
-  runtime dependencies: `@noble/curves` and `@noble/hashes`
-  (checkpointed-local-log#106).
 - **`cll.cbor.loads`** decodes one CBOR data item like `cbor2.loads`, but
   raises `cll.cbor.DuplicateMapKeyError` (a `ValueError`) when any map in it,
   at any depth, has two keys that are equal as Python values: `1` and `true`,
@@ -90,6 +74,56 @@ are documented here. The format follows
   than read the claim back changed. Go also refuses that statement, and more
   broadly: it refuses any claim it does not define, which departs from the
   same sentence (checkpointed-local-log#99).
+
+## @action-state-group/cll (TypeScript) 0.3.0 — 2026-10-28
+
+### Security
+
+- **TypeScript (`@action-state-group/cll`): `verifyCheckpoint` and
+  `checkpointMetadata` no longer use the platform's Ed25519.** In released
+  versions, the Node entry checked signatures with Node's OpenSSL. On some
+  builds, including Node 22 and 24 on Linux, that accepts a signature by a
+  small-order public key, which anyone can make without a private key. So a
+  forged checkpoint naming such a key verified. Both entries now use one
+  strict RFC 8032 verifier on `@noble/curves`. It refuses non-canonical
+  points, small-order keys and R, and S >= L, and checks the cofactorless
+  equation (checkpointed-local-log#106).
+- **TypeScript: `ReceiptVerifier.verify` uses the same strict verifier.**
+  Fixed in 0.3.0 (affected: 0.1.0 through 0.2.2, on builds whose OpenSSL
+  accepts small-order-key signatures). It refuses signatures by small-order
+  keys, so a receipt forged for a pinned small-order key no longer verifies
+  (checkpointed-local-log#109).
+
+### Added
+
+- **TypeScript: checkpoint verification in the browser entry.** Under the
+  `browser` export condition, `@action-state-group/cll` exports
+  `verifyCheckpoint`, `checkpointMetadata` and `CHECKPOINT_CONTENT_TYPE` with
+  the Node entry's signatures and results, with no Node imports. It hashes
+  with WebCrypto, or a built-in SHA-256 where `crypto.subtle` is missing. New
+  runtime dependencies: `@noble/curves` and `@noble/hashes`
+  (checkpointed-local-log#106).
+- **TypeScript: `EntryCounter` and `entryCount()`.** The built-in memory,
+  JSONL, SQLite and MySQL backends report the number of entries without a
+  scan. The interface is separate from `EntrySource`, `EntryStore` and
+  `Backend`, so existing implementers still compile
+  (checkpointed-local-log#98).
+- **TypeScript: the `@action-state-group/cll/conformance` export** runs the
+  shared backend conformance vectors against a user-supplied backend, and
+  `CllError` gains the `unsupported` code (checkpointed-local-log#77,
+  checkpointed-local-log#78).
+
+### Changed
+
+- **TypeScript backends reject inputs they used to accept.** `commitCll`
+  refuses a state whose size is not a complete MMR with `indexedSeq` leaves,
+  duplicate witness keys, invalid witness rows, empty or oversized
+  checkpoints and short peaks; `commitWitness` validates its `next` row;
+  `getWitness("", 0n)` is `invalid` rather than `undefined`; and a JSONL
+  replay reports a bad complete line as `corrupt`. In the memory and JSONL
+  backends, `pendingWitnesses` orders witnesses with equal checkpoint sizes
+  by witness ID, as the SQL backends do. A caller that relied on
+  the old acceptance now gets an error (checkpointed-local-log#77).
 
 ## 0.7.0 — 2026-10-22
 
