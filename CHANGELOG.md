@@ -34,13 +34,20 @@ are documented here. The format follows
     `witness.ReceiptVerifier`.
   - **Python** (`checkpointed-local-log` on PyPI) 0.1.0 through 0.7.0:
     `verify_checkpoint_cose_offline`, `verify_checkpoint_signature_offline`,
-    `verify_receipt_offline` and `verify_witness_stamp_tristate`. This
-    applies wherever `cryptography`'s OpenSSL accepts such signatures,
-    which includes the cryptography 50.0.2 wheel for macOS. The unreleased
+    `verify_receipt_offline` and `verify_witness_stamp_tristate`, and so
+    everything that calls them, including `verify_witness_stamp_offline`,
+    `CheckpointRecord.grade(ts_pubkey_pem=...)` and
+    `cll.checkpoint.bundle.verify_bundle_log_integrity`. This applies
+    wherever `cryptography`'s OpenSSL accepts such signatures, which
+    includes the cryptography 50.0.2 wheel for macOS. The unreleased
     `cll.checkpoint.witness.ReceiptVerifier` is fixed too.
   - **Rust** (`checkpointed-local-log` crate) 0.2.0 through 0.3.1:
     `verify_checkpoint_cose_offline` and
-    `CheckpointRecord::verify_signature_offline`.
+    `CheckpointRecord::verify_signature_offline`. The `evidencebook` crate's
+    `Checkpoint::verify_signature_offline` calls the latter, so it inherits
+    the issue: evidencebook 0.0.1 requires `checkpointed-local-log` 0.2, so
+    only a new evidencebook release fixes it, while 0.0.3 requires ^0.3.1
+    and picks up the fix with `cargo update` once a fixed crate is released.
   - **TypeScript** (`@action-state-group/cll`) 0.1.0 through 0.2.2:
     `ReceiptVerifier.verify`, on builds whose OpenSSL accepts such
     signatures (Node 22 and 24 on Linux).

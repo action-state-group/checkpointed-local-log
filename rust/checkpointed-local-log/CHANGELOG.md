@@ -1,5 +1,17 @@
 # Changelog: checkpointed-local-log (Rust)
 
+## Unreleased
+
+- **Security: Ed25519 signatures by small-order keys are refused.**
+  `verify_checkpoint_cose_offline` and
+  `CheckpointRecord::verify_signature_offline` used ed25519-dalek's `verify`,
+  which accepts a signature by a small-order public key. Anyone can make such
+  a signature without the private key, so a forged checkpoint naming such a
+  key verified, in every release from 0.2.0 through 0.3.1. Both now refuse
+  non-canonical points, small-order keys and R, and S >= L, and check the
+  cofactorless equation (`verify_strict`), as the other implementations do
+  (checkpointed-local-log#108).
+
 ## 0.3.1
 
 - **New: `cll::log`, the CLL storage interfaces.** The entry log, checkpoint
