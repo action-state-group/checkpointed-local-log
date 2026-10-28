@@ -18,6 +18,32 @@ are documented here. The format follows
   strict RFC 8032 verifier on `@noble/curves`. It refuses non-canonical
   points, small-order keys and R, and S >= L, and checks the cofactorless
   equation (checkpointed-local-log#106).
+- **Go, Python and Rust checkpoint verifiers, and every receipt verifier,
+  refuse Ed25519 signatures by small-order keys.** With a small-order public
+  key, anyone can make a valid-looking signature without the private key.
+  The Go, Python and Rust verifiers accepted such signatures, so a forged
+  checkpoint naming a small-order key verified. A receipt verifier pinned to
+  a small-order key would also have accepted a forged receipt. Every
+  verifier now applies the same checks as the TypeScript one: it refuses
+  non-canonical points, small-order keys and R, and S >= L, and checks the
+  cofactorless equation. The new shared vectors
+  `checkpoint-conformance-vectors/ed25519-vectors.json` pin the result in
+  all four languages (checkpointed-local-log#108). Affected released
+  versions:
+  - **Go** `go/v0.1.0`: `checkpoint` (`Record.VerifySignature`) and
+    `witness.ReceiptVerifier`.
+  - **Python** (`checkpointed-local-log` on PyPI) 0.1.0 through 0.7.0:
+    `verify_checkpoint_cose_offline`, `verify_checkpoint_signature_offline`,
+    `verify_receipt_offline` and `verify_witness_stamp_tristate`. This
+    applies wherever `cryptography`'s OpenSSL accepts such signatures,
+    which includes the cryptography 50.0.2 wheel for macOS. The unreleased
+    `cll.checkpoint.witness.ReceiptVerifier` is fixed too.
+  - **Rust** (`checkpointed-local-log` crate) 0.2.0 through 0.3.1:
+    `verify_checkpoint_cose_offline` and
+    `CheckpointRecord::verify_signature_offline`.
+  - **TypeScript** (`@action-state-group/cll`) 0.1.0 through 0.2.2:
+    `ReceiptVerifier.verify`, on builds whose OpenSSL accepts such
+    signatures (Node 22 and 24 on Linux).
 
 ### Added
 
