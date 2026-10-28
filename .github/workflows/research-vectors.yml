@@ -16,5 +16,6 @@ jobs:
       - run: python mmr-profile-vectors/generate.py --check
       - run: python cll-02-vectors/generate.py --check
       - run: python backend-conformance-vectors/generate.py --check
+      - run: python checkpoint-conformance-vectors/generate_ed25519.py --check
       - run: python -m pytest tests/checkpoint/test_mmr_profile_vectors.py
         working-directory: python

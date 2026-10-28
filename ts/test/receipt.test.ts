@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { decode, encode, rfc8949EncodeOptions } from "cborg";
+import { ed25519 } from "@noble/curves/ed25519.js";
 import { describe, expect, it } from "vitest";
 import { ReceiptVerifier, type WitnessReceipt } from "../src/index.js";
 
@@ -79,6 +80,38 @@ describe("capsule-anchor receipt interoperability", () => {
       await verifier.verify(checkpoint, {
         ...receipt,
         bytes: tamperReceiptPath(receipt.bytes),
+      }),
+    ).toBe(false);
+  });
+
+  it("refuses a receipt forged for a pinned small-order key", async () => {
+    // Under the identity as the authority key, [k]A is the identity for every
+    // challenge k, so R = rB and S = r verify with no private key. Node's
+    // OpenSSL accepts this on some builds (Node 22 and 24 on Linux).
+    const identity = new Uint8Array(32);
+    identity[0] = 1;
+    const items = decode(receipt.bytes.subarray(1), {
+      allowIndefinite: false,
+      useMaps: true,
+    }) as unknown[];
+    const nonce = 0x1234567n;
+    const signature = new Uint8Array(64);
+    signature.set(ed25519.Point.BASE.multiply(nonce).toBytes());
+    signature.set(
+      Uint8Array.from({ length: 32 }, (_, i) =>
+        Number((nonce >> BigInt(8 * i)) & 0xffn),
+      ),
+      32,
+    );
+    items[3] = signature;
+    const forged = Buffer.concat([
+      Uint8Array.of(0xd2),
+      encode(items, rfc8949EncodeOptions),
+    ]);
+    expect(
+      await new ReceiptVerifier(identity).verify(checkpoint, {
+        ...receipt,
+        bytes: forged,
       }),
     ).toBe(false);
   });

@@ -56,6 +56,21 @@ encoding, and the signed checkpoint record that wraps a root.
   first checkpoint, `prev_size=0`, no consistency proof) and
   `checkpoint-chained-2-to-7-leaves` (a second checkpoint chained from the
   first via the MMR consistency proof bridging `size_a=3` to `size_b=11`).
+- `ed25519-vectors.json` pins how a verifier decides Ed25519 signatures on
+  checkpoints and receipts, including inputs that platform libraries
+  accept but a verifier must refuse because they need no private key.
+  `ed25519_cases` are raw `(public_key, message, signature)` triples and
+  `cose_cases` are whole checkpoint statements whose `kid` is the key. A
+  verifier refuses A or R that is not a canonical encoding (y >= p, or x = 0
+  with the sign bit set) or is of small order, and S >= L, and checks the
+  cofactorless equation `[S]B = R + [k]A`. The `mixed-order A` cases (a key
+  `aB + T` with a small-order `T`, signed by the holder of `a` with a
+  challenge `k` that is a multiple of 8) must verify. For other `k`,
+  `[k]T` is not the identity and the cofactorless check fails, so such a key
+  is not usable in general.
+  `generate_ed25519.py` writes the file with plain RFC 8032 arithmetic, so
+  it depends on none of the verifiers it tests; `--check` fails when the
+  file is out of date.
 - `reference_verifier.py` regenerates every case from `CheckpointRecord`
   plus the pinned seed and checks exact digest/signature match, and also
   checks the witness-receipt boundary: each case's `digest_hex` round-trips
