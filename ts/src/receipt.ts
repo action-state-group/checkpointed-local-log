@@ -1,6 +1,7 @@
-import { createHash, createPublicKey, verify as edVerify } from "node:crypto";
+import { createHash } from "node:crypto";
 import { decode, encode, rfc8949EncodeOptions } from "cborg";
 import { checkpointEntryHash } from "./checkpoint.js";
+import { verifyEd25519 } from "./ed25519.js";
 import { limits } from "./types.js";
 import type { WitnessReceipt } from "./witness.js";
 
@@ -144,18 +145,11 @@ export class ReceiptVerifier {
         proof[2] as Uint8Array[],
       );
       if (root === undefined) return false;
-      const key = createPublicKey({
-        key: Buffer.concat([
-          Buffer.from("302a300506032b6570032100", "hex"),
-          this.publicKey,
-        ]),
-        format: "der",
-        type: "spki",
-      });
-      return edVerify(
-        null,
+      // The strict verifier, not Node's OpenSSL, which on some builds accepts
+      // a signature by a small-order key that needs no private key.
+      return verifyEd25519(
+        this.publicKey,
         encodeCanonical(["Signature1", items[0], new Uint8Array(), root]),
-        key,
         items[3],
       );
     } catch {
