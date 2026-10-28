@@ -592,12 +592,10 @@ def verify_checkpoint_signature_offline(cp: CheckpointRecord) -> bool:
     label, not a public key) correctly fails here rather than false-passing.
     Never raises -- any malformed input is a verification failure.
     """
-    try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+    from ..ed25519 import verify
 
-        public_key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(cp.key_id))
-        public_key.verify(bytes.fromhex(cp.signature), cp.digest().encode("ascii"))
-        return True
+    try:
+        return verify(bytes.fromhex(cp.key_id), cp.digest().encode("ascii"), bytes.fromhex(cp.signature))
     except Exception:
         return False
 
@@ -816,7 +814,9 @@ def verify_receipt_offline(
     ``cryptography`` package). Returns ``(ok, errors)`` -- never raises.
     """
     try:
-        from scitt_cose import verify_receipt
+        import scitt_cose  # noqa: F401
+
+        from ..ed25519 import verify_receipt
     except ImportError:
         return False, ["scitt-cose is not installed; run: pip install 'capsule-emit[checkpoint]'"]
 
@@ -942,7 +942,9 @@ def verify_witness_stamp_tristate(
         return StampVerdict.INVALID, [f"receipt_b64 is not valid base64: {exc}"]
 
     try:
-        from scitt_cose import verify_receipt
+        import scitt_cose  # noqa: F401
+
+        from ..ed25519 import verify_receipt
     except ImportError:
         return StampVerdict.INVALID, [
             "scitt-cose is not installed; run: pip install 'capsule-emit[checkpoint]'"
