@@ -46,8 +46,9 @@ are documented here. The format follows
     `CheckpointRecord::verify_signature_offline`. The `evidencebook` crate's
     `Checkpoint::verify_signature_offline` calls the latter, so it inherits
     the issue: evidencebook 0.0.1 requires `checkpointed-local-log` 0.2, so
-    only a new evidencebook release fixes it, while 0.0.3 requires ^0.3.1
-    and picks up the fix with `cargo update` once a fixed crate is released.
+    only a new evidencebook release fixes it, while 0.0.3 through 0.0.7
+    require ^0.3.1 and pick up the fix with `cargo update` once a fixed
+    crate is released.
   - **TypeScript** (`@action-state-group/cll`) 0.1.0 through 0.2.2:
     `ReceiptVerifier.verify`, on builds whose OpenSSL accepts such
     signatures (Node 22 and 24 on Linux).
