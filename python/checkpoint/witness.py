@@ -192,7 +192,9 @@ def _parse_receipt(raw: bytes) -> WitnessReceipt:
 
 class ReceiptVerifier:
     """Verifies RFC 9162 COSE receipts under a pinned Ed25519 authority key
-    (the raw 32-byte public key), with ``scitt_cose.verify_receipt``."""
+    (the raw 32-byte public key), with ``cll.ed25519.verify_receipt``:
+    ``scitt_cose.verify_receipt`` plus the small-order and canonical-encoding
+    checks."""
 
     def __init__(self, public_key: bytes) -> None:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey

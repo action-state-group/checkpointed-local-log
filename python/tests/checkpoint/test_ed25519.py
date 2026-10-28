@@ -160,3 +160,54 @@ def test_honest_receipt_still_verifies():
     )
     pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
     assert verify_receipt_offline(witness, ts_pubkey_pem=pem) == (True, [])
+
+
+def test_receipt_under_a_non_ed25519_key_is_left_to_scitt_cose():
+    """An ES384 receipt (a CCF log's key type) passes through unchanged:
+    honest verifies, under another key it does not."""
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from scitt_cose import build_receipt
+
+    from cll.ed25519 import verify_receipt
+
+    entry = "ab" * 32
+    key = ec.generate_private_key(ec.SECP384R1())
+    receipt = build_receipt(
+        leaf_entry_hex=entry, leaf_index=0, tree_entries_hex=[entry], alg="ES384",
+        log_private_key_pem=key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()),
+    )
+    pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+    other = ec.generate_private_key(ec.SECP384R1()).public_key().public_bytes(
+        Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+    )
+    assert verify_receipt(receipt, leaf_entry_hex=entry, log_public_key_pem=pem).ok
+    assert not verify_receipt(receipt, leaf_entry_hex=entry, log_public_key_pem=other).ok
+    witness = WitnessRecord(
+        ts_url="https://witness.example", entry_hash=entry,
+        receipt_b64=base64.b64encode(receipt).decode(), leaf_index=0, tree_size=1,
+    )
+    assert verify_receipt_offline(witness, ts_pubkey_pem=pem) == (True, [])
+    assert ledger_verify_receipt_offline(witness, ts_pubkey_pem=pem)[0]
+
+
+def test_receipt_is_refused_when_the_key_cannot_be_read(monkeypatch):
+    """If scitt-cose accepted but the key cannot be read back, fail closed."""
+    import cll.ed25519 as strict
+
+    entry = "ab" * 32
+    key = Ed25519PrivateKey.generate()
+    from scitt_cose import build_receipt
+
+    receipt = build_receipt(
+        leaf_entry_hex=entry, leaf_index=0, tree_entries_hex=[entry], alg="EdDSA",
+        log_private_key_pem=key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()),
+    )
+    pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+    assert strict.verify_receipt(receipt, leaf_entry_hex=entry, log_public_key_pem=pem).ok
+
+    def unreadable(_pem):
+        raise ValueError("unreadable key")
+
+    monkeypatch.setattr(strict, "_raw_ed25519_key", unreadable)
+    result = strict.verify_receipt(receipt, leaf_entry_hex=entry, log_public_key_pem=pem)
+    assert not result.ok and result.failed_at == "signature"
