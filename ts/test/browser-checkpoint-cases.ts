@@ -101,7 +101,7 @@ export interface Ed25519Case {
   readonly publicKey: Uint8Array;
   readonly message: Uint8Array;
   readonly signature: Uint8Array;
-  /** True only for an honest signature; every other case must be refused. */
+  /** Whether the verifier must accept it. */
   readonly valid: boolean;
 }
 
@@ -159,6 +159,33 @@ export function ed25519Cases(): Ed25519Case[] {
     message,
     signature: identitySignature,
     valid: false,
+  });
+
+  // A mixed-order public key, aB + T, with a challenge k a multiple of 8 so
+  // [k]T vanishes: the cofactorless equation holds and A is not of small
+  // order, so it verifies (in OpenSSL too). Pins that the verifiers agree.
+  const mixedA = Point.BASE.multiply(scalar).add(torsion).toBytes();
+  const mixedAR = Point.BASE.multiply(nonce).toBytes();
+  let mixedACounter = 0;
+  let mixedAMessage: Uint8Array;
+  do {
+    mixedAMessage = new TextEncoder().encode(`mixed order ${mixedACounter}`);
+    mixedACounter += 1;
+  } while (challenge(mixedAR, mixedA, mixedAMessage) % 8n !== 0n);
+  const mixedASignature = new Uint8Array(64);
+  mixedASignature.set(mixedAR);
+  mixedASignature.set(
+    scalarBytes(
+      (nonce + challenge(mixedAR, mixedA, mixedAMessage) * scalar) % L,
+    ),
+    32,
+  );
+  cases.push({
+    name: "mixed-order A",
+    publicKey: mixedA,
+    message: mixedAMessage,
+    signature: mixedASignature,
+    valid: true,
   });
 
   // Small-order public keys, each with a signature R = rB, S = r over a
@@ -242,7 +269,8 @@ const canonical = (value: unknown): Uint8Array =>
  * point, a small-order key. Its signature needs no private key: R = rB and
  * S = r satisfy [S]B = R + [k]A whenever [k]A is the identity, so the
  * timestamp is chosen to make k a multiple of 8. Chrome's WebCrypto Ed25519
- * accepts it; the Node entry refuses it, so the browser entry must too.
+ * and the OpenSSL in Node 22 and 24 on Linux accept it; both entries must
+ * refuse it.
  */
 export function smallOrderKeyStatement(): Uint8Array {
   const kid = fromHex(smallOrderEncodings[0]!);

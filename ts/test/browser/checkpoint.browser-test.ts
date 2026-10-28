@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import coseVectors from "../../../checkpoint-conformance-vectors/cose-vectors.json" with { type: "json" };
 import checkpointVectors from "../../../checkpoint-conformance-vectors/vectors.json" with { type: "json" };
 import { checkpointMetadata, verifyCheckpoint } from "../../src/browser.js";
-import { verifyEd25519 } from "../../src/ed25519-browser.js";
+import { verifyEd25519 } from "../../src/ed25519.js";
 import {
   ed25519Cases,
   expectedMetadata,

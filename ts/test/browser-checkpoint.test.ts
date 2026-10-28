@@ -1,6 +1,6 @@
 // The browser entry's checkpoint verifier, run in Node: the conformance
-// vectors and a differential check against the Node entry, under each Ed25519
-// path the browser entry can take.
+// vectors and a differential check against the Node entry, with and without
+// crypto.subtle, and the shared Ed25519 verifier against OpenSSL.
 import { createPublicKey, verify as edVerify } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -8,7 +8,7 @@ import { ed25519 } from "@noble/curves/ed25519.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import * as browser from "../src/browser.js";
-import { verifyEd25519 } from "../src/ed25519-browser.js";
+import { verifyEd25519 } from "../src/ed25519.js";
 import * as node from "../src/index.js";
 import {
   ed25519Cases,
@@ -61,7 +61,7 @@ const nodeEd25519 = (
 
 const realSubtle = globalThis.crypto.subtle;
 // The browser entry hashes with WebCrypto where the page has it and with the
-// plain SHA-256 where it does not; Ed25519 is always the plain verifier.
+// plain SHA-256 where it does not.
 const modes: Record<string, () => () => void> = {
   "WebCrypto SHA-256": () => () =>
     expect(globalThis.crypto.subtle).toBe(realSubtle),
@@ -146,35 +146,34 @@ describe("browser entry checkpoint verifier", () => {
   }
 });
 
-describe("browser Ed25519", () => {
+describe("checkpoint Ed25519", () => {
   const cases = ed25519Cases();
 
-  it("refuses everything but the honest signature, and never accepts what Node refuses", () => {
+  it("decides every edge case, and never accepts what OpenSSL refuses", () => {
     for (const edge of cases) {
-      const nodeResult = nodeEd25519(
+      const strict = verifyEd25519(
         edge.publicKey,
         edge.message,
         edge.signature,
       );
-      const browserResult = verifyEd25519(
-        edge.publicKey,
-        edge.message,
-        edge.signature,
-      );
-      expect({ name: edge.name, browserResult }).toEqual({
+      expect({ name: edge.name, strict }).toEqual({
         name: edge.name,
-        browserResult: edge.valid,
+        strict: edge.valid,
       });
-      expect({ name: edge.name, nodeResult }).toEqual({
-        name: edge.name,
-        nodeResult: edge.valid,
-      });
+      // OpenSSL may accept more (small-order keys, depending on the build);
+      // it must not accept less.
+      if (strict)
+        expect({
+          name: edge.name,
+          openssl: nodeEd25519(edge.publicKey, edge.message, edge.signature),
+        }).toEqual({ name: edge.name, openssl: true });
     }
   });
 
-  it("refuses a statement signed for a small-order key, as Node does", async () => {
+  it("refuses a statement signed for a small-order key in both entries", async () => {
     const forged = smallOrderKeyStatement();
     expect(await node.verifyCheckpoint(forged)).toBe(false);
+    expect(await node.checkpointMetadata(forged)).toBeUndefined();
     expect(await browser.verifyCheckpoint(forged)).toBe(false);
     expect(await browser.checkpointMetadata(forged)).toBeUndefined();
   });

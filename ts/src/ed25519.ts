@@ -1,9 +1,8 @@
-// Ed25519 verification for the browser entry, on @noble/curves in every
-// browser. WebCrypto's Ed25519 is not used: Chrome's accepts a signature by a
-// small-order public key, which anyone can make without a private key and
-// which Node refuses (test/browser/checkpoint.browser-test.ts), and the
-// engines need not agree with each other. SubtleCrypto is also missing
-// outside a secure context.
+// Ed25519 verification for checkpoints, the same in the Node and browser
+// entries: neither uses its platform's Ed25519. OpenSSL builds differ (the one
+// in Node 22 and 24 on Linux accepts a signature by a small-order public key,
+// which anyone can make without a private key), and so does WebCrypto
+// (Chrome's accepts one too; test/browser/checkpoint.browser-test.ts).
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { sha512 } from "@noble/hashes/sha2.js";
 
@@ -19,11 +18,10 @@ const littleEndian = (bytes: Uint8Array): bigint => {
 /**
  * RFC 8032 section 5.1.7 verification that refuses: non-canonical encodings
  * of A or R (y >= p), A or R of small order, S >= L, and any signature
- * failing the cofactorless equation [S]B = R + [k]A. Node's OpenSSL refuses
- * each of those too (test/browser-checkpoint.test.ts), so this accepts no
- * signature the Node entry refuses. noble's own `verify` checks the
- * cofactored equation instead, which accepts a signer-made R with a
- * small-order component that OpenSSL refuses, so it is not used.
+ * failing the cofactorless equation [S]B = R + [k]A. It accepts no signature
+ * OpenSSL refuses (test/browser-checkpoint.test.ts). noble's own `verify`
+ * checks the cofactored equation instead, which accepts a signer-made R with
+ * a small-order component that OpenSSL refuses, so it is not used.
  */
 export function verifyEd25519(
   publicKey: Uint8Array,

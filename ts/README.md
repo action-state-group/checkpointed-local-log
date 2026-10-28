@@ -203,11 +203,11 @@ if (metadata === undefined) {
 
 The browser entry hashes with WebCrypto where the page has it, and with a
 built-in SHA-256 where it does not: `crypto.subtle` exists only in a secure
-context. It checks Ed25519 signatures with `@noble/curves` in every browser
-and refuses every signature the Node entry refuses, including those by
-small-order keys. It does not use WebCrypto's Ed25519, because Chrome's
-accepts a signature by a small-order key, which anyone can make without a
-private key.
+context. Both entries check Ed25519 signatures with the same verifier, built
+on `@noble/curves`, and both refuse signatures by small-order keys, which
+anyone can make without a private key. Neither uses its platform's Ed25519:
+Chrome's WebCrypto accepts such signatures, and so does the OpenSSL in some
+Node builds.
 
 ## Compose with capsule-emit
 

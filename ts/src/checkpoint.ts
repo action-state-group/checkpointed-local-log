@@ -3,7 +3,6 @@ import {
   createPrivateKey,
   createPublicKey,
   sign as edSign,
-  verify as edVerify,
 } from "node:crypto";
 import { canonicalJson } from "./canonical-json.js";
 import {
@@ -14,6 +13,7 @@ import {
   type CheckpointCrypto,
   type CheckpointMetadata,
 } from "./checkpoint-verify.js";
+import { verifyEd25519 } from "./ed25519.js";
 import { commitmentObject, rootFromPeaks } from "./mmr-node.js";
 import {
   CllError,
@@ -233,21 +233,11 @@ export async function signCheckpoint(
   };
 }
 
-const ed25519SpkiPrefix = Buffer.from("302a300506032b6570032100", "hex");
 const nodeCrypto: CheckpointCrypto = {
   hash: async (...parts) =>
     createHash("sha256").update(Buffer.concat(parts)).digest(),
   verifyEd25519: async (publicKey, message, signature) =>
-    edVerify(
-      null,
-      message,
-      createPublicKey({
-        key: Buffer.concat([ed25519SpkiPrefix, publicKey]),
-        format: "der",
-        type: "spki",
-      }),
-      signature,
-    ),
+    verifyEd25519(publicKey, message, signature),
 };
 
 export const verifyCheckpoint = (cose: Uint8Array): Promise<boolean> =>

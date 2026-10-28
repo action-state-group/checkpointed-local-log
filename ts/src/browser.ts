@@ -24,7 +24,7 @@ import {
   type CheckpointCrypto,
   type CheckpointMetadata,
 } from "./checkpoint-verify.js";
-import { verifyEd25519 } from "./ed25519-browser.js";
+import { verifyEd25519 } from "./ed25519.js";
 import { sha256 } from "./sha256.js";
 
 const join = (...parts: readonly Uint8Array[]): Uint8Array => {
