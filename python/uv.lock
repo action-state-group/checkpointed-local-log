@@ -343,7 +343,7 @@ wheels = [
 
 [[package]]
 name = "checkpointed-local-log"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-action-capsule" },
@@ -372,7 +372,7 @@ requires-dist = [
     { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4,<0.16" },
-    { name = "scitt-cose", specifier = ">=0.4.3" },
+    { name = "scitt-cose", specifier = ">=0.5.0" },
 ]
 provides-extras = ["dev", "mysql"]
 
@@ -678,7 +678,7 @@ wheels = [
 
 [[package]]
 name = "scitt-cose"
-version = "0.4.3"
+version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cbor2", version = "5.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -686,9 +686,9 @@ dependencies = [
     { name = "cryptography", version = "47.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version <= '3.9'" },
     { name = "cryptography", version = "50.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version > '3.9'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/43/93/f4f798300d68e3936577a1b70db495b501d2891d1f1d849c733c0cdf2645/scitt_cose-0.4.3.tar.gz", hash = "sha256:79293ef4037872870a7077bdc18a70c0b8d52cb8dad8d49df9ae2e1287b3ea44", size = 162730, upload-time = "2026-10-16T23:11:22.837Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/11/8b5afd456b55f5a89abea90f59c8c83f5c86f8d3a42ada343953e4d8f164/scitt_cose-0.5.0.tar.gz", hash = "sha256:2e4dedf29ff1f72b6154a515caf19a9d23fc96f5ecdeb63563bc8a46d7fe1d1d", size = 168559, upload-time = "2026-10-21T17:32:55.285Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/84/ce/3caf9c5ba156a6365da26c20c22b05ee7e4ac0422821d6012df555357c07/scitt_cose-0.4.3-py3-none-any.whl", hash = "sha256:0455a28f47bab1916db7cc55ace9765d4c74d8906a92b64ea0f21c109497d7f8", size = 59524, upload-time = "2026-10-16T23:11:21.424Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/8b/0e3770c782f2cdf3e29aeddbd622bb1ffa463c35283506cf432d36d7b8ff/scitt_cose-0.5.0-py3-none-any.whl", hash = "sha256:35d97ccd07d78ecb95e5ea409a40bfdf1e78c24c7cbcf7d2a6669fd5fa033ed2", size = 60403, upload-time = "2026-10-21T17:32:53.63Z" },
 ]
 
 [[package]]
