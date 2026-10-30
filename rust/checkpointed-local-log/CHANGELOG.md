@@ -1,6 +1,6 @@
 # Changelog: checkpointed-local-log (Rust)
 
-## Unreleased
+## 0.4.0
 
 - **Security: Ed25519 signatures by small-order keys are refused.**
   `verify_checkpoint_cose_offline` and
@@ -11,6 +11,11 @@
   non-canonical points, small-order keys and R, and S >= L, and check the
   cofactorless equation (`verify_strict`), as the other implementations do
   (checkpointed-local-log#108).
+
+- **New:** `append_cll`, a commit whose cost does not grow with history
+  (checkpointed-local-log#96); an entry count on the entry log
+  (checkpointed-local-log#98); the checkpoint and witness delivery runners
+  (checkpointed-local-log#103).
 
 ## 0.3.1
 
