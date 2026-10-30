@@ -5,7 +5,42 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
-## Unreleased
+## checkpointed-local-log (Rust crate) 0.4.0 — 2026-10-30
+
+### Security
+
+- **`verify_checkpoint_cose_offline` and
+  `CheckpointRecord::verify_signature_offline` refuse Ed25519 signatures by
+  small-order keys.** Affected: 0.2.0 through 0.3.1. See the Python 0.8.0
+  Security entry below for the full description
+  (checkpointed-local-log#108, checkpointed-local-log#112).
+
+### Added
+
+- `cll::log` backend interfaces and backends (checkpointed-local-log#82),
+  `append_cll`, a commit whose cost does not grow with history
+  (checkpointed-local-log#96), an entry count on the entry log
+  (checkpointed-local-log#98), and the checkpoint and witness delivery runners
+  (checkpointed-local-log#103).
+
+## Go module 0.2.0 (`go/v0.2.0`) — 2026-10-30
+
+### Security
+
+- **`checkpoint` (`Record.VerifySignature`) and `witness.ReceiptVerifier`
+  refuse Ed25519 signatures by small-order keys.** Affected: `go/v0.1.0`. See
+  the Python 0.8.0 Security entry below for the full description
+  (checkpointed-local-log#108, checkpointed-local-log#110).
+
+### Added and fixed
+
+- Backends brought to the shared contract (checkpointed-local-log#77), an
+  unchanged witness commit now succeeds because matched rows are counted
+  (checkpointed-local-log#80), an entry count on the entry log
+  (checkpointed-local-log#98), and the checkpoint and witness delivery runners'
+  shared vectors (checkpointed-local-log#103).
+
+## 0.8.0 — 2026-10-30
 
 ### Security
 
