@@ -17,8 +17,7 @@ are documented here. The format follows
 
 ### Added
 
-- `cll::log` backend interfaces and backends (checkpointed-local-log#82),
-  `append_cll`, a commit whose cost does not grow with history
+- `append_cll`, a commit whose cost does not grow with history
   (checkpointed-local-log#96), an entry count on the entry log
   (checkpointed-local-log#98), and the checkpoint and witness delivery runners
   (checkpointed-local-log#103).
@@ -34,7 +33,9 @@ are documented here. The format follows
 
 ### Added and fixed
 
-- Backends brought to the shared contract (checkpointed-local-log#77), an
+- The importable `go/cll/conformance` package with the shared backend
+  vectors (checkpointed-local-log#78), backends brought to the shared contract
+  (checkpointed-local-log#77), an
   unchanged witness commit now succeeds because matched rows are counted
   (checkpointed-local-log#80), an entry count on the entry log
   (checkpointed-local-log#98), and the checkpoint and witness delivery runners'
@@ -65,22 +66,28 @@ are documented here. The format follows
     `CheckpointRecord.grade(ts_pubkey_pem=...)` and
     `cll.checkpoint.bundle.verify_bundle_log_integrity`. This applies
     wherever `cryptography`'s OpenSSL accepts such signatures, which
-    includes the cryptography 50.0.2 wheel for macOS. The unreleased
-    `cll.checkpoint.witness.ReceiptVerifier` is fixed too.
+    includes the cryptography 50.0.2 wheel for macOS. The new
+    `cll.checkpoint.witness.ReceiptVerifier` (added in 0.8.0) refuses them
+    too.
   - **Rust** (`checkpointed-local-log` crate) 0.2.0 through 0.3.1:
     `verify_checkpoint_cose_offline` and
     `CheckpointRecord::verify_signature_offline`. The `evidencebook` crate's
     `Checkpoint::verify_signature_offline` calls the latter, so it inherits
-    the issue: evidencebook 0.0.1 requires `checkpointed-local-log` 0.2, so
-    only a new evidencebook release fixes it, while 0.0.3 through 0.0.7
-    require ^0.3.1 and pick up the fix with `cargo update` once a fixed
-    crate is released.
+    the issue. The fixed crate is 0.4.0, which no evidencebook release
+    accepts: 0.0.1 requires `checkpointed-local-log` 0.2, and 0.0.3 through
+    0.0.7 require ^0.3.1, which excludes 0.4.0 (`cargo update` does not move
+    them). Only a new evidencebook release that requires ^0.4 fixes it.
   - **TypeScript** (`@action-state-group/cll`) 0.1.0 through 0.2.2:
     `ReceiptVerifier.verify`, on builds whose OpenSSL accepts such
     signatures (Node 22 and 24 on Linux). Fixed in 0.3.0.
 
 ### Added
 
+- **Checkpoint and witness delivery runners**
+  (`cll.checkpoint.runner`, `cll.checkpoint.witness`) with the shared runner
+  vectors (checkpointed-local-log#103).
+- **An entry count on the entry log:** the memory, JSONL, SQLite and MySQL
+  backends report it without a scan (checkpointed-local-log#98).
 - **`cll.cbor.loads`** decodes one CBOR data item like `cbor2.loads`, but
   raises `cll.cbor.DuplicateMapKeyError` (a `ValueError`) when any map in it,
   at any depth, has two keys that are equal as Python values: `1` and `true`,
@@ -92,6 +99,10 @@ are documented here. The format follows
 
 ### Fixed
 
+- **`verify_witness_stamp_tristate` reads scitt-cose's `failed_at`** to tell
+  a malformed receipt from one signed by an unknown key, instead of a side
+  effect of the failure shape. Verdicts are unchanged. The `scitt-cose`
+  dependency floor rises from 0.4.3 to 0.5.0 (checkpointed-local-log#90).
 - **`verify_checkpoint_cose_offline` no longer reads a map whose keys
   collapsed.** It decodes the protected header, the whole COSE_Sign1 (so the
   unprotected header too), the claims payload and both commitments with
