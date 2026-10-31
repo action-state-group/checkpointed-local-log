@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
+	"github.com/action-state-group/checkpointed-local-log/go/cll"
 	"github.com/veraison/go-cose"
 )
 
@@ -205,6 +206,12 @@ func scrapiReceiptPosition(raw, entry []byte) (int64, int64, error) {
 	treeSize, leafIndex, path, err := decodeProof(blob)
 	if err != nil {
 		return 0, 0, err
+	}
+	// The store refuses a position beyond the portable integer range, as the
+	// cll binding's Client does; refuse it here so delivery records a failure
+	// instead of erroring on every pass.
+	if uint64(treeSize) > cll.MaxPortableInteger {
+		return 0, 0, fmt.Errorf("SCRAPI receipt tree size exceeds the portable integer range")
 	}
 	if _, ok := rootFromProof(entry, leafIndex, treeSize, path); !ok {
 		return 0, 0, fmt.Errorf("SCRAPI receipt inclusion proof is invalid")

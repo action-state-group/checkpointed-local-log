@@ -225,8 +225,8 @@ _, err = delivery.RunOnce(ctx, time.Now().UTC(), cll.MaxWitnesses)
 (`POST /entries`, draft-ietf-scitt-scrapi). It sends the checkpoint's COSE
 statement octets exactly as signed, so its Receipt's leaf entry is SHA-256 of
 those octets, the anchor digest that agent-action-capsule interop profile v1
-§6.2.2 checks. It follows `202` and `303` answers only within the service's
-origin. Its Receipt carries no entry hash scheme and is not checked by
+§6.2.2 checks. It follows `202`, `302` and `303` answers only within the
+service's origin. Its Receipt carries no entry hash scheme and is not checked by
 `ReceiptVerifier`; pair it with a `Verifier` for that profile's
 `anchor_witnessed` check under the witness's key.
 

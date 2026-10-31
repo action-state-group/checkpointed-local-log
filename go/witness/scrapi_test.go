@@ -23,7 +23,8 @@ import (
 // scrapiService is a test SCITT Transparency Service. It appends the SHA-256
 // of each registered statement to an RFC 9162 tree after two earlier entries,
 // and answers per mode: "created" returns the Receipt with 201, "accepted"
-// returns 202 then the Receipt from the Location, "see-other" returns 303.
+// returns 202 then the Receipt from the Location, "found" does the same with
+// 302 while the registration runs, "see-other" returns 303.
 type scrapiService struct {
 	t        *testing.T
 	key      ed25519.PrivateKey
@@ -54,7 +55,7 @@ func newSCRAPIService(t *testing.T, mode string) *scrapiService {
 				w.Header().Set("Content-Type", SCRAPIContentType)
 				w.WriteHeader(http.StatusCreated)
 				_, _ = w.Write(receipt)
-			case "accepted", "pending":
+			case "accepted", "found", "pending":
 				w.Header().Set("Location", "/operations/1")
 				w.WriteHeader(http.StatusAccepted)
 			case "see-other":
@@ -75,7 +76,11 @@ func newSCRAPIService(t *testing.T, mode string) *scrapiService {
 		case r.Method == http.MethodGet && r.URL.Path == "/operations/1":
 			if s.mode == "pending" || s.polls.Add(1) < 2 {
 				w.Header().Set("Location", "/operations/1")
-				w.WriteHeader(http.StatusAccepted)
+				if s.mode == "found" {
+					w.WriteHeader(http.StatusFound)
+				} else {
+					w.WriteHeader(http.StatusAccepted)
+				}
 				return
 			}
 			w.Header().Set("Location", "/entries/1")
@@ -165,7 +170,7 @@ func scrapiReceiptVerifies(t *testing.T, s *scrapiService, entry []byte, receipt
 // The Receipt covers SHA-256 of the statement octets, the anchor digest, and
 // not the cll binding's entry, SHA-256 of the payload digest.
 func TestSCRAPIClientReceiptCoversTheAnchorDigest(t *testing.T) {
-	for _, mode := range []string{"created", "accepted", "see-other"} {
+	for _, mode := range []string{"created", "accepted", "found", "see-other"} {
 		t.Run(mode, func(t *testing.T) {
 			service := newSCRAPIService(t, mode)
 			statement := checkpointStatement(t)
@@ -293,6 +298,16 @@ func TestSCRAPIReceiptPositionRefusesMalformedReceipts(t *testing.T) {
 		"no proof":         func(m *cose.Sign1Message) { m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{}} },
 		"proof not bytes": func(m *cose.Sign1Message) {
 			m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{int64(1)}}
+		},
+		"tree size beyond portable integer": func(m *cose.Sign1Message) {
+			// Leaf 0 of a 2^53 tree has a 53-hash path, so only the cap refuses it.
+			path := make([][]byte, 53)
+			for i := range path {
+				path[i] = bytes.Repeat([]byte{2}, 32)
+			}
+			proof, err := cbor.Marshal([]any{int64(1) << 53, int64(0), path})
+			require.NoError(t, err)
+			m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{proof}}
 		},
 		"wrong path length": func(m *cose.Sign1Message) {
 			proof, err := cbor.Marshal([]any{int64(2), int64(0), [][]byte{}})
