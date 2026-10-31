@@ -79,9 +79,9 @@ func NewSCRAPIClient(baseURL string, client *http.Client, maxResponseBytes int64
 // A 200 or 201 answer carries the Receipt. A 202, 302 or 303 answer names a
 // Location to read next; 202 and 302 mean the registration is still running
 // and are re-read after the poll interval. The Receipt is checked against the
-// receipt profile ReceiptVerifier applies and for an inclusion proof that
-// folds from SHA-256 of the statement, but not for the service's signature,
-// which needs the relying party's witness key.
+// receipt profile ReceiptVerifier applies, but not for the service's
+// signature, which needs the relying party's witness key; without it, nothing
+// binds the Receipt to this statement.
 func (c *SCRAPIClient) Submit(ctx context.Context, signedCheckpoint []byte) (Receipt, error) {
 	record, err := checkpoint.ParseRecord(signedCheckpoint)
 	if err != nil {
