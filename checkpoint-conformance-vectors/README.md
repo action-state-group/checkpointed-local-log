@@ -88,10 +88,11 @@ encoding, and the signed checkpoint record that wraps a root.
   naming only present, understood labels, and 1 to 16 inclusion proofs that
   all decode and fit their tree, one of which rebuilds the root the
   signature covers. A holder also refuses a receipt whose stored position is
-  not that proof's. Python checks the encoding rule and `crit` before
-  `cll.ed25519.verify_receipt`, which is scitt-cose's `verify_receipt`: that
-  alone decodes a proof blob leniently and admits tags, floats and simple
-  values elsewhere in the receipt.
+  not that proof's. Python checks the encoding rule, that `vds` is an
+  integer, and `crit` before `cll.ed25519.verify_receipt`, which is
+  scitt-cose's `verify_receipt`: that alone decodes a proof blob leniently,
+  admits tags, floats and simple values elsewhere in the receipt, and reads
+  `vds: true` as 1.
   `generate_receipts.py` assembles the receipts byte by byte, so it depends
   on none of the verifiers it tests; `--check` fails when the file is out of
   date. `go/witness/testdata/receipt-vectors.json` is a pinned copy.

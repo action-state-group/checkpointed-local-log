@@ -234,6 +234,8 @@ def _cases(entry: bytes) -> list[dict]:
          receipt(protected=_protected((_int(1), _int(-7)), VDS_1)))
     case("neg-alg-text", False, "alg must be an integer", receipt(protected=_protected((_int(1), cbor2.dumps("EdDSA")), VDS_1)))
     case("neg-vds-2", False, "only vds 1 (RFC9162_SHA256)", receipt(protected=_protected(ALG_EDDSA, (_int(395), _int(2)))))
+    case("neg-vds-true", False, "vds must be the integer 1, not true",
+         receipt(protected=_protected(ALG_EDDSA, (_int(395), b"\xf5"))))
     case("neg-vds-text", False, "vds must be an integer", receipt(protected=_protected(ALG_EDDSA, (_int(395), cbor2.dumps("1")))))
 
     good = receipt()

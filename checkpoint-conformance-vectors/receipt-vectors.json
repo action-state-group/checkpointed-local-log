@@ -422,6 +422,14 @@
       "receipt_b64": "0oRHogEnGQGLAqEZAYyhIIFEgwEAgPZYQPB4GbmHk0wdYgQMIhVARQAsdGwgvNLlYvRs6abwrX17QPrdi8F12m0+sQHPeB/XVr1fRtQY3PnokuW0nmG5mAU="
     },
     {
+      "name": "neg-vds-true",
+      "accept": false,
+      "tree_size": 1,
+      "leaf_index": 0,
+      "why": "vds must be the integer 1, not true",
+      "receipt_b64": "0oRHogEnGQGL9aEZAYyhIIFEgwEAgPZYQP4IYp0/XrHjsJTQEl02CYTcockaORGCLOtMJHFnTllcugTE7yJf/Do7yhEnp1+QpYGLztGdbgO58xDLNHmqUwE="
+    },
+    {
       "name": "neg-vds-text",
       "accept": false,
       "tree_size": 1,

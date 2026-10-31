@@ -192,9 +192,12 @@ def _parse_receipt(raw: bytes) -> WitnessReceipt:
 
 class ReceiptVerifier:
     """Verifies RFC 9162 COSE receipts under a pinned Ed25519 authority key
-    (the raw 32-byte public key), with ``cll.ed25519.verify_receipt``:
-    ``scitt_cose.verify_receipt`` plus the small-order and canonical-encoding
-    checks."""
+    (the raw 32-byte public key), as agent-action-capsule's
+    ``VerifyCOSEReceipt`` does: ``_check_receipt_rules`` (the receipt
+    encoding rule, ``vds``'s type and ``crit``), then
+    ``cll.ed25519.verify_receipt``, which is ``scitt_cose.verify_receipt``
+    plus the small-order and canonical-encoding checks. It therefore refuses
+    some receipts scitt-cose alone accepts."""
 
     def __init__(self, public_key: bytes) -> None:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -234,9 +237,10 @@ def _check_receipt_rules(receipt: bytes) -> None:
     """Refuse, as agent-action-capsule's ``VerifyCOSEReceipt`` does and before
     scitt-cose reads the receipt, one whose COSE_Sign1, protected header or
     any inclusion-proof blob breaks the receipt encoding rule
-    (:func:`cll.cbor.receipt_item`), or whose protected ``crit`` breaks RFC
-    9052 section 3.1. scitt-cose decodes a proof blob leniently, admits tags,
-    floats and other simple values elsewhere, and reads ``crit: [true]`` as
+    (:func:`cll.cbor.receipt_item`), whose protected ``vds`` is not an
+    integer, or whose protected ``crit`` breaks RFC 9052 section 3.1.
+    scitt-cose decodes a proof blob leniently, admits tags, floats and other
+    simple values elsewhere, reads ``vds: true`` as 1 and ``crit: [true]`` as
     the ``alg`` label 1. The rest of the shape is left to scitt-cose."""
     import cbor2
 
@@ -249,7 +253,11 @@ def _check_receipt_rules(receipt: bytes) -> None:
         if not isinstance(parts, (list, tuple)) or len(parts) != 4:
             return
         if isinstance(parts[0], bytes) and parts[0]:
-            _check_crit(receipt_item(parts[0]))
+            headers = receipt_item(parts[0])
+            # type(), not ==: scitt-cose compares vds by value, and true == 1.
+            if isinstance(headers, Mapping) and 395 in headers and type(headers[395]) is not int:
+                raise RejectedError("receipt vds is not an integer")
+            _check_crit(headers)
         vdp = parts[1].get(396) if isinstance(parts[1], Mapping) else None
         proofs = vdp.get(-1) if isinstance(vdp, Mapping) else None
         for blob in proofs if isinstance(proofs, (list, tuple)) else []:
