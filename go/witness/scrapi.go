@@ -15,7 +15,6 @@ import (
 
 	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
 	"github.com/action-state-group/checkpointed-local-log/go/cll"
-	"github.com/veraison/go-cose"
 )
 
 // SCRAPIContentType is the media type of a SCRAPI registration request and of
@@ -79,10 +78,10 @@ func NewSCRAPIClient(baseURL string, client *http.Client, maxResponseBytes int64
 // Submit registers signedCheckpoint and returns the service's COSE Receipt.
 // A 200 or 201 answer carries the Receipt. A 202, 302 or 303 answer names a
 // Location to read next; 202 and 302 mean the registration is still running
-// and are re-read after the poll interval. The Receipt is checked for the
-// RFC 9162 shape it needs and for an inclusion proof that folds from SHA-256
-// of the statement, but not for the service's signature, which needs the
-// relying party's witness key.
+// and are re-read after the poll interval. The Receipt is checked against the
+// receipt profile ReceiptVerifier applies, but not for the service's
+// signature, which needs the relying party's witness key; without it, nothing
+// binds the Receipt to this statement.
 func (c *SCRAPIClient) Submit(ctx context.Context, signedCheckpoint []byte) (Receipt, error) {
 	record, err := checkpoint.ParseRecord(signedCheckpoint)
 	if err != nil {
@@ -125,7 +124,7 @@ func (c *SCRAPIClient) Submit(ctx context.Context, signedCheckpoint []byte) (Rec
 		return Receipt{}, &HTTPError{StatusCode: status, Body: boundedText(strings.TrimSpace(string(raw)))}
 	}
 	entry := sha256.Sum256(signedCheckpoint)
-	leafIndex, treeSize, err := scrapiReceiptPosition(raw, entry[:])
+	leafIndex, treeSize, err := scrapiReceiptPosition(raw)
 	if err != nil {
 		return Receipt{}, err
 	}
@@ -178,49 +177,25 @@ func sleep(ctx context.Context, d time.Duration) error {
 	}
 }
 
-// scrapiReceiptPosition checks that raw is a detached COSE_Sign1 RFC 9162
-// Receipt with a well-formed first inclusion proof, and returns that proof's
-// position.
-func scrapiReceiptPosition(raw, entry []byte) (int64, int64, error) {
+// scrapiReceiptPosition checks raw with decodeReceipt, the receipt profile
+// ReceiptVerifier and agent-action-capsule's VerifyReceipts apply, and returns
+// its first inclusion proof's position. decodeReceipt refuses a proof that
+// cannot fit its tree, so every proof folds to a root; which root the service
+// signed needs the relying party's witness key, which this client lacks.
+func scrapiReceiptPosition(raw []byte) (int64, int64, error) {
 	if len(raw) == 0 {
 		return 0, 0, fmt.Errorf("SCRAPI response has no receipt")
 	}
-	var message cose.Sign1Message
-	if err := message.UnmarshalCBOR(raw); err != nil {
+	decoded, err := decodeReceipt(raw)
+	if err != nil {
 		return 0, 0, fmt.Errorf("decode SCRAPI receipt: %w", err)
 	}
-	if message.Payload != nil {
-		return 0, 0, fmt.Errorf("SCRAPI receipt payload must be detached")
-	}
-	if vds, ok := integerHeader(message.Headers.Protected, headerVDS); !ok || vds != vdsRFC9162 {
-		return 0, 0, fmt.Errorf("SCRAPI receipt protected header requires RFC9162 VDS")
-	}
-	vdpAny, ok := lookup(message.Headers.Unprotected, headerVDP)
-	vdp, isMap := vdpAny.(map[any]any)
-	if !ok || !isMap {
-		return 0, 0, fmt.Errorf("SCRAPI receipt has no VDP map")
-	}
-	proofsAny, _ := lookup(vdp, vdpInclusion)
-	proofs, ok := proofsAny.([]any)
-	if !ok || len(proofs) == 0 {
-		return 0, 0, fmt.Errorf("SCRAPI receipt has no inclusion proof")
-	}
-	blob, ok := proofs[0].([]byte)
-	if !ok {
-		return 0, 0, fmt.Errorf("SCRAPI receipt proof is not bytes")
-	}
-	treeSize, leafIndex, path, err := decodeProof(blob)
-	if err != nil {
-		return 0, 0, err
-	}
+	proof := decoded.proofs[0]
 	// The store refuses a position beyond the portable integer range, as the
 	// cll binding's Client does; refuse it here so delivery records a failure
 	// instead of erroring on every pass.
-	if uint64(treeSize) > cll.MaxPortableInteger {
+	if uint64(proof.size) > cll.MaxPortableInteger {
 		return 0, 0, fmt.Errorf("SCRAPI receipt tree size exceeds the portable integer range")
 	}
-	if _, ok := rootFromProof(entry, leafIndex, treeSize, path); !ok {
-		return 0, 0, fmt.Errorf("SCRAPI receipt inclusion proof is invalid")
-	}
-	return leafIndex, treeSize, nil
+	return proof.index, proof.size, nil
 }

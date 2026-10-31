@@ -331,29 +331,6 @@ func sigStructure(protected, root []byte) []byte {
 	return encoded
 }
 
-func decodeProof(blob []byte) (int64, int64, [][]byte, error) {
-	var values []cbor.RawMessage
-	if err := cbor.Unmarshal(blob, &values); err != nil || len(values) != 3 {
-		return 0, 0, nil, fmt.Errorf("invalid inclusion proof")
-	}
-	var size, index int64
-	var path [][]byte
-	if err := cbor.Unmarshal(values[0], &size); err != nil {
-		return 0, 0, nil, err
-	}
-	if err := cbor.Unmarshal(values[1], &index); err != nil {
-		return 0, 0, nil, err
-	}
-	if err := cbor.Unmarshal(values[2], &path); err != nil {
-		return 0, 0, nil, err
-	}
-	for _, node := range path {
-		if len(node) != 32 {
-			return 0, 0, nil, fmt.Errorf("invalid proof hash length")
-		}
-	}
-	return size, index, path, nil
-}
 func rootFromProof(entry []byte, index, size int64, path [][]byte) ([]byte, bool) {
 	if index < 0 || index >= size || size > maxTreeSize || int64(len(path)) != expectedPath(size, index) {
 		return nil, false
@@ -418,40 +395,4 @@ func expectedPath(size, index int64) int64 {
 		count++
 	}
 	return count
-}
-func lookup(values map[any]any, key int64) (any, bool) {
-	for candidate, value := range values {
-		switch typed := candidate.(type) {
-		case int64:
-			if typed == key {
-				return value, true
-			}
-		case uint64:
-			if key >= 0 && typed == uint64(key) {
-				return value, true
-			}
-		case int:
-			if int64(typed) == key {
-				return value, true
-			}
-		}
-	}
-	return nil, false
-}
-func integerHeader(values map[any]any, key int64) (int64, bool) {
-	value, ok := lookup(values, key)
-	if !ok {
-		return 0, false
-	}
-	switch typed := value.(type) {
-	case int64:
-		return typed, true
-	case uint64:
-		if typed <= uint64(^uint64(0)>>1) {
-			return int64(typed), true
-		}
-	case int:
-		return int64(typed), true
-	}
-	return 0, false
 }

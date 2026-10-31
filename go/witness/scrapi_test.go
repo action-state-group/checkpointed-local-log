@@ -154,18 +154,12 @@ func auditPath(m int64, entries [][]byte) [][]byte {
 // interop profile v1 section 6.2.2, with entry as the anchor digest.
 func scrapiReceiptVerifies(t *testing.T, s *scrapiService, entry []byte, receipt Receipt) bool {
 	t.Helper()
-	var message cose.Sign1Message
-	require.NoError(t, message.UnmarshalCBOR(receipt.Bytes))
-	vdp, _ := lookup(message.Headers.Unprotected, headerVDP)
-	proofs, _ := lookup(vdp.(map[any]any), vdpInclusion)
-	size, index, path, err := decodeProof(proofs.([]any)[0].([]byte))
+	decoded, err := decodeReceipt(receipt.Bytes)
 	require.NoError(t, err)
-	root, ok := rootFromProof(entry, index, size, path)
+	proof := decoded.proofs[0]
+	root, ok := rootFromProof(entry, proof.index, proof.size, proof.path)
 	require.True(t, ok)
-	message.Payload = root
-	verifier, err := cose.NewVerifier(cose.AlgorithmEdDSA, s.key.Public())
-	require.NoError(t, err)
-	return message.Verify(nil, verifier) == nil
+	return ed25519.Verify(s.key.Public().(ed25519.PublicKey), sigStructure(decoded.protected, root), decoded.signature)
 }
 
 // The Receipt covers SHA-256 of the statement octets, the anchor digest, and
@@ -300,8 +294,19 @@ func TestSCRAPIReceiptPositionRefusesMalformedReceipts(t *testing.T) {
 		require.NoError(t, err)
 		return raw
 	}
-	_, _, err = scrapiReceiptPosition(sign(func(*cose.Sign1Message) {}), entry)
+	_, _, err = scrapiReceiptPosition(sign(func(*cose.Sign1Message) {}))
 	require.NoError(t, err)
+
+	// The position comes from the first proof.
+	index, size, err := scrapiReceiptPosition(sign(func(m *cose.Sign1Message) {
+		first, err := cbor.Marshal([]any{int64(2), int64(1), [][]byte{bytes.Repeat([]byte{2}, 32)}})
+		require.NoError(t, err)
+		second, err := cbor.Marshal([]any{int64(1), int64(0), [][]byte{}})
+		require.NoError(t, err)
+		m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{first, second}}
+	}))
+	require.NoError(t, err)
+	require.Equal(t, []int64{1, 2}, []int64{index, size})
 
 	for name, edit := range map[string]func(*cose.Sign1Message){
 		"attached payload": func(m *cose.Sign1Message) { m.Payload = []byte("root") },
@@ -321,15 +326,25 @@ func TestSCRAPIReceiptPositionRefusesMalformedReceipts(t *testing.T) {
 			require.NoError(t, err)
 			m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{proof}}
 		},
+		"not EdDSA": func(m *cose.Sign1Message) { m.Headers.Protected.SetAlgorithm(cose.AlgorithmES256) },
+		"crit unknown label": func(m *cose.Sign1Message) {
+			m.Headers.Protected[int64(99)] = true
+			m.Headers.Protected[headerCrit] = []any{int64(99)}
+		},
+		"second proof malformed": func(m *cose.Sign1Message) {
+			proof, err := cbor.Marshal([]any{int64(1), int64(0), [][]byte{}})
+			require.NoError(t, err)
+			m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{proof, []byte{0xff}}}
+		},
 		"wrong path length": func(m *cose.Sign1Message) {
 			proof, err := cbor.Marshal([]any{int64(2), int64(0), [][]byte{}})
 			require.NoError(t, err)
 			m.Headers.Unprotected[headerVDP] = map[any]any{vdpInclusion: []any{proof}}
 		},
 	} {
-		_, _, err := scrapiReceiptPosition(sign(edit), entry)
+		_, _, err := scrapiReceiptPosition(sign(edit))
 		require.Error(t, err, name)
 	}
-	_, _, err = scrapiReceiptPosition(nil, entry)
+	_, _, err = scrapiReceiptPosition(nil)
 	require.Error(t, err)
 }
