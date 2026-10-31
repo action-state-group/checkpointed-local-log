@@ -5,6 +5,27 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
+
+### Added
+
+- `witness.NewSCRAPIClient`, a `Submitter` that registers a signed checkpoint
+  with a SCITT Transparency Service through SCRAPI's `POST /entries`, so its
+  Receipt's leaf is SHA-256 of the checkpoint statement, the anchor digest
+  agent-action-capsule interop profile v1 §6.2.2 checks
+  (checkpointed-local-log#117, checkpointed-local-log#118).
+
+### Changed
+
+- `witness.ReceiptVerifier` accepts and refuses the same receipts as
+  scitt-cose and agent-action-capsule `VerifyReceipts`: it refuses an
+  attached or undefined payload, a `crit` label it does not understand,
+  non-shortest CBOR and a malformed later proof, and accepts several
+  inclusion proofs. The shared `receipt-vectors.json` pins this
+  (checkpointed-local-log#119, checkpointed-local-log#120).
+- The SCRAPI client checks a Receipt's shape with that same receipt profile
+  (checkpointed-local-log#121, checkpointed-local-log#123).
+
 ## checkpointed-local-log (Rust crate) 0.4.0 — 2026-10-30
 
 ### Security
