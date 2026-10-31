@@ -192,9 +192,12 @@ def _parse_receipt(raw: bytes) -> WitnessReceipt:
 
 class ReceiptVerifier:
     """Verifies RFC 9162 COSE receipts under a pinned Ed25519 authority key
-    (the raw 32-byte public key), with ``cll.ed25519.verify_receipt``:
-    ``scitt_cose.verify_receipt`` plus the small-order and canonical-encoding
-    checks."""
+    (the raw 32-byte public key), as agent-action-capsule's
+    ``VerifyCOSEReceipt`` does: ``_check_receipt_rules`` (the receipt
+    encoding rule, ``vds``'s type and ``crit``), then
+    ``cll.ed25519.verify_receipt``, which is ``scitt_cose.verify_receipt``
+    plus the small-order and canonical-encoding checks. It therefore refuses
+    some receipts scitt-cose alone accepts."""
 
     def __init__(self, public_key: bytes) -> None:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -210,6 +213,7 @@ class ReceiptVerifier:
 
         if not 1 <= len(receipt.bytes) <= MAX_WITNESS_RESPONSE_BYTES:
             raise RejectedError("receipt size is invalid")
+        _check_receipt_rules(receipt.bytes)
         if receipt.entry_hash_scheme != ENTRY_HASH_SCHEME_CHECKPOINT_DIGEST:
             raise RejectedError(f"unsupported receipt entry hash scheme {receipt.entry_hash_scheme!r}")
         entry_hash = _checkpoint_entry_hash(checkpoint)
@@ -222,6 +226,63 @@ class ReceiptVerifier:
         # signed proof carries.
         if result.tree_size != receipt.tree_size or result.leaf_index != receipt.leaf_index:
             raise RejectedError("receipt position mismatch")
+
+
+#: Protected labels the receipt check processes (alg, crit, CWT_Claims, vds),
+#: as Go's ``understoodLabels``.
+_UNDERSTOOD_LABELS = (1, 2, 15, 395)
+
+
+def _check_receipt_rules(receipt: bytes) -> None:
+    """Refuse, as agent-action-capsule's ``VerifyCOSEReceipt`` does and before
+    scitt-cose reads the receipt, one whose COSE_Sign1, protected header or
+    any inclusion-proof blob breaks the receipt encoding rule
+    (:func:`cll.cbor.receipt_item`), whose protected ``vds`` is not an
+    integer, or whose protected ``crit`` breaks RFC 9052 section 3.1.
+    scitt-cose decodes a proof blob leniently, admits tags, floats and other
+    simple values elsewhere, reads ``vds: true`` as 1 and ``crit: [true]`` as
+    the ``alg`` label 1. The rest of the shape is left to scitt-cose."""
+    import cbor2
+
+    from ..cbor import ReceiptEncodingError, receipt_item
+
+    try:
+        outer = receipt_item(receipt, top_tag=True)
+        parts = outer.value if isinstance(outer, cbor2.CBORTag) else None
+        # cbor2 decodes inside a tag to tuples and frozen maps.
+        if not isinstance(parts, (list, tuple)) or len(parts) != 4:
+            return
+        if isinstance(parts[0], bytes) and parts[0]:
+            headers = receipt_item(parts[0])
+            # type(), not ==: scitt-cose compares vds by value, and true == 1.
+            if isinstance(headers, Mapping) and 395 in headers and type(headers[395]) is not int:
+                raise RejectedError("receipt vds is not an integer")
+            _check_crit(headers)
+        vdp = parts[1].get(396) if isinstance(parts[1], Mapping) else None
+        proofs = vdp.get(-1) if isinstance(vdp, Mapping) else None
+        for blob in proofs if isinstance(proofs, (list, tuple)) else []:
+            if isinstance(blob, bytes):
+                receipt_item(blob)
+    except ReceiptEncodingError as exc:
+        raise RejectedError(f"receipt breaks the receipt encoding rule: {exc}") from None
+
+
+def _check_crit(headers: object) -> None:
+    """RFC 9052 section 3.1: a protected ``crit`` (2) is a non-empty array of
+    labels present in the protected header and understood here."""
+    if not isinstance(headers, Mapping) or 2 not in headers:
+        return
+    labels = headers[2]
+    if not isinstance(labels, (list, tuple)) or not labels:
+        raise RejectedError("receipt crit must be a non-empty array")
+    for label in labels:
+        # type(), not isinstance: true would equal the alg label 1.
+        if type(label) not in (int, str):
+            raise RejectedError("receipt crit lists a label that is not an integer or text")
+        if label not in headers:
+            raise RejectedError("receipt crit lists a header absent from the protected header")
+        if type(label) is not int or label not in _UNDERSTOOD_LABELS:
+            raise RejectedError("receipt crit marks a header this verifier does not understand")
 
 
 def _bounded_text(value: str) -> str:

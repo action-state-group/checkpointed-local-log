@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate ``receipt-vectors.json``: witness receipts over one checkpoint that
-every CLL receipt verifier must decide the same way as scitt-cose's
-``verify_receipt`` and agent-action-capsule's ``VerifyReceipts``. Only cases
-the two decide alike are pinned, plus ``neg-payload-undefined``, which the AAC
-spec settles (a detached payload is CBOR null) and AAC go/v0.18.0 gets wrong.
+every CLL receipt verifier must decide the same way as agent-action-capsule's
+``VerifyCOSEReceipt``, which since agent-action-capsule#523 decodes the
+receipt, its protected header and each inclusion-proof blob under the receipt
+encoding rule of the AAC interop profile v1 section 6.2.2.
 
 Each case is a COSE Receipt (RFC 9942 shape, RFC 9162 SHA-256 inclusion
 proof) over the entry hash of the ``checkpoint-first-2-leaves`` statement in
@@ -140,32 +140,77 @@ def _cases(entry: bytes) -> list[dict]:
     def extra(value: bytes) -> bytes:
         return _map((_int(396), _map((_int(-1), _array(_bstr(proof1))))), (_int(77), value))
 
-    case("pos-unprotected-tagged-value", True, "a tagged value under an unprotected label the verifier ignores",
+    # The receipt encoding rule (profile v1 section 6.2.2, as
+    # agent-action-capsule#523 applies it to every COSE Receipt) covers the
+    # whole message, each inclusion-proof blob included: no tag but the outer
+    # 18, no float, no bignum, no simple value but false, true and null,
+    # definite lengths, shortest arguments, integer or text keys, at most 16
+    # levels. Label 77 sits three levels deep (tag, array, map).
+    case("neg-unprotected-tagged-value", False, "a tagged value, even under an unprotected label the verifier ignores",
          receipt(unprotected=extra(_head(6, 1000) + _int(0))))
-    case("pos-unprotected-half-float", True, "a float in its shortest (half-precision) form",
+    case("neg-unprotected-half-float", False, "a float, even in its shortest (half-precision) form",
          receipt(unprotected=extra(b"\xf9\x3c\x00")))
-    case("pos-proof-non-shortest-integer", True, "the inclusion-proof blob is decoded leniently, as the scitt-cose verifiers do",
+    case("neg-proof-non-shortest-integer", False, "the inclusion-proof blob is decoded under the same rule as the message",
          receipt(unprotected=_unprotected(_array(_int(1, 2), _int(0), _array()))))
-    case("pos-proof-bignum-tree-size", True, "a proof's tree_size may be a bignum (tag 2) that fits an int64",
+    case("neg-proof-bignum-tree-size", False, "a proof's tree_size is an unsigned integer, not a bignum (tag 2)",
          receipt(unprotected=_unprotected(_array(b"\xc2" + _bstr(b"\x01"), _int(0), _array()))))
-    case("pos-proof-indefinite-path", True, "an indefinite-length audit path inside the leniently decoded proof blob",
+    case("neg-proof-indefinite-path", False, "an indefinite-length audit path inside the proof blob",
          receipt(unprotected=_unprotected(_array(_int(3), _int(2), b"\x9f" + _bstr(left) + b"\xff")), root=root3), 3, 2)
+    case("neg-proof-indefinite-blob", False, "a proof blob that is an indefinite-length array",
+         receipt(unprotected=_unprotected(b"\x9f" + _int(1) + _int(0) + _array() + b"\xff")))
 
     def proof_with(size: bytes, index: bytes, path: bytes) -> bytes:
         return _unprotected(_array(size, index, path))
 
-    case("pos-proof-self-described-blob", True, "the leniently decoded proof blob may carry the self-described CBOR tag (55799)",
+    case("neg-proof-self-described-blob", False, "the self-described CBOR tag (55799) around the proof blob",
          receipt(unprotected=_unprotected(_head(6, 55799) + proof1)))
-    case("pos-proof-self-described-size", True, "so may an item inside it",
+    case("neg-proof-self-described-size", False, "the self-described tag around a proof's tree_size",
          receipt(unprotected=proof_with(_head(6, 55799) + _int(1), _int(0), _array())))
-    case("pos-proof-self-described-node", True, "so may an audit-path node",
+    case("neg-proof-self-described-node", False, "the self-described tag around an audit-path node",
          receipt(unprotected=proof_with(_int(3), _int(2), _array(_head(6, 55799) + _bstr(left))), root=root3), 3, 2)
-    case("pos-unprotected-bignum", True, "a bignum that needs more than 64 bits is its shortest form",
+    case("neg-unprotected-bignum", False, "a bignum, even one that needs more than 64 bits",
          receipt(unprotected=extra(b"\xc2" + _bstr(b"\x01" + bytes(8)))))
-    case("pos-unprotected-undefined", True, "undefined under an ignored label", receipt(unprotected=extra(b"\xf7")))
-    case("pos-unprotected-simple-value", True, "simple value 32 under an ignored label", receipt(unprotected=extra(b"\xf8\x20")))
-    case("pos-unprotected-nested-29", True, "29 nested arrays under an ignored label, within every verifier's depth limit",
+    case("neg-unprotected-integer-below-int64", False, "the integer -2^64, below -2^63",
+         receipt(unprotected=extra(b"\x3b" + b"\xff" * 8)))
+    case("neg-unprotected-undefined", False, "undefined, even under an ignored label", receipt(unprotected=extra(b"\xf7")))
+    case("neg-unprotected-simple-value", False, "simple value 32", receipt(unprotected=extra(b"\xf8\x20")))
+    case("neg-unprotected-simple-value-0", False, "the unassigned simple value 0", receipt(unprotected=extra(b"\xe0")))
+    case("neg-unprotected-indefinite-array", False, "an indefinite-length array under an ignored label",
+         receipt(unprotected=extra(b"\x9f\x01\xff")))
+    case("neg-unprotected-array-key", False, "a map keyed by an array",
+         receipt(unprotected=extra(_map((_array(_int(1)), _int(1))))))
+    case("neg-unprotected-bytes-key", False, "a map keyed by a byte string",
+         receipt(unprotected=extra(_map((_bstr(b"k"), _int(1))))))
+    case("neg-unprotected-nan-keys", False, "a map keyed twice by NaN",
+         receipt(unprotected=extra(_map((b"\xf9\x7e\x00", _int(1)), (b"\xf9\x7e\x00", _int(2))))))
+    case("neg-unprotected-nested-repeated-key", False, "a map under an ignored label that repeats a key",
+         receipt(unprotected=extra(_map((_int(1), _int(1)), (_int(1), _int(2))))))
+    case("neg-unprotected-depth-17", False, "14 nested arrays under label 77, so an item 17 levels deep",
+         receipt(unprotected=extra(b"\x81" * 14 + _int(0))))
+    case("neg-unprotected-nested-29", False, "29 nested arrays under an ignored label",
          receipt(unprotected=extra(b"\x81" * 29 + b"\x80")))
+    case("pos-unprotected-depth-16", True, "13 nested arrays under label 77, so an item 16 levels deep, the most allowed",
+         receipt(unprotected=extra(b"\x81" * 13 + _int(0))))
+    case("pos-unprotected-keys-out-of-order", True, "a map under an ignored label whose text keys are not in canonical order",
+         receipt(unprotected=extra(_map((cbor2.dumps("b"), _int(1)), (cbor2.dumps("a"), _int(2))))))
+    case("pos-unprotected-kid-integer", True, "an unprotected kid (4) that is an integer, a label the verifier does not read",
+         receipt(unprotected=_map((_int(4), _int(1)), (_int(396), _map((_int(-1), _array(_bstr(proof1))))))))
+    case("pos-protected-content-type", True, "a protected content type (3) \"abc\", a label the verifier does not read",
+         receipt(protected=_protected(ALG_EDDSA, (_int(3), cbor2.dumps("abc")), VDS_1)))
+    case("pos-crit-cwt-claims", True, "crit [15] with an empty protected CWT claims map, a label the verifier processes",
+         receipt(protected=_protected(ALG_EDDSA, (_int(2), _array(_int(15))), (_int(15), _map()), VDS_1)))
+    case("neg-protected-tag-unread-label", False, "an epoch time (tag 1) under protected label -65538, which no check reads",
+         receipt(protected=_protected(ALG_EDDSA, VDS_1, (_int(-65538), b"\xc1" + _int(1)))))
+    case("neg-protected-float-iat", False, "a protected CWT iat that is a float",
+         receipt(protected=_protected(ALG_EDDSA, (_int(15), _map((_int(6), cbor2.dumps(1767225600.5)))), VDS_1)))
+    case("neg-protected-float-claim-key", False, "protected CWT claims keyed by the float 6.0",
+         receipt(protected=_protected(ALG_EDDSA, (_int(15), _map((b"\xf9\x46\x00", _int(1767225600)))), VDS_1)))
+    case("neg-crit-not-an-array", False, "crit must be an array, not an integer",
+         receipt(protected=_protected(ALG_EDDSA, (_int(2), _int(1)), VDS_1)))
+    case("neg-crit-boolean", False, "crit [true] lists a label that is not an integer or text",
+         receipt(protected=_protected(ALG_EDDSA, (_int(2), _array(b"\xf5")), VDS_1)))
+    case("neg-crit-kid", False, "crit [4] over a protected kid, a label the verifier does not process",
+         receipt(protected=_protected(ALG_EDDSA, (_int(2), _array(_int(4))), (_int(4), _bstr(b"k")), VDS_1)))
 
     case("neg-attached-payload-root", False, "an attached payload binds nothing, even when it is the rebuilt root",
          receipt(payload=_bstr(leaf)))
@@ -189,6 +234,8 @@ def _cases(entry: bytes) -> list[dict]:
          receipt(protected=_protected((_int(1), _int(-7)), VDS_1)))
     case("neg-alg-text", False, "alg must be an integer", receipt(protected=_protected((_int(1), cbor2.dumps("EdDSA")), VDS_1)))
     case("neg-vds-2", False, "only vds 1 (RFC9162_SHA256)", receipt(protected=_protected(ALG_EDDSA, (_int(395), _int(2)))))
+    case("neg-vds-true", False, "vds must be the integer 1, not true",
+         receipt(protected=_protected(ALG_EDDSA, (_int(395), b"\xf5"))))
     case("neg-vds-text", False, "vds must be an integer", receipt(protected=_protected(ALG_EDDSA, (_int(395), cbor2.dumps("1")))))
 
     good = receipt()
@@ -272,8 +319,8 @@ def build() -> dict:
         "note": (
             "Witness receipts over one checkpoint statement. A receipt verifier pinned to authority_public_key_hex, "
             "given checkpoint_cose_b64 and a receipt with entry_hash_hex, tree_size and leaf_index, accepts exactly "
-            "the cases whose accept is true, as scitt-cose's verify_receipt does and as agent-action-capsule's "
-            "VerifyReceipts does except for neg-payload-undefined, which AAC go/v0.18.0 accepts. "
+            "the cases whose accept is true, as agent-action-capsule's VerifyCOSEReceipt does under the receipt "
+            "encoding rule of its interop profile v1 section 6.2.2 (agent-action-capsule#523). "
             "Generated by generate_receipts.py."
         ),
         "checkpoint_cose_b64": base64.b64encode(statement).decode(),

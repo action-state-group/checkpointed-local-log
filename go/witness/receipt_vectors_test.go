@@ -15,8 +15,7 @@ import (
 
 // testdata/receipt-vectors.json is a pinned copy of
 // checkpoint-conformance-vectors/receipt-vectors.json at the repository root,
-// the receipts agent-action-capsule's VerifyReceipts and scitt-cose's
-// verify_receipt accept and refuse.
+// the receipts agent-action-capsule's VerifyCOSEReceipt accepts and refuses.
 type receiptVectors struct {
 	CheckpointCOSE string `json:"checkpoint_cose_b64"`
 	EntryHash      string `json:"entry_hash_hex"`

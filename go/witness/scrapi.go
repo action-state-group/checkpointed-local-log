@@ -178,7 +178,7 @@ func sleep(ctx context.Context, d time.Duration) error {
 }
 
 // scrapiReceiptPosition checks raw with decodeReceipt, the receipt profile
-// ReceiptVerifier and agent-action-capsule's VerifyReceipts apply, and returns
+// ReceiptVerifier and agent-action-capsule's VerifyCOSEReceipt apply, and returns
 // its first inclusion proof's position. decodeReceipt refuses a proof that
 // cannot fit its tree, so every proof folds to a root; which root the service
 // signed needs the relying party's witness key, which this client lacks.

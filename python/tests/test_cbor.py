@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
-"""``cll.cbor.loads``: maps whose keys collide as Python values are refused."""
+"""``cll.cbor.loads``: maps whose keys collide as Python values are refused;
+``cll.cbor.receipt_item``: the receipt encoding rule."""
 from __future__ import annotations
 
 import cbor2
 import pytest
 
+from cll import cbor
 from cll.cbor import DuplicateMapKeyError, loads
 
 
@@ -104,3 +106,49 @@ def test_collision_hidden_by_a_shared_reference_is_refused() -> None:
     data = bytes.fromhex("a3d81c61610082d81c6162d81d0001826162616102")
     with pytest.raises(DuplicateMapKeyError, match="depends on the rest of the item"):
         loads(data)
+
+
+@pytest.mark.parametrize(
+    "item",
+    [
+        "0000",  # trailing byte
+        "1a0001",  # truncated argument
+        "62ff",  # truncated text
+        "1801",  # non-shortest argument
+        "1c",  # reserved length
+        "9f01ff",  # indefinite array
+        "7f6161ff",  # indefinite text
+        "f93c00",  # half float
+        "fb3ff0000000000000",  # double
+        "f7",  # undefined
+        "e0",  # simple value 0
+        "f820",  # simple value 32
+        "c249010000000000000000",  # bignum
+        "3bffffffffffffffff",  # integer below -2^63
+        "a1416b01",  # byte-string key
+        "a1810101",  # array key
+        "a1f401",  # false as a key
+        "a201010102",  # repeated key
+        "a2616101616102",  # repeated text key
+        "81d280",  # inner tag 18
+        "61ff",  # invalid UTF-8
+        "9a0000ffff00",  # array longer than the input
+        "81" * 17 + "00",  # 17 levels
+    ],
+)
+def test_receipt_item_refuses_what_the_encoding_rule_refuses(item: str) -> None:
+    with pytest.raises(cbor.ReceiptEncodingError):
+        cbor.receipt_item(bytes.fromhex(item), top_tag=True)
+
+
+def test_receipt_item_refuses_a_tag_where_none_is_allowed() -> None:
+    with pytest.raises(cbor.ReceiptEncodingError):
+        cbor.receipt_item(bytes.fromhex("d280"))
+
+
+def test_receipt_item_accepts_what_the_rule_admits() -> None:
+    assert cbor.receipt_item(bytes.fromhex("81" * 16 + "00")) is not None
+    assert list(cbor.receipt_item(bytes.fromhex("83f6f4f5"))) == [None, False, True]
+    assert cbor.receipt_item(bytes.fromhex("3b7fffffffffffffff")) == -(1 << 63)
+    assert dict(cbor.receipt_item(bytes.fromhex("a2616201616102"))) == {"b": 1, "a": 2}
+    assert cbor.receipt_item(bytes.fromhex("d28140"), top_tag=True).tag == 18
