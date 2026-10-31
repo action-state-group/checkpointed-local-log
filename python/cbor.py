@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import cbor2
 
-__all__ = ["DuplicateMapKeyError", "loads"]
+__all__ = ["DuplicateMapKeyError", "ReceiptEncodingError", "loads", "receipt_item"]
 
 
 class DuplicateMapKeyError(ValueError):
@@ -144,3 +144,94 @@ def _frozen(value: object) -> object:
     if isinstance(value, float) and value != value:
         return _NAN
     return value
+
+
+class ReceiptEncodingError(ValueError):
+    """A CBOR item breaks the receipt encoding rule (:func:`receipt_item`)."""
+
+
+#: The deepest nesting the receipt encoding rule allows.
+_MAX_RECEIPT_DEPTH = 16
+
+
+def receipt_item(data: bytes, top_tag: bool = False) -> object:
+    """Decode one CBOR item under the receipt encoding rule of
+    agent-action-capsule's interop profile v1 section 6.2.2, as its
+    ``strictReceiptItem`` (agent-action-capsule#523) applies it to every COSE
+    Receipt: no trailing bytes, definite lengths, the shortest form of every
+    argument, no repeated map key, integers from -2^63, integer or text map
+    keys, valid UTF-8, no float, no simple value but false, true and null, no
+    tag but an outer 18 when ``top_tag``, and at most 16 levels. Map order is
+    not checked. Raise :class:`ReceiptEncodingError` otherwise.
+
+    The rule is checked on the encoded bytes, so an item that meets it means
+    one thing to every decoder, and ``cbor2.loads`` then decodes it."""
+    data = bytes(data)
+    try:
+        end = _receipt_walk(data, 0, 0, top_tag)
+    except IndexError:
+        raise ReceiptEncodingError("CBOR item is truncated") from None
+    if end != len(data):
+        raise ReceiptEncodingError("trailing bytes after the CBOR item")
+    return cbor2.loads(data)
+
+
+def _receipt_walk(data: bytes, i: int, depth: int, top_tag: bool) -> int:
+    if depth > _MAX_RECEIPT_DEPTH:
+        raise ReceiptEncodingError(f"CBOR nested more than {_MAX_RECEIPT_DEPTH} levels deep")
+    initial = data[i]
+    major, info = initial >> 5, initial & 0x1F
+    if major == 7:
+        if info in (20, 21, 22):  # false, true, null
+            return i + 1
+        raise ReceiptEncodingError("a float or a simple value other than false, true and null")
+    if info > 27:
+        raise ReceiptEncodingError("an indefinite or reserved CBOR length")
+    if info < 24:
+        arg, i = info, i + 1
+    else:
+        width = 1 << (info - 24)
+        if i + 1 + width > len(data):
+            raise ReceiptEncodingError("CBOR item is truncated")
+        arg = int.from_bytes(data[i + 1:i + 1 + width], "big")
+        if arg < (24, 1 << 8, 1 << 16, 1 << 32)[info - 24]:
+            raise ReceiptEncodingError("a CBOR argument not in its shortest form")
+        i += 1 + width
+    if major == 0:
+        return i
+    if major == 1:
+        if arg >= 1 << 63:
+            raise ReceiptEncodingError("an integer below -2^63")
+        return i
+    if major in (2, 3):
+        if i + arg > len(data):
+            raise ReceiptEncodingError("CBOR item is truncated")
+        if major == 3:
+            try:
+                data[i:i + arg].decode("utf-8")
+            except UnicodeDecodeError:
+                raise ReceiptEncodingError("a text string that is not valid UTF-8") from None
+        return i + arg
+    if major == 6:
+        if not (depth == 0 and top_tag and arg == 18):
+            raise ReceiptEncodingError(f"CBOR tag {arg} is not the outer tag 18")
+        return _receipt_walk(data, i, depth + 1, False)
+    # Every element takes at least one byte.
+    if arg > len(data) - i:
+        raise ReceiptEncodingError("CBOR item is truncated")
+    if major == 4:
+        for _ in range(arg):
+            i = _receipt_walk(data, i, depth + 1, False)
+        return i
+    keys = set()
+    for _ in range(arg):
+        start = i
+        if data[i] >> 5 not in (0, 1, 3):
+            raise ReceiptEncodingError("a map key that is not an integer or text")
+        i = _receipt_walk(data, i, depth + 1, False)
+        # Keys are shortest-form integers or text, so equal keys have equal bytes.
+        if data[start:i] in keys:
+            raise ReceiptEncodingError("a repeated CBOR map key")
+        keys.add(data[start:i])
+        i = _receipt_walk(data, i, depth + 1, False)
+    return i

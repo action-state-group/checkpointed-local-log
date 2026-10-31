@@ -4,9 +4,7 @@ import {
   CborMap,
   CborTag,
   type CborValue,
-  cborInteger,
-  decodeLenientCbor,
-  decodeStrictCbor,
+  decodeReceiptItem,
 } from "./cbor-strict.js";
 import { checkpointEntryHash } from "./checkpoint.js";
 import { verifyEd25519 } from "./ed25519.js";
@@ -56,17 +54,18 @@ interface InclusionProof {
   readonly path: readonly Uint8Array[];
 }
 
-/** CBOR [tree_size, leaf_index, [audit_path...]], decoded leniently. */
+/**
+ * CBOR [tree_size, leaf_index, [audit_path...]], decoded under the receipt
+ * encoding rule as the message around it is.
+ */
 function inclusionProof(blob: Uint8Array): InclusionProof {
-  const value = decodeLenientCbor(blob);
+  const value = decodeReceiptItem(blob, false);
   if (!Array.isArray(value) || value.length !== 3)
     throw new SyntaxError(
       "inclusion proof must be [tree_size, leaf_index, [path]]",
     );
-  const [rawSize, rawIndex, path] = value as readonly CborValue[];
-  const size = cborInteger(rawSize);
-  const index = cborInteger(rawIndex);
-  if (size === undefined || index === undefined)
+  const [size, index, path] = value as readonly CborValue[];
+  if (typeof size !== "bigint" || typeof index !== "bigint")
     throw new SyntaxError("inclusion proof sizes must be integers");
   if (
     !Array.isArray(path) ||
@@ -143,10 +142,9 @@ export class ReceiptVerifier {
         Buffer.from(entry).toString("hex") !== receipt.entryHash
       )
         return false;
-      // The receipt profile agent-action-capsule's VerifyReceipts and
-      // scitt-cose's verify_receipt share, so all three accept the same
-      // receipts (checkpoint-conformance-vectors/receipt-vectors.json).
-      const message = decodeStrictCbor(receipt.bytes);
+      // agent-action-capsule's VerifyCOSEReceipt profile, so both accept the
+      // same receipts (checkpoint-conformance-vectors/receipt-vectors.json).
+      const message = decodeReceiptItem(receipt.bytes, true);
       if (!(message instanceof CborTag) || message.tag !== 18n) return false;
       const items = message.value;
       if (
@@ -169,7 +167,7 @@ export class ReceiptVerifier {
       const protectedHeaders =
         protectedBytes.length === 0
           ? new CborMap([])
-          : decodeStrictCbor(protectedBytes);
+          : decodeReceiptItem(protectedBytes, false);
       if (
         !(protectedHeaders instanceof CborMap) ||
         protectedHeaders.get(ALG) !== -8n ||

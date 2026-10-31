@@ -3,17 +3,16 @@ package witness
 // Receipt verification is an attributed Go adaptation of
 // action-state-group/scitt-cose/scitt-cose-go-verify at
 // 36ec13992287a463481d1b00ac2098f032f229b5 (Apache-2.0), with the decoding
-// rules of action-state-group/agent-action-capsule go/witness/cose.go at
-// go/v0.18.0 (BSD-3-Clause, Copyright (c) 2026 Action State Group, Inc.).
+// receipt encoding rule of action-state-group/agent-action-capsule
+// go/witness/anchor.go (strictReceiptItem) at
+// c4b83db74b311af1c2c816f8866a940bff4f2347, agent-action-capsule#523
+// (BSD-3-Clause, Copyright (c) 2026 Action State Group, Inc.).
 
 import (
-	"bytes"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"math"
-	"math/big"
 
 	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/ed25519strict"
@@ -32,6 +31,8 @@ const (
 	maxTreeSize        = int64(1 << 62)
 	maxInclusionProofs = 16
 	maxAuditPath       = 64
+	// maxReceiptDepth is the deepest nesting the receipt encoding rule allows.
+	maxReceiptDepth = 16
 )
 
 // understoodLabels are the protected labels this verifier processes; a
@@ -39,12 +40,26 @@ const (
 var understoodLabels = map[uint64]bool{uint64(headerAlg): true, uint64(headerCrit): true, uint64(headerVDS): true, uint64(headerCWTClaims): true}
 
 var (
-	lenientDecoding = mustDecMode(cbor.DecOptions{IntDec: cbor.IntDecConvertNone})
-	strictDecoding  = mustDecMode(cbor.DecOptions{
-		DupMapKey:   cbor.DupMapKeyEnforcedAPF,
-		IndefLength: cbor.IndefLengthForbidden,
-		IntDec:      cbor.IntDecConvertNone,
-	})
+	// receiptDecoding is the decode mode of the receipt encoding rule:
+	// repeated keys, indefinite lengths, bignums and simple value 23
+	// (undefined) are refused, and integers below -2^63 decode to big.Int,
+	// which strictReceiptItem refuses. Arrays and maps are limited only by
+	// the receipt size.
+	receiptDecoding = func() cbor.DecMode {
+		simple, err := cbor.NewSimpleValueRegistryFromDefaults(cbor.WithRejectedSimpleValue(23))
+		if err != nil {
+			panic(err)
+		}
+		return mustDecMode(cbor.DecOptions{
+			DupMapKey:        cbor.DupMapKeyEnforcedAPF,
+			IndefLength:      cbor.IndefLengthForbidden,
+			IntDec:           cbor.IntDecConvertNone,
+			BignumTag:        cbor.BignumTagForbidden,
+			SimpleValues:     simple,
+			MaxArrayElements: DefaultMaxResponseBytes,
+			MaxMapPairs:      DefaultMaxResponseBytes,
+		})
+	}()
 	deterministicEncoding = func() cbor.EncMode {
 		mode, err := cbor.CoreDetEncOptions().EncMode()
 		if err != nil {
@@ -123,14 +138,15 @@ type decodedReceipt struct {
 	proofs               []inclusionProof
 }
 
-// decodeReceipt applies the receipt profile agent-action-capsule's
-// VerifyCOSEReceipt and scitt-cose's verify_receipt share, so all three
-// accept the same receipts (checkpoint-conformance-vectors/receipt-vectors.json):
-// a strictly encoded tag-18 COSE_Sign1 with a detached payload, protected vds
-// 1 and alg EdDSA, crit naming only understood labels, and 1 to
+// decodeReceipt applies agent-action-capsule's VerifyCOSEReceipt profile, so
+// both accept the same receipts
+// (checkpoint-conformance-vectors/receipt-vectors.json): a tag-18 COSE_Sign1
+// whose message, protected header and inclusion-proof blobs each meet the
+// receipt encoding rule (strictReceiptItem), with a detached payload,
+// protected vds 1 and alg EdDSA, crit naming only understood labels, and 1 to
 // maxInclusionProofs inclusion proofs that all decode.
 func decodeReceipt(raw []byte) (decodedReceipt, error) {
-	value, err := strictItem(raw)
+	value, err := strictReceiptItem(raw, true)
 	if err != nil {
 		return decodedReceipt{}, fmt.Errorf("decode COSE receipt: %w", err)
 	}
@@ -144,9 +160,9 @@ func decodeReceipt(raw []byte) (decodedReceipt, error) {
 		return decodedReceipt{}, fmt.Errorf("receipt is not a COSE_Sign1 message")
 	}
 	// An attached payload binds nothing: the signature must cover the root
-	// rebuilt from the proof. Detached is CBOR null; undefined also decodes
-	// to nil, so the raw item is checked.
-	if !detachedPayload(raw) {
+	// rebuilt from the proof. Detached is CBOR null; the decode mode refuses
+	// undefined, the other item that decodes to nil.
+	if parts[2] != nil {
 		return decodedReceipt{}, fmt.Errorf("receipt payload is attached; a receipt's payload must be detached")
 	}
 	signature, isBytes := parts[3].([]byte)
@@ -155,7 +171,7 @@ func decodeReceipt(raw []byte) (decodedReceipt, error) {
 	}
 	protected := map[any]any{}
 	if len(protectedBytes) != 0 {
-		value, err := strictItem(protectedBytes)
+		value, err := strictReceiptItem(protectedBytes, false)
 		if err != nil {
 			return decodedReceipt{}, fmt.Errorf("decode receipt protected header: %w", err)
 		}
@@ -205,35 +221,23 @@ func decodeReceipt(raw []byte) (decodedReceipt, error) {
 	return decodedReceipt{protected: protectedBytes, signature: signature, proofs: proofs}, nil
 }
 
-// detachedPayload reports whether the third item of a well-formed tag-18
-// COSE_Sign1 is CBOR null.
-func detachedPayload(raw []byte) bool {
-	var tag cbor.RawTag
-	var parts []cbor.RawMessage
-	if cbor.Unmarshal(raw, &tag) != nil || cbor.Unmarshal(tag.Content, &parts) != nil || len(parts) != 4 {
-		return false
-	}
-	return bytes.Equal(parts[2], []byte{0xf6})
-}
-
 // decodeInclusionProof decodes CBOR [tree_size, leaf_index, [audit_path...]]
-// as AAC's decodeInclusionProof does: leniently (a non-shortest head or an
-// indefinite length is accepted), with plain integers or bignums for the
-// sizes and byte strings for the path, refusing a proof that cannot fit its
-// tree so that it refuses the whole receipt.
+// under the receipt encoding rule, as the message around it is decoded, with
+// unsigned integers for the sizes and 32-byte strings for the path, refusing
+// a proof that cannot fit its tree so that it refuses the whole receipt.
 func decodeInclusionProof(blob []byte) (inclusionProof, error) {
-	var value any
-	if err := lenientDecoding.Unmarshal(blob, &value); err != nil {
+	value, err := strictReceiptItem(blob, false)
+	if err != nil {
 		return inclusionProof{}, fmt.Errorf("invalid inclusion proof: %w", err)
 	}
 	parts, isArray := value.([]any)
 	if !isArray || len(parts) != 3 {
 		return inclusionProof{}, fmt.Errorf("inclusion proof must be [tree_size, leaf_index, [path]]")
 	}
-	size, sizeOK := cborInteger(parts[0])
-	index, indexOK := cborInteger(parts[1])
+	size, sizeOK := parts[0].(uint64)
+	index, indexOK := parts[1].(uint64)
 	if !sizeOK || !indexOK {
-		return inclusionProof{}, fmt.Errorf("inclusion proof tree_size and leaf_index must be integers")
+		return inclusionProof{}, fmt.Errorf("inclusion proof tree_size and leaf_index must be unsigned integers")
 	}
 	nodes, isArray := parts[2].([]any)
 	if !isArray || len(nodes) > maxAuditPath {
@@ -247,51 +251,68 @@ func decodeInclusionProof(blob []byte) (inclusionProof, error) {
 		}
 		path[i] = raw
 	}
-	if index < 0 || index >= size || size > maxTreeSize || int64(len(path)) != expectedPath(size, index) {
+	if index >= size || size > uint64(maxTreeSize) || int64(len(path)) != expectedPath(int64(size), int64(index)) {
 		return inclusionProof{}, fmt.Errorf("invalid inclusion proof position or path length")
 	}
-	return inclusionProof{size, index, path}, nil
+	return inclusionProof{int64(size), int64(index), path}, nil
 }
 
-// cborInteger reads a decoded CBOR integer, a bignum included, that fits an
-// int64.
-func cborInteger(value any) (int64, bool) {
-	switch value := value.(type) {
-	case uint64:
-		if value > math.MaxInt64 {
-			return 0, false
-		}
-		return int64(value), true
-	case int64:
-		return value, true
-	case big.Int:
-		if value.IsInt64() {
-			return value.Int64(), true
-		}
-	case *big.Int:
-		if value.IsInt64() {
-			return value.Int64(), true
-		}
-	}
-	return 0, false
-}
-
-// strictItem decodes one CBOR item and refuses any encoding but its
-// deterministic one up to map order: trailing bytes, indefinite lengths,
-// duplicate keys, and non-shortest arguments or floats. Comparing lengths
-// accepts a validly signed header whose keys are not in canonical order, as
-// the scitt-cose verifiers do.
-func strictItem(data []byte) (any, error) {
+// strictReceiptItem decodes one CBOR item under the receipt encoding rule of
+// agent-action-capsule's interop profile v1 section 6.2.2: no trailing bytes,
+// definite lengths, shortest arguments, no repeated key, integer or text keys,
+// valid UTF-8, no float, no simple value but false, true and null, no tag but
+// an outer 18 when topTag, and at most maxReceiptDepth levels. Map order is
+// not checked, so a validly signed header whose keys are not in canonical
+// order is accepted.
+func strictReceiptItem(data []byte, topTag bool) (any, error) {
 	var value any
-	if err := strictDecoding.Unmarshal(data, &value); err != nil {
+	if err := receiptDecoding.Unmarshal(data, &value); err != nil {
 		return nil, err
 	}
-	canonical, err := deterministicEncoding.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	if len(canonical) != len(data) {
+	// Shortest arguments: the deterministic re-encoding is as long as the
+	// input, whatever the map order.
+	if canonical, err := deterministicEncoding.Marshal(value); err != nil || len(canonical) != len(data) {
 		return nil, fmt.Errorf("non-deterministic CBOR encoding")
+	}
+	var walk func(v any, depth int) error
+	walk = func(v any, depth int) error {
+		if depth > maxReceiptDepth {
+			return fmt.Errorf("CBOR nested more than %d levels deep", maxReceiptDepth)
+		}
+		switch v := v.(type) {
+		case nil, bool, uint64, int64, []byte, string:
+			return nil
+		case cbor.Tag:
+			if depth != 0 || !topTag || v.Number != 18 {
+				return fmt.Errorf("CBOR tag %d is not the outer tag 18", v.Number)
+			}
+			return walk(v.Content, depth+1)
+		case []any:
+			for _, item := range v {
+				if err := walk(item, depth+1); err != nil {
+					return err
+				}
+			}
+			return nil
+		case map[any]any:
+			for key, item := range v {
+				switch key.(type) {
+				case uint64, int64, string:
+				default:
+					return fmt.Errorf("CBOR map key is not an integer or text")
+				}
+				if err := walk(item, depth+1); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		// A float, an integer below -2^63 or a simple value but false, true
+		// and null.
+		return fmt.Errorf("CBOR item of type %T is not allowed", v)
+	}
+	if err := walk(value, 0); err != nil {
+		return nil, err
 	}
 	return value, nil
 }

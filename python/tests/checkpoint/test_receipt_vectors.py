@@ -1,8 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """``checkpoint-conformance-vectors/receipt-vectors.json``, shared by every
-implementation: the witness receipts agent-action-capsule's ``VerifyReceipts``
-and scitt-cose's ``verify_receipt`` accept and refuse, through
-``cll.ed25519.verify_receipt`` and the ``ReceiptVerifier`` that uses it.
+implementation: the witness receipts agent-action-capsule's
+``VerifyCOSEReceipt`` accepts and refuses, through ``ReceiptVerifier``.
 """
 from __future__ import annotations
 
