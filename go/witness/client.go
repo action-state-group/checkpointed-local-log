@@ -168,8 +168,12 @@ func boundedText(value string) string {
 	return value
 }
 
-// IsRetryable reports timeout, 408, 429, and 5xx failures.
+// IsRetryable reports timeout, 408, 429, and 5xx failures, and a SCRAPI
+// registration still pending after its poll budget.
 func IsRetryable(err error) bool {
+	if errors.Is(err, ErrSCRAPIPending) {
+		return true
+	}
 	var target *HTTPError
 	if errors.As(err, &target) {
 		return target.Retryable()

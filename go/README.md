@@ -221,6 +221,16 @@ if err != nil {
 _, err = delivery.RunOnce(ctx, time.Now().UTC(), cll.MaxWitnesses)
 ```
 
+`witness.NewSCRAPIClient` is a `Submitter` for a SCITT Transparency Service
+(`POST /entries`, draft-ietf-scitt-scrapi). It sends the checkpoint's COSE
+statement octets exactly as signed, so its Receipt's leaf entry is SHA-256 of
+those octets, the anchor digest that agent-action-capsule interop profile v1
+§6.2.2 checks. It follows `202`, `302` and `303` answers only within the
+service's origin, and one registration, its polls included, takes at most the
+client's request timeout. Its Receipt carries no entry hash scheme and is not
+checked by `ReceiptVerifier`; pair it with a `Verifier` for that profile's
+`anchor_witnessed` check under the witness's key.
+
 The host provisions checkpoint keys, witness endpoints, and pinned authority
 keys. Receipt verification proves registration and inclusion of the submitted
 checkpoint. It does not independently prove application-record semantics.
