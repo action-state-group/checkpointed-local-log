@@ -24,12 +24,13 @@ are documented here. The format follows
 
 - `witness.ReceiptVerifier` applies the receipt profile that scitt-cose and
   agent-action-capsule `VerifyReceipts` share, and decides every case in the
-  shared `receipt-vectors.json` as they do: it refuses an attached or
-  undefined payload, a `crit` label it does not understand, non-shortest CBOR
-  and a malformed later proof, and accepts several inclusion proofs.
-  Encodings outside those vectors are not pinned yet
-  (agent-action-capsule#520) (checkpointed-local-log#119,
-  checkpointed-local-log#120).
+  shared `receipt-vectors.json` as scitt-cose does, and as
+  agent-action-capsule does from agent-action-capsule#521 (its `go/v0.18.0`
+  still accepts an undefined payload): it refuses an attached or undefined
+  payload, a `crit` label it does not understand, non-shortest CBOR and a
+  malformed later proof, and accepts several inclusion proofs. Encodings
+  outside those vectors are not pinned yet (agent-action-capsule#520,
+  checkpointed-local-log#119, checkpointed-local-log#120).
 
 ## checkpointed-local-log (Rust crate) 0.4.0 — 2026-10-30
 
