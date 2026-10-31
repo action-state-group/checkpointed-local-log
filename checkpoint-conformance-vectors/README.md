@@ -77,12 +77,16 @@ encoding, and the signed checkpoint record that wraps a root.
   `leaf_index` a holder stores. Every CLL receipt verifier (Go
   `witness.ReceiptVerifier`, Python `cll.ed25519.verify_receipt` and
   `ReceiptVerifier`, TypeScript `ReceiptVerifier`) decides each case as
-  `accept` says, which is how agent-action-capsule's `VerifyReceipts` and
-  scitt-cose's `verify_receipt` decide it: a strictly encoded tag-18
-  COSE_Sign1 with a detached payload, protected `vds` 1 and `alg` EdDSA,
-  `crit` naming only understood labels, and 1 to 16 inclusion proofs that
-  all decode, one of which rebuilds the root the signature covers. A holder
-  also refuses a receipt whose stored position is not that proof's.
+  `accept` says, which is how scitt-cose's `verify_receipt` and
+  agent-action-capsule's `VerifyReceipts` decide it: a strictly encoded tag-18
+  COSE_Sign1 with a detached (null) payload, protected `vds` 1 and `alg`
+  EdDSA, `crit` naming only understood labels, and 1 to 16 inclusion proofs
+  that all decode and fit their tree, one of which rebuilds the root the
+  signature covers. A holder also refuses a receipt whose stored position is
+  not that proof's. AAC go/v0.18.0 accepts `neg-payload-undefined`, against
+  its own spec. Encodings the two references decide differently (tag 0, an
+  array or bignum map key, repeated NaN keys, nesting deeper than 32, arrays
+  of more than 131072 items) are not pinned until the AAC spec settles them.
   `generate_receipts.py` assembles the receipts byte by byte, so it depends
   on none of the verifiers it tests; `--check` fails when the file is out of
   date. `go/witness/testdata/receipt-vectors.json` is a pinned copy.

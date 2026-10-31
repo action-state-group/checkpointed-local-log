@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate ``receipt-vectors.json``: witness receipts over one checkpoint that
-every CLL receipt verifier must decide the same way as agent-action-capsule's
-``VerifyReceipts`` and scitt-cose's ``verify_receipt``.
+every CLL receipt verifier must decide the same way as scitt-cose's
+``verify_receipt`` and agent-action-capsule's ``VerifyReceipts``. Only cases
+the two decide alike are pinned, plus ``neg-payload-undefined``, which the AAC
+spec settles (a detached payload is CBOR null) and AAC go/v0.18.0 gets wrong.
 
 Each case is a COSE Receipt (RFC 9942 shape, RFC 9162 SHA-256 inclusion
 proof) over the entry hash of the ``checkpoint-first-2-leaves`` statement in
@@ -149,6 +151,22 @@ def _cases(entry: bytes) -> list[dict]:
     case("pos-proof-indefinite-path", True, "an indefinite-length audit path inside the leniently decoded proof blob",
          receipt(unprotected=_unprotected(_array(_int(3), _int(2), b"\x9f" + _bstr(left) + b"\xff")), root=root3), 3, 2)
 
+    def proof_with(size: bytes, index: bytes, path: bytes) -> bytes:
+        return _unprotected(_array(size, index, path))
+
+    case("pos-proof-self-described-blob", True, "the leniently decoded proof blob may carry the self-described CBOR tag (55799)",
+         receipt(unprotected=_unprotected(_head(6, 55799) + proof1)))
+    case("pos-proof-self-described-size", True, "so may an item inside it",
+         receipt(unprotected=proof_with(_head(6, 55799) + _int(1), _int(0), _array())))
+    case("pos-proof-self-described-node", True, "so may an audit-path node",
+         receipt(unprotected=proof_with(_int(3), _int(2), _array(_head(6, 55799) + _bstr(left))), root=root3), 3, 2)
+    case("pos-unprotected-bignum", True, "a bignum that needs more than 64 bits is its shortest form",
+         receipt(unprotected=extra(b"\xc2" + _bstr(b"\x01" + bytes(8)))))
+    case("pos-unprotected-undefined", True, "undefined under an ignored label", receipt(unprotected=extra(b"\xf7")))
+    case("pos-unprotected-simple-value", True, "simple value 32 under an ignored label", receipt(unprotected=extra(b"\xf8\x20")))
+    case("pos-unprotected-nested-29", True, "29 nested arrays under an ignored label, within every verifier's depth limit",
+         receipt(unprotected=extra(b"\x81" * 29 + b"\x80")))
+
     case("neg-attached-payload-root", False, "an attached payload binds nothing, even when it is the rebuilt root",
          receipt(payload=_bstr(leaf)))
     case("neg-attached-payload-other", False, "an attached payload is refused whatever it holds",
@@ -187,12 +205,46 @@ def _cases(entry: bytes) -> list[dict]:
 
     case("neg-unprotected-non-shortest-float", False, "1.0 as a double is not its shortest form, even under an ignored label",
          receipt(unprotected=extra(b"\xfb\x3f\xf0" + bytes(6))))
+    case("neg-payload-undefined", False, "a detached payload is CBOR null; undefined is not null",
+         receipt(payload=b"\xf7"))
+    case("neg-unprotected-epoch-time", False, "an epoch time (tag 1) does not survive the strict decoders' re-encoding",
+         receipt(unprotected=extra(b"\xc1" + _int(0))))
+    case("neg-unprotected-small-bignum", False, "a bignum that fits in 64 bits is not its shortest form",
+         receipt(unprotected=extra(b"\xc2" + _bstr(b"\x01"))))
+    case("neg-unprotected-bignum-leading-zero", False, "nor is one with a leading zero byte",
+         receipt(unprotected=extra(b"\xc2" + _bstr(b"\x00\x01"))))
+    case("neg-unprotected-negative-bignum", False, "the same holds for a negative bignum (tag 3)",
+         receipt(unprotected=extra(b"\xc3" + _bstr(b"\x00"))))
+    case("neg-unprotected-self-described", False, "the self-described tag (55799) inside the strictly decoded message",
+         receipt(unprotected=extra(_head(6, 55799) + _int(0))))
+    case("neg-envelope-self-described", False, "the self-described tag around the COSE_Sign1", _head(6, 55799) + good)
+    case("neg-protected-self-described", False, "the self-described tag inside the protected header",
+         receipt(protected=_protected(ALG_EDDSA, (_int(15), _head(6, 55799) + _map((_int(6), _int(5)))), VDS_1)))
+    case("neg-protected-epoch-time-iat", False, "an iat written as an epoch time (tag 1)",
+         receipt(protected=_protected(ALG_EDDSA, (_int(15), _map((_int(6), b"\xc1" + _int(5)))), VDS_1)))
     case("neg-no-vdp", False, "no vdp (label 396) in the unprotected header", receipt(unprotected=_map()))
     case("neg-no-proofs", False, "the vdp proof array is empty", receipt(unprotected=_map((_int(396), _map((_int(-1), _array()))))))
     case("neg-proof-not-bytes", False, "an inclusion proof that is not a byte string",
          receipt(unprotected=_map((_int(396), _map((_int(-1), _array(proof1)))))))
     case("neg-second-proof-malformed", False, "every proof must decode, even after one that verifies",
          receipt(unprotected=_unprotected(proof1, b"\xff")))
+    case("neg-second-proof-wrong-path-length", False,
+         "a later proof that decodes but cannot fit its tree refuses the receipt, even after one that verifies",
+         receipt(unprotected=_unprotected(proof1, _proof(4, 1, [left]))))
+    case("neg-second-proof-index-out-of-range", False, "the same for a later proof whose leaf_index is not below tree_size",
+         receipt(unprotected=_unprotected(proof1, _proof(1, 1, []))))
+    case("neg-proof-float-tree-size", False, "tree_size must be an integer, not the float 1.0",
+         receipt(unprotected=_unprotected(_array(b"\xf9\x3c\x00", _int(0), _array()))))
+    case("neg-proof-null-index", False, "leaf_index null", receipt(unprotected=proof_with(_int(1), NULL, _array())))
+    case("neg-proof-undefined-index", False, "leaf_index undefined", receipt(unprotected=proof_with(_int(1), b"\xf7", _array())))
+    case("neg-proof-simple-index", False, "leaf_index simple value 0", receipt(unprotected=proof_with(_int(1), b"\xe0", _array())))
+    case("neg-proof-null-path", False, "audit path null", receipt(unprotected=proof_with(_int(1), _int(0), NULL)))
+    case("neg-proof-tagged-size", False, "tree_size under an unregistered tag",
+         receipt(unprotected=proof_with(_head(6, 1000) + _int(1), _int(0), _array())))
+    case("neg-proof-epoch-time-size", False, "tree_size as an epoch time (tag 1)",
+         receipt(unprotected=proof_with(b"\xc1" + _int(1), _int(0), _array())))
+    case("neg-proof-bignum-node", False, "an audit-path node must be a byte string, not a bignum",
+         receipt(unprotected=proof_with(_int(3), _int(2), _array(b"\xc2" + _bstr(left))), root=root3), 3, 2)
     case("neg-too-many-proofs", False, "at most 16 inclusion proofs", receipt(unprotected=_unprotected(*([proof1] * 17))))
     case("neg-proof-path-length", False, "an audit path longer than the tree needs",
          receipt(unprotected=_unprotected(_proof(1, 0, [left]))))
@@ -220,8 +272,9 @@ def build() -> dict:
         "note": (
             "Witness receipts over one checkpoint statement. A receipt verifier pinned to authority_public_key_hex, "
             "given checkpoint_cose_b64 and a receipt with entry_hash_hex, tree_size and leaf_index, accepts exactly "
-            "the cases whose accept is true, as agent-action-capsule's VerifyReceipts and scitt-cose's verify_receipt "
-            "do. Generated by generate_receipts.py."
+            "the cases whose accept is true, as scitt-cose's verify_receipt does and as agent-action-capsule's "
+            "VerifyReceipts does except for neg-payload-undefined, which AAC go/v0.18.0 accepts. "
+            "Generated by generate_receipts.py."
         ),
         "checkpoint_cose_b64": base64.b64encode(statement).decode(),
         "entry_hash_hex": entry.hex(),

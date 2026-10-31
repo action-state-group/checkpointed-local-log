@@ -164,7 +164,17 @@ function decodeCbor(data: Uint8Array, shortest: boolean): CborValue {
     if (major === 1) return -1n - length;
     if (major === 2) return take(length);
     if (major === 3) return utf8.decode(take(length));
-    if (major === 6) return new CborTag(length, item(depth + 1));
+    if (major === 6) {
+      const value = item(depth + 1);
+      // The lenient decoders (cbor2, fxamacker) drop a self-described CBOR
+      // tag; the strict check refuses one, since re-encoding drops it.
+      if (length === 55799n) {
+        if (shortest) throw new SyntaxError("self-described CBOR tag");
+        return value;
+      }
+      if (shortest) strictTag(length, value);
+      return new CborTag(length, value);
+    }
     // Every element takes at least one byte: refuse a count the rest of the
     // input cannot hold before looping over it.
     if (length > BigInt(data.length - offset))
@@ -188,6 +198,19 @@ function decodeCbor(data: Uint8Array, shortest: boolean): CborValue {
   const value = item(0);
   if (offset !== data.length) throw new SyntaxError("trailing CBOR bytes");
   return value;
+}
+
+/**
+ * Refuse a tag the reference verifiers decode into a value that re-encodes
+ * differently (scitt-cose's cbor2 and agent-action-capsule's fxamacker agree
+ * on these): an epoch time (tag 1), and a bignum (tag 2 or 3) that is not a
+ * byte string, has a leading zero byte, or fits in 64 bits.
+ */
+function strictTag(tag: bigint, value: CborValue): void {
+  if (tag === 1n) throw new SyntaxError("CBOR epoch time is not kept as is");
+  if (tag !== 2n && tag !== 3n) return;
+  if (!(value instanceof Uint8Array) || value.length <= 8 || value[0] === 0)
+    throw new SyntaxError("CBOR bignum is not in its shortest form");
 }
 
 /**

@@ -7,10 +7,13 @@ package witness
 // go/v0.18.0 (BSD-3-Clause, Copyright (c) 2026 Action State Group, Inc.).
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
+	"math/big"
 
 	"github.com/action-state-group/checkpointed-local-log/go/checkpoint"
 	"github.com/action-state-group/checkpointed-local-log/go/internal/ed25519strict"
@@ -28,6 +31,7 @@ const (
 	vdpInclusion       = int64(-1)
 	maxTreeSize        = int64(1 << 62)
 	maxInclusionProofs = 16
+	maxAuditPath       = 64
 )
 
 // understoodLabels are the protected labels this verifier processes; a
@@ -35,7 +39,8 @@ const (
 var understoodLabels = map[uint64]bool{uint64(headerAlg): true, uint64(headerCrit): true, uint64(headerVDS): true, uint64(headerCWTClaims): true}
 
 var (
-	strictDecoding = mustDecMode(cbor.DecOptions{
+	lenientDecoding = mustDecMode(cbor.DecOptions{IntDec: cbor.IntDecConvertNone})
+	strictDecoding  = mustDecMode(cbor.DecOptions{
 		DupMapKey:   cbor.DupMapKeyEnforcedAPF,
 		IndefLength: cbor.IndefLengthForbidden,
 		IntDec:      cbor.IntDecConvertNone,
@@ -139,8 +144,9 @@ func decodeReceipt(raw []byte) (decodedReceipt, error) {
 		return decodedReceipt{}, fmt.Errorf("receipt is not a COSE_Sign1 message")
 	}
 	// An attached payload binds nothing: the signature must cover the root
-	// rebuilt from the proof.
-	if parts[2] != nil {
+	// rebuilt from the proof. Detached is CBOR null; undefined also decodes
+	// to nil, so the raw item is checked.
+	if !detachedPayload(raw) {
 		return decodedReceipt{}, fmt.Errorf("receipt payload is attached; a receipt's payload must be detached")
 	}
 	signature, isBytes := parts[3].([]byte)
@@ -190,13 +196,84 @@ func decodeReceipt(raw []byte) (decodedReceipt, error) {
 		if !isBytes {
 			return decodedReceipt{}, fmt.Errorf("receipt proof is not bytes")
 		}
-		size, index, path, err := decodeProof(blob)
+		proof, err := decodeInclusionProof(blob)
 		if err != nil {
 			return decodedReceipt{}, err
 		}
-		proofs = append(proofs, inclusionProof{size, index, path})
+		proofs = append(proofs, proof)
 	}
 	return decodedReceipt{protected: protectedBytes, signature: signature, proofs: proofs}, nil
+}
+
+// detachedPayload reports whether the third item of a well-formed tag-18
+// COSE_Sign1 is CBOR null.
+func detachedPayload(raw []byte) bool {
+	var tag cbor.RawTag
+	var parts []cbor.RawMessage
+	if cbor.Unmarshal(raw, &tag) != nil || cbor.Unmarshal(tag.Content, &parts) != nil || len(parts) != 4 {
+		return false
+	}
+	return bytes.Equal(parts[2], []byte{0xf6})
+}
+
+// decodeInclusionProof decodes CBOR [tree_size, leaf_index, [audit_path...]]
+// as AAC's decodeInclusionProof does: leniently (a non-shortest head or an
+// indefinite length is accepted), with plain integers or bignums for the
+// sizes and byte strings for the path, refusing a proof that cannot fit its
+// tree so that it refuses the whole receipt.
+func decodeInclusionProof(blob []byte) (inclusionProof, error) {
+	var value any
+	if err := lenientDecoding.Unmarshal(blob, &value); err != nil {
+		return inclusionProof{}, fmt.Errorf("invalid inclusion proof: %w", err)
+	}
+	parts, isArray := value.([]any)
+	if !isArray || len(parts) != 3 {
+		return inclusionProof{}, fmt.Errorf("inclusion proof must be [tree_size, leaf_index, [path]]")
+	}
+	size, sizeOK := cborInteger(parts[0])
+	index, indexOK := cborInteger(parts[1])
+	if !sizeOK || !indexOK {
+		return inclusionProof{}, fmt.Errorf("inclusion proof tree_size and leaf_index must be integers")
+	}
+	nodes, isArray := parts[2].([]any)
+	if !isArray || len(nodes) > maxAuditPath {
+		return inclusionProof{}, fmt.Errorf("inclusion proof path must be an array of at most %d nodes", maxAuditPath)
+	}
+	path := make([][]byte, len(nodes))
+	for i, node := range nodes {
+		raw, isBytes := node.([]byte)
+		if !isBytes || len(raw) != sha256.Size {
+			return inclusionProof{}, fmt.Errorf("inclusion proof path node must be a 32-byte string")
+		}
+		path[i] = raw
+	}
+	if index < 0 || index >= size || size > maxTreeSize || int64(len(path)) != expectedPath(size, index) {
+		return inclusionProof{}, fmt.Errorf("invalid inclusion proof position or path length")
+	}
+	return inclusionProof{size, index, path}, nil
+}
+
+// cborInteger reads a decoded CBOR integer, a bignum included, that fits an
+// int64.
+func cborInteger(value any) (int64, bool) {
+	switch value := value.(type) {
+	case uint64:
+		if value > math.MaxInt64 {
+			return 0, false
+		}
+		return int64(value), true
+	case int64:
+		return value, true
+	case big.Int:
+		if value.IsInt64() {
+			return value.Int64(), true
+		}
+	case *big.Int:
+		if value.IsInt64() {
+			return value.Int64(), true
+		}
+	}
+	return 0, false
 }
 
 // strictItem decodes one CBOR item and refuses any encoding but its
