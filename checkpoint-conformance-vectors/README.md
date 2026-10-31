@@ -71,6 +71,21 @@ encoding, and the signed checkpoint record that wraps a root.
   `generate_ed25519.py` writes the file with plain RFC 8032 arithmetic, so
   it depends on none of the verifiers it tests; `--check` fails when the
   file is out of date.
+- `receipt-vectors.json` pins which witness receipts a receipt verifier
+  accepts: COSE Receipts over the entry hash of `checkpoint-first-2-leaves`,
+  signed by a fixture authority key, each with the `tree_size` and
+  `leaf_index` a holder stores. Every CLL receipt verifier (Go
+  `witness.ReceiptVerifier`, Python `cll.ed25519.verify_receipt` and
+  `ReceiptVerifier`, TypeScript `ReceiptVerifier`) decides each case as
+  `accept` says, which is how agent-action-capsule's `VerifyReceipts` and
+  scitt-cose's `verify_receipt` decide it: a strictly encoded tag-18
+  COSE_Sign1 with a detached payload, protected `vds` 1 and `alg` EdDSA,
+  `crit` naming only understood labels, and 1 to 16 inclusion proofs that
+  all decode, one of which rebuilds the root the signature covers. A holder
+  also refuses a receipt whose stored position is not that proof's.
+  `generate_receipts.py` assembles the receipts byte by byte, so it depends
+  on none of the verifiers it tests; `--check` fails when the file is out of
+  date. `go/witness/testdata/receipt-vectors.json` is a pinned copy.
 - `reference_verifier.py` regenerates every case from `CheckpointRecord`
   plus the pinned seed and checks exact digest/signature match, and also
   checks the witness-receipt boundary: each case's `digest_hex` round-trips

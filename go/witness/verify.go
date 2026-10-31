@@ -2,7 +2,9 @@ package witness
 
 // Receipt verification is an attributed Go adaptation of
 // action-state-group/scitt-cose/scitt-cose-go-verify at
-// 36ec13992287a463481d1b00ac2098f032f229b5 (Apache-2.0).
+// 36ec13992287a463481d1b00ac2098f032f229b5 (Apache-2.0), with the decoding
+// rules of action-state-group/agent-action-capsule go/witness/cose.go at
+// go/v0.18.0 (BSD-3-Clause, Copyright (c) 2026 Action State Group, Inc.).
 
 import (
 	"crypto/ed25519"
@@ -17,12 +19,43 @@ import (
 )
 
 const (
-	headerVDS    = int64(395)
-	headerVDP    = int64(396)
-	vdsRFC9162   = int64(1)
-	vdpInclusion = int64(-1)
-	maxTreeSize  = int64(1 << 62)
+	headerAlg          = int64(1)
+	headerCrit         = int64(2)
+	headerCWTClaims    = int64(15)
+	headerVDS          = int64(395)
+	headerVDP          = int64(396)
+	vdsRFC9162         = 1
+	vdpInclusion       = int64(-1)
+	maxTreeSize        = int64(1 << 62)
+	maxInclusionProofs = 16
 )
+
+// understoodLabels are the protected labels this verifier processes; a
+// receipt marking any other label critical is refused.
+var understoodLabels = map[uint64]bool{uint64(headerAlg): true, uint64(headerCrit): true, uint64(headerVDS): true, uint64(headerCWTClaims): true}
+
+var (
+	strictDecoding = mustDecMode(cbor.DecOptions{
+		DupMapKey:   cbor.DupMapKeyEnforcedAPF,
+		IndefLength: cbor.IndefLengthForbidden,
+		IntDec:      cbor.IntDecConvertNone,
+	})
+	deterministicEncoding = func() cbor.EncMode {
+		mode, err := cbor.CoreDetEncOptions().EncMode()
+		if err != nil {
+			panic(err)
+		}
+		return mode
+	}()
+)
+
+func mustDecMode(options cbor.DecOptions) cbor.DecMode {
+	mode, err := options.DecMode()
+	if err != nil {
+		panic(err)
+	}
+	return mode
+}
 
 // ReceiptVerifier verifies RFC 9162 COSE receipts under a pinned authority key.
 type ReceiptVerifier struct{ public ed25519.PublicKey }
@@ -56,54 +89,169 @@ func (v *ReceiptVerifier) Verify(statement []byte, receipt Receipt) error {
 	if hex.EncodeToString(entry) != receipt.EntryHash {
 		return fmt.Errorf("entry hash does not bind signed checkpoint")
 	}
-	var message cose.Sign1Message
-	if err := message.UnmarshalCBOR(receipt.Bytes); err != nil {
-		return fmt.Errorf("decode COSE receipt: %w", err)
-	}
-	vds, ok := integerHeader(message.Headers.Protected, headerVDS)
-	if !ok || vds != vdsRFC9162 {
-		return fmt.Errorf("receipt protected header requires RFC9162 VDS")
-	}
-	algorithm, err := message.Headers.Protected.Algorithm()
-	if err != nil || algorithm != cose.AlgorithmEdDSA {
-		return fmt.Errorf("receipt must use EdDSA")
-	}
-	vdpAny, ok := lookup(message.Headers.Unprotected, headerVDP)
-	if !ok {
-		return fmt.Errorf("receipt missing VDP")
-	}
-	vdp, ok := vdpAny.(map[any]any)
-	if !ok {
-		return fmt.Errorf("receipt VDP is not a map")
-	}
-	proofsAny, ok := lookup(vdp, vdpInclusion)
-	if !ok {
-		return fmt.Errorf("receipt missing inclusion proof")
-	}
-	proofs, ok := proofsAny.([]any)
-	if !ok || len(proofs) != 1 {
-		return fmt.Errorf("receipt requires one inclusion proof")
-	}
-	blob, ok := proofs[0].([]byte)
-	if !ok {
-		return fmt.Errorf("receipt proof is not bytes")
-	}
-	treeSize, leafIndex, path, err := decodeProof(blob)
+	decoded, err := decodeReceipt(receipt.Bytes)
 	if err != nil {
 		return err
 	}
-	if treeSize != receipt.TreeSize || leafIndex != receipt.LeafIndex {
-		return fmt.Errorf("receipt position mismatch")
+	for _, proof := range decoded.proofs {
+		root, ok := rootFromProof(entry, proof.index, proof.size, proof.path)
+		if !ok || !ed25519strict.Verify(v.public, sigStructure(decoded.protected, root), decoded.signature) {
+			continue
+		}
+		// The runner stores the response's position, so it must be the one
+		// the verified proof carries.
+		if proof.size != receipt.TreeSize || proof.index != receipt.LeafIndex {
+			return fmt.Errorf("receipt position mismatch")
+		}
+		return nil
 	}
-	root, ok := rootFromProof(entry, leafIndex, treeSize, path)
-	if !ok {
-		return fmt.Errorf("receipt inclusion proof is invalid")
+	return fmt.Errorf("receipt signature did not verify over any reconstructed root")
+}
+
+type inclusionProof struct {
+	size, index int64
+	path        [][]byte
+}
+
+type decodedReceipt struct {
+	protected, signature []byte
+	proofs               []inclusionProof
+}
+
+// decodeReceipt applies the receipt profile agent-action-capsule's
+// VerifyCOSEReceipt and scitt-cose's verify_receipt share, so all three
+// accept the same receipts (checkpoint-conformance-vectors/receipt-vectors.json):
+// a strictly encoded tag-18 COSE_Sign1 with a detached payload, protected vds
+// 1 and alg EdDSA, crit naming only understood labels, and 1 to
+// maxInclusionProofs inclusion proofs that all decode.
+func decodeReceipt(raw []byte) (decodedReceipt, error) {
+	value, err := strictItem(raw)
+	if err != nil {
+		return decodedReceipt{}, fmt.Errorf("decode COSE receipt: %w", err)
 	}
-	message.Payload = root
-	if err := message.Verify(nil, ed25519strict.NewVerifier(v.public)); err != nil {
-		return fmt.Errorf("verify receipt authority signature: %w", err)
+	tag, isTag := value.(cbor.Tag)
+	parts, isArray := tag.Content.([]any)
+	if !isTag || tag.Number != 18 || !isArray || len(parts) != 4 {
+		return decodedReceipt{}, fmt.Errorf("receipt is not a COSE_Sign1 message")
+	}
+	protectedBytes, isBytes := parts[0].([]byte)
+	if !isBytes {
+		return decodedReceipt{}, fmt.Errorf("receipt is not a COSE_Sign1 message")
+	}
+	// An attached payload binds nothing: the signature must cover the root
+	// rebuilt from the proof.
+	if parts[2] != nil {
+		return decodedReceipt{}, fmt.Errorf("receipt payload is attached; a receipt's payload must be detached")
+	}
+	signature, isBytes := parts[3].([]byte)
+	if !isBytes {
+		return decodedReceipt{}, fmt.Errorf("receipt signature is not a byte string")
+	}
+	protected := map[any]any{}
+	if len(protectedBytes) != 0 {
+		value, err := strictItem(protectedBytes)
+		if err != nil {
+			return decodedReceipt{}, fmt.Errorf("decode receipt protected header: %w", err)
+		}
+		var isMap bool
+		if protected, isMap = value.(map[any]any); !isMap {
+			return decodedReceipt{}, fmt.Errorf("receipt protected header is not a map")
+		}
+	}
+	if vds, _ := protected[uint64(headerVDS)].(uint64); vds != vdsRFC9162 {
+		return decodedReceipt{}, fmt.Errorf("receipt protected header requires RFC9162 VDS")
+	}
+	if alg, _ := protected[uint64(headerAlg)].(int64); alg != int64(cose.AlgorithmEdDSA) {
+		return decodedReceipt{}, fmt.Errorf("receipt must use EdDSA")
+	}
+	if err := checkCritical(protected); err != nil {
+		return decodedReceipt{}, err
+	}
+	unprotected, isMap := parts[1].(map[any]any)
+	if !isMap {
+		return decodedReceipt{}, fmt.Errorf("receipt unprotected header is not a map")
+	}
+	vdp, isMap := unprotected[uint64(headerVDP)].(map[any]any)
+	if !isMap {
+		return decodedReceipt{}, fmt.Errorf("receipt missing VDP")
+	}
+	blobs, isArray := vdp[vdpInclusion].([]any)
+	if !isArray || len(blobs) == 0 {
+		return decodedReceipt{}, fmt.Errorf("receipt missing inclusion proof")
+	}
+	if len(blobs) > maxInclusionProofs {
+		return decodedReceipt{}, fmt.Errorf("receipt has more than %d inclusion proofs", maxInclusionProofs)
+	}
+	// Decode every proof before verifying any: a valid proof must not hide a
+	// malformed later entry in this unauthenticated array.
+	proofs := make([]inclusionProof, 0, len(blobs))
+	for _, entry := range blobs {
+		blob, isBytes := entry.([]byte)
+		if !isBytes {
+			return decodedReceipt{}, fmt.Errorf("receipt proof is not bytes")
+		}
+		size, index, path, err := decodeProof(blob)
+		if err != nil {
+			return decodedReceipt{}, err
+		}
+		proofs = append(proofs, inclusionProof{size, index, path})
+	}
+	return decodedReceipt{protected: protectedBytes, signature: signature, proofs: proofs}, nil
+}
+
+// strictItem decodes one CBOR item and refuses any encoding but its
+// deterministic one up to map order: trailing bytes, indefinite lengths,
+// duplicate keys, and non-shortest arguments or floats. Comparing lengths
+// accepts a validly signed header whose keys are not in canonical order, as
+// the scitt-cose verifiers do.
+func strictItem(data []byte) (any, error) {
+	var value any
+	if err := strictDecoding.Unmarshal(data, &value); err != nil {
+		return nil, err
+	}
+	canonical, err := deterministicEncoding.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	if len(canonical) != len(data) {
+		return nil, fmt.Errorf("non-deterministic CBOR encoding")
+	}
+	return value, nil
+}
+
+// checkCritical enforces RFC 9052 section 3.1: crit is a non-empty array of
+// labels that are present in the protected header and understood here.
+func checkCritical(protected map[any]any) error {
+	raw, present := protected[uint64(headerCrit)]
+	if !present {
+		return nil
+	}
+	labels, isArray := raw.([]any)
+	if !isArray || len(labels) == 0 {
+		return fmt.Errorf("receipt crit must be a non-empty array")
+	}
+	for _, label := range labels {
+		switch label.(type) {
+		case uint64, int64, string:
+		default:
+			return fmt.Errorf("receipt crit lists a label that is not an integer or text")
+		}
+		if _, listed := protected[label]; !listed {
+			return fmt.Errorf("receipt crit lists a header absent from the protected header")
+		}
+		if value, isUint := label.(uint64); !isUint || !understoodLabels[value] {
+			return fmt.Errorf("receipt crit marks a header this verifier does not understand")
+		}
 	}
 	return nil
+}
+
+func sigStructure(protected, root []byte) []byte {
+	encoded, err := deterministicEncoding.Marshal([]any{"Signature1", protected, []byte{}, root})
+	if err != nil {
+		panic(err) // a fixed shape of text and byte strings always encodes
+	}
+	return encoded
 }
 
 func decodeProof(blob []byte) (int64, int64, [][]byte, error) {

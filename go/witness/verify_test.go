@@ -124,9 +124,9 @@ func TestReceiptVerifierRefusesForgeryForSmallOrderPinnedKey(t *testing.T) {
 	// The forgery is real: crypto/ed25519 accepts it over the receipt's
 	// signed bytes.
 	leaf := sha256.Sum256(append([]byte{0}, entry...))
-	message.Payload = leaf[:]
-	toBeSigned, err := sigStructure(message)
+	protected, err := message.Headers.MarshalProtected()
 	require.NoError(t, err)
+	toBeSigned := sigStructure(protected, leaf[:])
 	require.True(t, ed25519.Verify(identity, toBeSigned, message.Signature))
 }
 
@@ -136,12 +136,4 @@ func reverse(b []byte) []byte {
 		out[len(b)-1-i] = b[i]
 	}
 	return out
-}
-
-func sigStructure(message cose.Sign1Message) ([]byte, error) {
-	protected, err := message.Headers.MarshalProtected()
-	if err != nil {
-		return nil, err
-	}
-	return cbor.Marshal([]any{"Signature1", cbor.RawMessage(protected), []byte{}, message.Payload})
 }

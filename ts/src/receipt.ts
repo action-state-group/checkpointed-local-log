@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
-import { decode, encode, rfc8949EncodeOptions } from "cborg";
+import { encode, rfc8949EncodeOptions } from "cborg";
+import {
+  CborMap,
+  CborTag,
+  type CborValue,
+  cborInteger,
+  decodeLenientCbor,
+  decodeStrictCbor,
+} from "./cbor-strict.js";
 import { checkpointEntryHash } from "./checkpoint.js";
 import { verifyEd25519 } from "./ed25519.js";
 import { limits } from "./types.js";
@@ -11,16 +19,26 @@ const sha = (...parts: readonly Uint8Array[]): Uint8Array =>
   createHash("sha256").update(Buffer.concat(parts)).digest();
 const nodeHash = (left: Uint8Array, right: Uint8Array): Uint8Array =>
   sha(Uint8Array.of(1), left, right);
-const largestPowerBelow = (value: number): number => {
-  let power = 1;
-  while (power * 2 < value) power *= 2;
+const MAX_TREE_SIZE = 1n << 62n;
+const MAX_INCLUSION_PROOFS = 16;
+const ALG = 1n;
+const CRIT = 2n;
+const CWT_CLAIMS = 15n;
+const VDS = 395n;
+const VDP = 396n;
+// Protected labels this verifier processes, for RFC 9052 crit enforcement.
+const UNDERSTOOD = new Set([ALG, CRIT, VDS, CWT_CLAIMS]);
+
+const largestPowerBelow = (value: bigint): bigint => {
+  let power = 1n;
+  while (power * 2n < value) power *= 2n;
   return power;
 };
-const expectedPath = (size: number, index: number): number => {
+const expectedPath = (size: bigint, index: bigint): number => {
   let count = 0;
   let nodes = size;
   let position = index;
-  while (nodes > 1) {
+  while (nodes > 1n) {
     count += 1;
     const split = largestPowerBelow(nodes);
     if (position < split) nodes = split;
@@ -32,37 +50,67 @@ const expectedPath = (size: number, index: number): number => {
   return count;
 };
 
-function proofRoot(
-  entry: Uint8Array,
-  index: number,
-  size: number,
-  path: readonly Uint8Array[],
-): Uint8Array | undefined {
+interface InclusionProof {
+  readonly size: bigint;
+  readonly index: bigint;
+  readonly path: readonly Uint8Array[];
+}
+
+/** CBOR [tree_size, leaf_index, [audit_path...]], decoded leniently. */
+function inclusionProof(blob: Uint8Array): InclusionProof {
+  const value = decodeLenientCbor(blob);
+  if (!Array.isArray(value) || value.length !== 3)
+    throw new SyntaxError(
+      "inclusion proof must be [tree_size, leaf_index, [path]]",
+    );
+  const [rawSize, rawIndex, path] = value as readonly CborValue[];
+  const size = cborInteger(rawSize);
+  const index = cborInteger(rawIndex);
+  if (size === undefined || index === undefined)
+    throw new SyntaxError("inclusion proof sizes must be integers");
   if (
-    !Number.isSafeInteger(index) ||
-    !Number.isSafeInteger(size) ||
-    index < 0 ||
-    index >= size ||
-    size > 2 ** 53 - 1 ||
-    path.length !== expectedPath(size, index)
+    !Array.isArray(path) ||
+    !(path as readonly CborValue[]).every(
+      (node) => node instanceof Uint8Array && node.length === 32,
+    )
   )
-    return undefined;
-  const siblings = [...path];
+    throw new SyntaxError("inclusion proof path nodes must be 32 bytes");
+  if (index < 0n || index >= size || size > MAX_TREE_SIZE)
+    throw new SyntaxError("invalid tree size or leaf index");
+  if (path.length !== expectedPath(size, index))
+    throw new SyntaxError("invalid inclusion proof path length");
+  return { size, index, path: path as Uint8Array[] };
+}
+
+function proofRoot(entry: Uint8Array, proof: InclusionProof): Uint8Array {
+  const siblings = [...proof.path];
   const leaf = sha(Uint8Array.of(0), entry);
-  const fold = (nodes: number, position: number): Uint8Array | undefined => {
-    if (nodes === 1) return leaf;
-    const sibling = siblings.pop();
-    if (sibling === undefined) return undefined;
+  const fold = (nodes: bigint, position: bigint): Uint8Array => {
+    if (nodes === 1n) return leaf;
+    // inclusionProof checked the path length, so a sibling is always left.
+    const sibling = siblings.pop()!;
     const split = largestPowerBelow(nodes);
-    if (position < split) {
-      const child = fold(split, position);
-      return child === undefined ? undefined : nodeHash(child, sibling);
-    }
-    const child = fold(nodes - split, position - split);
-    return child === undefined ? undefined : nodeHash(sibling, child);
+    if (position < split) return nodeHash(fold(split, position), sibling);
+    return nodeHash(sibling, fold(nodes - split, position - split));
   };
-  const root = fold(size, index);
-  return root !== undefined && siblings.length === 0 ? root : undefined;
+  return fold(proof.size, proof.index);
+}
+
+/** RFC 9052 section 3.1: crit names present, understood protected labels. */
+function criticalUnderstood(headers: CborMap): boolean {
+  if (!headers.has(CRIT)) return true;
+  const crit = headers.get(CRIT);
+  return (
+    Array.isArray(crit) &&
+    crit.length > 0 &&
+    (crit as readonly CborValue[]).every(
+      (label) =>
+        typeof label === "bigint" &&
+        label >= 0n &&
+        UNDERSTOOD.has(label) &&
+        headers.has(label),
+    )
+  );
 }
 
 /** Offline RFC 9162 receipt verifier under a pinned Ed25519 authority key. */
@@ -86,8 +134,7 @@ export class ReceiptVerifier {
         typeof receipt.entryHash !== "string" ||
         !/^[0-9a-f]{64}$/u.test(receipt.entryHash) ||
         !Number.isSafeInteger(receipt.treeSize) ||
-        !Number.isSafeInteger(receipt.leafIndex) ||
-        receipt.bytes[0] !== 0xd2
+        !Number.isSafeInteger(receipt.leafIndex)
       )
         return false;
       const entry = await checkpointEntryHash(checkpoint);
@@ -96,62 +143,80 @@ export class ReceiptVerifier {
         Buffer.from(entry).toString("hex") !== receipt.entryHash
       )
         return false;
-      const items = decode(receipt.bytes.subarray(1), {
-        allowIndefinite: false,
-        useMaps: true,
-      }) as unknown[];
+      // The receipt profile agent-action-capsule's VerifyReceipts and
+      // scitt-cose's verify_receipt share, so all three accept the same
+      // receipts (checkpoint-conformance-vectors/receipt-vectors.json).
+      const message = decodeStrictCbor(receipt.bytes);
+      if (!(message instanceof CborTag) || message.tag !== 18n) return false;
+      const items = message.value;
       if (
         !Array.isArray(items) ||
         items.length !== 4 ||
         !(items[0] instanceof Uint8Array) ||
-        !(items[1] instanceof Map) ||
+        !(items[1] instanceof CborMap) ||
+        // An attached payload binds nothing: the signature must cover the
+        // root rebuilt from the proof.
         items[2] !== null ||
         !(items[3] instanceof Uint8Array)
       )
         return false;
-      const protectedHeaders = decode(items[0], {
-        allowIndefinite: false,
-        useMaps: true,
-      }) as Map<number, unknown>;
-      if (protectedHeaders.get(1) !== -8 || protectedHeaders.get(395) !== 1)
-        return false;
-      const vdp = items[1].get(396);
-      if (!(vdp instanceof Map)) return false;
-      const proofs = vdp.get(-1);
+      const [protectedBytes, unprotected, , signature] = items as [
+        Uint8Array,
+        CborMap,
+        null,
+        Uint8Array,
+      ];
+      const protectedHeaders =
+        protectedBytes.length === 0
+          ? new CborMap([])
+          : decodeStrictCbor(protectedBytes);
       if (
-        !Array.isArray(proofs) ||
-        proofs.length !== 1 ||
-        !(proofs[0] instanceof Uint8Array)
+        !(protectedHeaders instanceof CborMap) ||
+        protectedHeaders.get(ALG) !== -8n ||
+        protectedHeaders.get(VDS) !== 1n ||
+        !criticalUnderstood(protectedHeaders)
       )
         return false;
-      const proof = decode(proofs[0], { allowIndefinite: false }) as unknown[];
+      const vdp = unprotected.get(VDP);
+      if (!(vdp instanceof CborMap)) return false;
+      const blobs = vdp.get(-1n);
       if (
-        !Array.isArray(proof) ||
-        proof.length !== 3 ||
-        !Number.isSafeInteger(proof[0]) ||
-        !Number.isSafeInteger(proof[1]) ||
-        !Array.isArray(proof[2]) ||
-        proof[2].some(
-          (hash) => !(hash instanceof Uint8Array) || hash.length !== 32,
-        ) ||
-        proof[0] !== receipt.treeSize! ||
-        proof[1] !== receipt.leafIndex!
+        !Array.isArray(blobs) ||
+        blobs.length === 0 ||
+        blobs.length > MAX_INCLUSION_PROOFS ||
+        !(blobs as readonly CborValue[]).every(
+          (blob) => blob instanceof Uint8Array,
+        )
       )
         return false;
-      const root = proofRoot(
-        entry,
-        receipt.leafIndex!,
-        receipt.treeSize!,
-        proof[2] as Uint8Array[],
-      );
-      if (root === undefined) return false;
-      // The strict verifier, not Node's OpenSSL, which on some builds accepts
-      // a signature by a small-order key that needs no private key.
-      return verifyEd25519(
-        this.publicKey,
-        encodeCanonical(["Signature1", items[0], new Uint8Array(), root]),
-        items[3],
-      );
+      // Decode every proof before verifying any: a valid proof must not hide
+      // a malformed later entry in this unauthenticated array.
+      const proofs = (blobs as readonly Uint8Array[]).map(inclusionProof);
+      for (const proof of proofs) {
+        const root = proofRoot(entry, proof);
+        // The strict verifier, not Node's OpenSSL, which on some builds
+        // accepts a signature by a small-order key that needs no private key.
+        if (
+          !verifyEd25519(
+            this.publicKey,
+            encodeCanonical([
+              "Signature1",
+              protectedBytes,
+              new Uint8Array(),
+              root,
+            ]),
+            signature,
+          )
+        )
+          continue;
+        // The runner stores the response's position, so it must be the one
+        // the verified proof carries.
+        return (
+          proof.size === BigInt(receipt.treeSize!) &&
+          proof.index === BigInt(receipt.leafIndex!)
+        );
+      }
+      return false;
     } catch {
       return false;
     }
