@@ -12,19 +12,24 @@ are documented here. The format follows
 - `witness.NewSCRAPIClient`, a `Submitter` that registers a signed checkpoint
   with a SCITT Transparency Service through SCRAPI's `POST /entries`, so its
   Receipt's leaf is SHA-256 of the checkpoint statement, the anchor digest
-  agent-action-capsule interop profile v1 §6.2.2 checks
-  (checkpointed-local-log#117, checkpointed-local-log#118).
+  agent-action-capsule interop profile v1 §6.2.2 checks. It checks the
+  Receipt's shape with the same receipt profile as `ReceiptVerifier` and
+  leaves its signature to the relying party's `Verifier`. A registration
+  still pending after its poll budget returns `ErrSCRAPIPending`, which
+  `IsRetryable` reports as retryable (checkpointed-local-log#117,
+  checkpointed-local-log#118, checkpointed-local-log#121,
+  checkpointed-local-log#123).
 
 ### Changed
 
-- `witness.ReceiptVerifier` accepts and refuses the same receipts as
-  scitt-cose and agent-action-capsule `VerifyReceipts`: it refuses an
-  attached or undefined payload, a `crit` label it does not understand,
-  non-shortest CBOR and a malformed later proof, and accepts several
-  inclusion proofs. The shared `receipt-vectors.json` pins this
-  (checkpointed-local-log#119, checkpointed-local-log#120).
-- The SCRAPI client checks a Receipt's shape with that same receipt profile
-  (checkpointed-local-log#121, checkpointed-local-log#123).
+- `witness.ReceiptVerifier` applies the receipt profile that scitt-cose and
+  agent-action-capsule `VerifyReceipts` share, and decides every case in the
+  shared `receipt-vectors.json` as they do: it refuses an attached or
+  undefined payload, a `crit` label it does not understand, non-shortest CBOR
+  and a malformed later proof, and accepts several inclusion proofs.
+  Encodings outside those vectors are not pinned yet
+  (agent-action-capsule#520) (checkpointed-local-log#119,
+  checkpointed-local-log#120).
 
 ## checkpointed-local-log (Rust crate) 0.4.0 — 2026-10-30
 
