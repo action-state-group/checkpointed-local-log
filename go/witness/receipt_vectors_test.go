@@ -66,3 +66,26 @@ func TestReceiptVerifierDecidesEveryReceiptVector(t *testing.T) {
 		}
 	}
 }
+
+// scrapiReceiptPosition refuses every receipt vector ReceiptVerifier refuses
+// for its shape and returns the position of every accepted one. It has no
+// witness key, so the vectors refused only for their signature pass it.
+func TestSCRAPIReceiptPositionDecidesEveryReceiptVector(t *testing.T) {
+	data, err := os.ReadFile("testdata/receipt-vectors.json")
+	require.NoError(t, err)
+	var v receiptVectors
+	require.NoError(t, json.Unmarshal(data, &v))
+	signatureOnly := map[string]bool{"neg-wrong-key": true, "neg-other-entry": true}
+	for _, c := range v.Cases {
+		raw, err := base64.StdEncoding.DecodeString(c.Receipt)
+		require.NoError(t, err, c.Name)
+		index, size, err := scrapiReceiptPosition(raw)
+		if !c.Accept && !signatureOnly[c.Name] {
+			require.Error(t, err, c.Name)
+			continue
+		}
+		require.NoError(t, err, c.Name)
+		require.Equal(t, c.TreeSize, size, c.Name)
+		require.Equal(t, c.LeafIndex, index, c.Name)
+	}
+}
