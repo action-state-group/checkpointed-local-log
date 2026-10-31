@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -136,4 +137,59 @@ func reverse(b []byte) []byte {
 		out[len(b)-1-i] = b[i]
 	}
 	return out
+}
+
+// fxamacker's default limits (131,072 array elements or map pairs) would
+// refuse a receipt the encoding rule admits; only the receipt size limits
+// them, as in agent-action-capsule's strictReceiptItem.
+func TestStrictReceiptItemLimitsArraysAndMapsOnlyByReceiptSize(t *testing.T) {
+	const count = 131073
+	array, err := deterministicEncoding.Marshal(make([]uint64, count))
+	require.NoError(t, err)
+	_, err = strictReceiptItem(array, false)
+	require.NoError(t, err)
+	pairs := make(map[uint64]bool, count)
+	for i := range uint64(count) {
+		pairs[i] = true
+	}
+	encoded, err := deterministicEncoding.Marshal(pairs)
+	require.NoError(t, err)
+	_, err = strictReceiptItem(encoded, false)
+	require.NoError(t, err)
+}
+
+func TestStrictReceiptItemRefusesWhatTheEncodingRuleRefuses(t *testing.T) {
+	for name, item := range map[string]string{
+		"trailing byte":       "0000",
+		"non-shortest":        "1801",
+		"indefinite":          "9f01ff",
+		"half float":          "f93c00",
+		"undefined":           "f7",
+		"simple value 32":     "f820",
+		"bignum":              "c249010000000000000000",
+		"integer below int64": "3bffffffffffffffff",
+		"bytes key":           "a1416b01",
+		"repeated key":        "a201010102",
+		"inner tag 18":        "81d280",
+		"invalid UTF-8":       "61ff",
+		"17 levels":           strings.Repeat("81", 17) + "00",
+	} {
+		raw, err := hex.DecodeString(item)
+		require.NoError(t, err, name)
+		_, err = strictReceiptItem(raw, true)
+		require.Error(t, err, name)
+	}
+	for name, item := range map[string]string{
+		"16 levels":         strings.Repeat("81", 16) + "00",
+		"null, false, true": "83f6f4f5",
+		"int64 minimum":     "3b7fffffffffffffff",
+		"keys out of order": "a2616201616102",
+	} {
+		raw, err := hex.DecodeString(item)
+		require.NoError(t, err, name)
+		_, err = strictReceiptItem(raw, false)
+		require.NoError(t, err, name)
+	}
+	_, err := strictReceiptItem([]byte{0xd2, 0x80}, false)
+	require.Error(t, err, "a tag 18 where no tag is allowed")
 }

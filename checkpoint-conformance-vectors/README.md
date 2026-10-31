@@ -75,18 +75,23 @@ encoding, and the signed checkpoint record that wraps a root.
   accepts: COSE Receipts over the entry hash of `checkpoint-first-2-leaves`,
   signed by a fixture authority key, each with the `tree_size` and
   `leaf_index` a holder stores. Every CLL receipt verifier (Go
-  `witness.ReceiptVerifier`, Python `cll.ed25519.verify_receipt` and
-  `ReceiptVerifier`, TypeScript `ReceiptVerifier`) decides each case as
-  `accept` says, which is how scitt-cose's `verify_receipt` and
-  agent-action-capsule's `VerifyReceipts` decide it: a strictly encoded tag-18
-  COSE_Sign1 with a detached (null) payload, protected `vds` 1 and `alg`
-  EdDSA, `crit` naming only understood labels, and 1 to 16 inclusion proofs
-  that all decode and fit their tree, one of which rebuilds the root the
+  `witness.ReceiptVerifier`, Python `ReceiptVerifier`, TypeScript
+  `ReceiptVerifier`) decides each case as `accept` says, which is how
+  agent-action-capsule's `VerifyCOSEReceipt` decides it since
+  agent-action-capsule#523: a tag-18 COSE_Sign1 whose message, protected
+  header and each inclusion-proof blob are one CBOR item under the receipt
+  encoding rule of the AAC interop profile v1 §6.2.2 (definite lengths,
+  shortest arguments, no repeated key, integer or text keys, valid UTF-8,
+  integers from -2^63, no float, no simple value but false, true and null,
+  no tag but the outer 18, at most 16 levels; map order is not checked),
+  with a detached (null) payload, protected `vds` 1 and `alg` EdDSA, `crit`
+  naming only present, understood labels, and 1 to 16 inclusion proofs that
+  all decode and fit their tree, one of which rebuilds the root the
   signature covers. A holder also refuses a receipt whose stored position is
-  not that proof's. AAC go/v0.18.0 accepts `neg-payload-undefined`, against
-  its own spec. Encodings the two references decide differently (tag 0, an
-  array or bignum map key, repeated NaN keys, nesting deeper than 32, arrays
-  of more than 131072 items) are not pinned until the AAC spec settles them.
+  not that proof's. Python checks the encoding rule and `crit` before
+  `cll.ed25519.verify_receipt`, which is scitt-cose's `verify_receipt`: that
+  alone decodes a proof blob leniently and admits tags, floats and simple
+  values elsewhere in the receipt.
   `generate_receipts.py` assembles the receipts byte by byte, so it depends
   on none of the verifiers it tests; `--check` fails when the file is out of
   date. `go/witness/testdata/receipt-vectors.json` is a pinned copy.

@@ -1,6 +1,6 @@
 // checkpoint-conformance-vectors/receipt-vectors.json, shared by every
-// implementation: the witness receipts agent-action-capsule's VerifyReceipts
-// and scitt-cose's verify_receipt accept and refuse.
+// implementation: the witness receipts agent-action-capsule's
+// VerifyCOSEReceipt accepts and refuses.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
