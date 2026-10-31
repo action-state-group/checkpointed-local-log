@@ -5,6 +5,35 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
+
+### Added
+
+- `witness.NewSCRAPIClient`, a `Submitter` that registers a signed checkpoint
+  with a SCITT Transparency Service through SCRAPI's `POST /entries`, so its
+  Receipt's leaf is SHA-256 of the checkpoint statement, the anchor digest
+  agent-action-capsule interop profile v1 §6.2.2 checks. It checks the
+  Receipt's shape with the same receipt profile as `ReceiptVerifier` and
+  leaves its signature to the relying party's `Verifier`. A registration
+  still pending after its poll budget returns `ErrSCRAPIPending`, which
+  `IsRetryable` reports as retryable (checkpointed-local-log#117,
+  checkpointed-local-log#118, checkpointed-local-log#121,
+  checkpointed-local-log#123).
+
+### Changed
+
+- `witness.ReceiptVerifier` applies the receipt profile that scitt-cose and
+  agent-action-capsule `VerifyReceipts` share, and decides every case in the
+  shared `receipt-vectors.json` as scitt-cose does, and as
+  agent-action-capsule does from agent-action-capsule#521 (its `go/v0.18.0`
+  still accepts an undefined payload): it refuses an attached or undefined
+  payload, a `crit` label it does not understand, non-shortest CBOR in the
+  receipt or its protected header (inclusion proofs are still decoded
+  leniently) and a malformed later proof, and accepts several inclusion
+  proofs. Encodings
+  outside those vectors are not pinned yet (agent-action-capsule#520,
+  checkpointed-local-log#119, checkpointed-local-log#120).
+
 ## checkpointed-local-log (Rust crate) 0.4.0 — 2026-10-30
 
 ### Security
