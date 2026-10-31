@@ -2,6 +2,7 @@ package witness
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -212,6 +213,17 @@ func TestSCRAPIClientClassifiesFailures(t *testing.T) {
 
 	_, err := newSCRAPIService(t, "pending").client(t).Submit(t.Context(), statement)
 	require.ErrorIs(t, err, ErrSCRAPIPending)
+	require.True(t, IsRetryable(err))
+
+	// The whole registration, polls included, stays within one request
+	// timeout, and running out of it is retryable.
+	slow := newSCRAPIService(t, "pending").client(t)
+	slow.pollInterval = time.Second
+	slow.timeout = 50 * time.Millisecond
+	started := time.Now()
+	_, err = slow.Submit(t.Context(), statement)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Less(t, time.Since(started), time.Second)
 	require.True(t, IsRetryable(err))
 
 	_, err = newSCRAPIService(t, "unavailable").client(t).Submit(t.Context(), statement)

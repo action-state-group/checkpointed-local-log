@@ -50,12 +50,15 @@ type SCRAPIClient struct {
 	maxBytes     int64
 	maxPolls     int
 	pollInterval time.Duration
+	timeout      time.Duration
 }
 
 // NewSCRAPIClient constructs a redirect-rejecting, response-bounded SCRAPI
 // client for the service at baseURL, an HTTP(S) origin or path with no
 // binding prefix. Location responses are followed only within baseURL's
-// origin.
+// origin. One registration, its polls included, takes at most the client's
+// request timeout (DefaultRequestTimeout when unset), the bound one cll
+// binding request has.
 func NewSCRAPIClient(baseURL string, client *http.Client, maxResponseBytes int64) (*SCRAPIClient, error) {
 	plain, err := NewClient(baseURL, client, maxResponseBytes)
 	if err != nil {
@@ -69,6 +72,7 @@ func NewSCRAPIClient(baseURL string, client *http.Client, maxResponseBytes int64
 		maxBytes:     plain.maxBytes,
 		maxPolls:     DefaultSCRAPIMaxPolls,
 		pollInterval: DefaultSCRAPIPollInterval,
+		timeout:      plain.http.Timeout,
 	}, nil
 }
 
@@ -87,6 +91,8 @@ func (c *SCRAPIClient) Submit(ctx context.Context, signedCheckpoint []byte) (Rec
 	if err := record.VerifySignature(); err != nil {
 		return Receipt{}, err
 	}
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.entries, bytes.NewReader(signedCheckpoint))
 	if err != nil {
 		return Receipt{}, err
