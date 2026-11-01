@@ -78,7 +78,8 @@ encoding, and the signed checkpoint record that wraps a root.
   `witness.ReceiptVerifier`, Python `ReceiptVerifier`, TypeScript
   `ReceiptVerifier`) decides each case as `accept` says, which is how
   agent-action-capsule's `VerifyCOSEReceipt` decides it since
-  agent-action-capsule#523: a tag-18 COSE_Sign1 whose message, protected
+  agent-action-capsule#523 (in its `go/v0.19.0`; `go/v0.18.0` still accepts an undefined
+  payload): a tag-18 COSE_Sign1 whose message, protected
   header and each inclusion-proof blob are one CBOR item under the receipt
   encoding rule of the AAC interop profile v1 §6.2.2 (definite lengths,
   shortest arguments, no repeated key, integer or text keys, valid UTF-8,
