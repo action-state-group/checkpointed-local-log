@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate ``receipt-vectors.json``: witness receipts over one checkpoint that
 every CLL receipt verifier must decide the same way as agent-action-capsule's
-``VerifyCOSEReceipt``, which since agent-action-capsule#523 decodes the
+``VerifyCOSEReceipt``, which since agent-action-capsule#523 (``go/v0.19.0``; ``go/v0.18.0``
+accepts an undefined payload) decodes the
 receipt, its protected header and each inclusion-proof blob under the receipt
 encoding rule of the AAC interop profile v1 section 6.2.2.
 
