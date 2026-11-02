@@ -79,6 +79,11 @@ func (e *Engine) Entries() []cll.Entry { return cloneEntries(e.entries) }
 func (e *Engine) EntryCount() uint64 { return uint64(len(e.entries)) }
 func (e *Engine) State() cll.State   { return CloneState(e.state) }
 
+// SharedState returns the current state without copying it. Commits replace the
+// state rather than mutate it, so the value stays valid after later commits;
+// callers must not modify it.
+func (e *Engine) SharedState() cll.State { return e.state }
+
 func (e *Engine) Replace(entries []cll.Entry, state cll.State) error {
 	seen := make(map[string]struct{}, len(entries))
 	for index, entry := range entries {
