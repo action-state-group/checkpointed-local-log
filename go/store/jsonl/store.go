@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -37,6 +38,11 @@ type Store struct {
 	file   *os.File
 	engine *backend.Engine
 	closed bool
+	// published is the CLL state after the last successful commit, or nil once
+	// the store is closed. The engine replaces its state on every commit and never
+	// mutates a published one, so LoadCLL clones it without taking mu and a
+	// large clone never makes an append wait.
+	published atomic.Pointer[cll.State]
 }
 
 // Open validates an existing journal under a non-blocking exclusive writer
@@ -74,6 +80,7 @@ func open(path string, initialize bool) (*Store, error) {
 	if err := store.replay(initialize); err != nil {
 		return nil, errors.Join(err, store.closeFile())
 	}
+	store.publish()
 	info, err := file.Stat()
 	if err != nil {
 		return nil, errors.Join(fmt.Errorf("stat JSONL journal: %w", err), store.closeFile())
@@ -252,6 +259,7 @@ func (s *Store) rollback(offset int64, cause error) error {
 		return cause
 	}
 	s.closed = true
+	s.published.Store(nil)
 	return errors.Join(cause, fmt.Errorf("%w: JSONL rollback failed", cll.ErrCorrupt), err, s.closeFile())
 }
 
@@ -323,16 +331,22 @@ func (s *Store) EntryCount(ctx context.Context) (uint64, error) {
 	return s.engine.EntryCount(), nil
 }
 
+// publish exposes the engine's current state to LoadCLL. The caller holds mu
+// or has exclusive access to the store.
+func (s *Store) publish() {
+	state := s.engine.SharedState()
+	s.published.Store(&state)
+}
+
 func (s *Store) LoadCLL(ctx context.Context) (cll.State, error) {
 	if err := ctx.Err(); err != nil {
 		return cll.State{}, err
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.closed {
+	state := s.published.Load()
+	if state == nil {
 		return cll.State{}, cll.ErrClosed
 	}
-	return s.engine.State(), nil
+	return backend.CloneState(*state), nil
 }
 
 func (s *Store) CommitCLL(ctx context.Context, expectedSize uint64, expectedCheckpoint []byte, next cll.State) error {
@@ -364,6 +378,7 @@ func (s *Store) CommitCLL(ctx context.Context, expectedSize uint64, expectedChec
 	if err != nil {
 		return s.restore(snapshot, err)
 	}
+	s.publish()
 	return nil
 }
 
@@ -412,12 +427,14 @@ func (s *Store) CommitWitness(ctx context.Context, expectedAttempts uint32, next
 	if err != nil {
 		return s.restore(snapshot, err)
 	}
+	s.publish()
 	return nil
 }
 
 func (s *Store) restore(snapshot backend.Snapshot, cause error) error {
 	if err := s.engine.Restore(snapshot); err != nil {
 		s.closed = true
+		s.published.Store(nil)
 		return errors.Join(
 			cause,
 			fmt.Errorf("%w: restore JSONL state after persistence failure: %v", cll.ErrCorrupt, err),
@@ -435,6 +452,7 @@ func (s *Store) Close() error {
 		return nil
 	}
 	s.closed = true
+	s.published.Store(nil)
 	return s.closeFile()
 }
 
