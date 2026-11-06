@@ -39,7 +39,7 @@ use cll::mmr::{add_leaf, MemoryNodeStore};
   features of the same names, and a conformance runner for any backend.
 
 ```toml
-checkpointed-local-log = { version = "0.3", features = ["sqlite"] }
+checkpointed-local-log = { version = "0.5", features = ["sqlite"] }
 ```
 
 ```rust
