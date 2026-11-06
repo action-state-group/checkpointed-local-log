@@ -252,3 +252,58 @@ func TestDeliveryRunnerChainOrder(t *testing.T) {
 		require.NotNil(t, item.Receipt, "%s/%d", item.WitnessID, item.CheckpointSize)
 	}
 }
+
+// An operator clears a permanent row by writing it back as not permanent, as
+// docs/backend-contract.md ("Held and permanent witness rows") describes.
+func TestDeliveryRunnerResumesAfterOperatorClearsPermanentRow(t *testing.T) {
+	store := memory.New()
+	t.Cleanup(func() { require.NoError(t, store.Close()) })
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	_, private, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	signer, err := checkpoint.NewEd25519Signer(private)
+	require.NoError(t, err)
+	for value := byte(1); value <= 2; value++ {
+		_, err := store.Append(t.Context(), cll.AppendInput{Value: bytes.Repeat([]byte{value}, cll.EntryBytes), AppendedAt: now})
+		require.NoError(t, err)
+		config := checkpoint.DefaultRunnerConfig("delivery-log")
+		config.Cadence.CadenceEntries = 1
+		config.WitnessIDs = []string{"a"}
+		runner, err := checkpoint.NewRunner(config, store, signer)
+		require.NoError(t, err)
+		_, err = runner.RunOnce(t.Context(), now)
+		require.NoError(t, err)
+	}
+	receipt := Receipt{Bytes: []byte("receipt"), EntryHashScheme: EntryHashSchemeCheckpointDigest, TreeSize: 1}
+	var calls int
+	run := func(submitter countingSubmitter, at time.Time) int {
+		config := DefaultDeliveryConfig()
+		config.Jitter = false
+		runner, err := NewDeliveryRunner(config, store, map[string]Submitter{"a": submitter}, map[string]Verifier{"a": fakeVerifier{}})
+		require.NoError(t, err)
+		completed, err := runner.RunOnce(t.Context(), at, 32)
+		require.NoError(t, err)
+		return completed
+	}
+	// The witness refuses the first checkpoint permanently: nothing is sent for the second.
+	require.Zero(t, run(countingSubmitter{err: &HTTPError{StatusCode: http.StatusConflict}, calls: &calls}, now))
+	require.Zero(t, run(countingSubmitter{receipt: receipt, calls: &calls}, now.Add(time.Hour)))
+	require.Equal(t, 1, calls)
+	// The operator reads the row and writes it back as not permanent.
+	state, err := store.LoadCLL(t.Context())
+	require.NoError(t, err)
+	var first cll.WitnessState
+	for _, item := range state.Witnesses {
+		if item.CheckpointSize == 1 {
+			first = item
+		}
+	}
+	require.True(t, first.Permanent)
+	cleared := first
+	cleared.Permanent = false
+	cleared.NextAttemptAt = now
+	require.NoError(t, store.CommitWitness(t.Context(), first.Attempts, cleared))
+	// Both checkpoints are delivered in order.
+	require.Equal(t, 2, run(countingSubmitter{receipt: receipt, calls: &calls}, now.Add(2*time.Hour)))
+	require.Equal(t, 3, calls)
+}

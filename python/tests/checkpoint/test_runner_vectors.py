@@ -95,15 +95,19 @@ def _replay(case: dict) -> None:
     signer = Ed25519CheckpointSigner(Ed25519PrivateKey.from_private_bytes(bytes.fromhex(VECTORS["signingKeySeed"])))
     config = case["config"]
     store = MemoryStore()
-    runner = CheckpointRunner(
-        store,
-        signer,
-        VECTORS["logId"],
-        witness_ids=config.get("witnessIds") or (),
-        cadence_entries=config["cadenceEntries"],
-        cadence_age=timedelta(milliseconds=config["cadenceAgeMs"]),
-        scan_limit=config["scanLimit"],
-    )
+
+    def checkpoint_runner(witness_ids) -> CheckpointRunner:
+        return CheckpointRunner(
+            store,
+            signer,
+            VECTORS["logId"],
+            witness_ids=witness_ids,
+            cadence_entries=config["cadenceEntries"],
+            cadence_age=timedelta(milliseconds=config["cadenceAgeMs"]),
+            scan_limit=config["scanLimit"],
+        )
+
+    runner = checkpoint_runner(config.get("witnessIds") or ())
     script = _Script()
     witnesses = config.get("witnessIds") or ()
     delivery = None
@@ -122,7 +126,10 @@ def _replay(case: dict) -> None:
         if op == "append":
             store.append(AppendInput(base64.b64decode(step["value"]), parse_time(step["appendedAt"])))
         elif op == "runCheckpoint":
-            runner.run_once(parse_time(step["now"]))
+            # A checkpoint runner keeps no state between passes: a step that
+            # names witnesses (one added later) gets a fresh one over the store.
+            step_runner = checkpoint_runner(step["witnessIds"]) if "witnessIds" in step else runner
+            step_runner.run_once(parse_time(step["now"]))
         elif op == "deliverWitnesses":
             script.load(step)
             completed = delivery.run_once(parse_time(step["now"]), step["limit"])

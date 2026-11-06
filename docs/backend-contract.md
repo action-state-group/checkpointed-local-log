@@ -225,6 +225,37 @@ Witness rules: a valid identifier, `checkpointSize` above 0, checkpoint bytes of
 0..`MaxPortableInteger`. Receipt metadata without receipt bytes is not
 representable.
 
+#### Held and permanent witness rows
+
+The Go, Rust and Python delivery runners release a checkpoint to a witness only
+once that witness's row for the checkpoint's `prev_size` has a receipt, or when
+the witness has no row for it (the witness's own answer then decides). A row
+without a receipt therefore holds the checkpoints that follow it on that
+witness, each through its `prev_size` row. A permanent row is never returned by
+`pendingWitnesses` or `pendingWitnessesFor`, so it holds that witness until the
+row changes; the runners never change it, and `RunOnce` reports nothing for a
+held witness. The TypeScript runner does not hold: it still sends a witness's
+later rows after a permanent one.
+
+There is no automatic recovery. To find a held witness, read the state with
+`loadCll` and look for that witness's rows with `permanent` true and no receipt;
+a held row whose stored checkpoint fails verification is marked permanent too,
+so there can be several, and the lowest `checkpointSize` is the one to clear
+first. To resume delivery, write it back with `commitWitness`
+(`expectedAttempts` equal to the stored `attempts`, same checkpoint bytes) with
+`permanent` false and `nextAttemptAt` at or before now. The runner then retries
+it and, on success, releases the later checkpoints in order.
+
+Clearing helps only when the refusal was transient or its cause is fixed. If the
+witness refuses the checkpoint again the row becomes permanent again, and a row
+whose stored checkpoint fails verification becomes permanent again before any
+send (its bytes cannot be changed: `commitWitness` returns `contention` on
+different bytes, and rows are never deleted). A witness that is already at or
+past the held checkpoint is not detected, because the runners cannot read a
+witness's position, so for that case and for a corrupt stored checkpoint there
+is no supported recovery until "witness ahead" is delivered
+(checkpointed-local-log#130 records it as deferred from #91).
+
 ### Lifecycle
 
 | Condition | Result |

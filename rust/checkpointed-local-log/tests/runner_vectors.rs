@@ -66,6 +66,9 @@ struct Step {
     appended_at: String,
     #[serde(default)]
     now: String,
+    /// Witnesses that get this checkpoint pass's rows instead of the case's
+    /// (a witness added later).
+    witness_ids: Option<Vec<String>>,
     #[serde(default)]
     limit: usize,
     #[serde(default)]
@@ -233,19 +236,24 @@ fn signing_key(seed_hex: &str) -> SigningKey {
 
 fn replay(document: &Document, case: &Case) {
     let store = Arc::new(MemoryStore::new());
-    let config = RunnerConfig {
-        cadence_entries: case.config.cadence_entries,
-        cadence_age: Duration::from_millis(case.config.cadence_age_ms),
-        scan_limit: case.config.scan_limit,
-        witness_ids: case.config.witness_ids.clone().unwrap_or_default(),
-        ..RunnerConfig::new(document.log_id.clone())
+    // A checkpoint runner keeps no state between passes: a step that names
+    // witnesses gets a fresh one over the same store.
+    let checkpoint_runner = |witness_ids: Vec<String>| {
+        let config = RunnerConfig {
+            cadence_entries: case.config.cadence_entries,
+            cadence_age: Duration::from_millis(case.config.cadence_age_ms),
+            scan_limit: case.config.scan_limit,
+            witness_ids,
+            ..RunnerConfig::new(document.log_id.clone())
+        };
+        CheckpointRunner::new(
+            config,
+            store.clone(),
+            signing_key(&document.signing_key_seed),
+        )
+        .unwrap()
     };
-    let runner = CheckpointRunner::new(
-        config,
-        store.clone(),
-        signing_key(&document.signing_key_seed),
-    )
-    .unwrap();
+    let runner = checkpoint_runner(case.config.witness_ids.clone().unwrap_or_default());
     let script = Arc::new(Script::default());
     let mut clients: HashMap<String, Box<dyn Submitter>> = HashMap::new();
     let mut verifiers: HashMap<String, Box<dyn Verifier>> = HashMap::new();
@@ -288,7 +296,10 @@ fn replay(document: &Document, case: &Case) {
                 continue;
             }
             "runCheckpoint" => {
-                runner
+                let named = step.witness_ids.clone().map(checkpoint_runner);
+                named
+                    .as_ref()
+                    .unwrap_or(&runner)
                     .run_once(time(&step.now))
                     .unwrap_or_else(|e| panic!("{context}: {e}"));
                 continue;

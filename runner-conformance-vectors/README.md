@@ -31,7 +31,7 @@ run in order against one fresh, empty backend:
 | op | Meaning |
 |---|---|
 | `append` | Append `value` at `appendedAt` to the entry log |
-| `runCheckpoint` | One checkpoint runner pass at `now` |
+| `runCheckpoint` | One checkpoint runner pass at `now`. With `witnessIds`, that pass gives its checkpoint rows to those witnesses instead of the case's (a witness added later) |
 | `deliverWitnesses` | One delivery pass at `now` over at most `limit` due rows per witness. Each witness answers its submits from `submit` and its receipt checks from `verify`, in order; every scripted answer must be used. `expect.result` is the number of rows that received a verified receipt |
 | `loadCll` | Read the state; `expect.result` is the backend contract's portable state |
 
@@ -48,7 +48,7 @@ A case that `requires` a capability runs only where the runners have it.
 |---|---|---|---|---|
 | `bounded-run`: a checkpoint pass scans one batch of `scanLimit` entries and checkpoints that batch when it is due | yes | yes | yes | no: `runOnce` catches up on the whole backlog and checkpoints once |
 | `stop-after-retryable`: a retryable failure ends that witness's delivery pass | yes | yes | yes | no: later rows of the witness are still tried |
-| `chain-order`: a checkpoint is released to a witness only once that witness's row for the checkpoint's `prev_size` has a receipt, or when it has no such row (the witness's own answer then decides); a row without a receipt, permanent or not, holds the witness's later checkpoints | yes | yes | yes | no: rows are sent in checkpoint order but not held |
+| `chain-order`: a checkpoint is released to a witness only once that witness's row for the checkpoint's `prev_size` has a receipt, or when it has no such row (the witness's own answer then decides); a row without a receipt, permanent or not, holds the witness's later checkpoints; a permanent row is cleared only by an operator (`docs/backend-contract.md`, "Held and permanent witness rows") | yes | yes | yes | no: rows are sent in checkpoint order but not held |
 
 ## Runners
 

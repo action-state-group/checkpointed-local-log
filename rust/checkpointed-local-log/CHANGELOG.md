@@ -1,5 +1,21 @@
 # Changelog: checkpointed-local-log (Rust)
 
+## Unreleased
+
+- **Breaking for implementers: `WitnessStateStore::pending_witnesses_for`.**
+  The trait gained a required method that returns one witness's due rows,
+  ordered by checkpoint size, at most `limit` (`docs/backend-contract.md`,
+  "Witness state"). A backend that implements `WitnessStateStore` must add it.
+- **`DeliveryRunner` delivers in chain order.** It releases a checkpoint to a
+  witness only once that witness's row for the checkpoint's `prev_size` has a
+  receipt, or when the witness has no row for it. A row without a receipt,
+  permanent or not, holds the checkpoints that follow it on that witness; clear a
+  permanent row by writing it back as not permanent with `commit_witness`
+  ("Held and permanent witness rows" in `docs/backend-contract.md`). `run_once`
+  reads at most `limit` due rows per witness, and no longer reads rows of a
+  witness it has no client for (checkpointed-local-log#91,
+  checkpointed-local-log#129, checkpointed-local-log#130).
+
 ## 0.4.0
 
 - **Security: Ed25519 signatures by small-order keys are refused.**

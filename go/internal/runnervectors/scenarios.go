@@ -27,6 +27,13 @@ func appendSteps(first, last byte, offset time.Duration) []Step {
 
 func checkpointStep(offset time.Duration) Step { return Step{Op: "runCheckpoint", Now: at(offset)} }
 
+// checkpointStepFor is a checkpoint pass that gives its rows to ids only.
+func checkpointStepFor(offset time.Duration, ids ...string) Step {
+	step := checkpointStep(offset)
+	step.WitnessIDs = ids
+	return step
+}
+
 func load() Step { return Step{Op: "loadCll"} }
 
 func deliver(offset time.Duration, submit map[string][]Outcome, verify map[string][]bool) Step {
@@ -159,8 +166,9 @@ func scenarios() []Case {
 		},
 		{
 			Name: "witness/chain-order-held",
-			Description: "A checkpoint is not sent to a witness while the witness's row for its prev_size has no receipt, " +
-				"even once that row's retry is not yet due; both are delivered in order after the first succeeds.",
+			Description: "A checkpoint is not sent to a witness while that witness's row for its prev_size has no receipt, " +
+				"even when the checkpoint's own row is due and the predecessor's retry is not; once the predecessor " +
+				"succeeds, both are delivered in order.",
 			Requires: []string{"chain-order"},
 			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
 			Steps: steps(
@@ -183,6 +191,35 @@ func scenarios() []Case {
 					"w-b": {receipt("w-b 1", 0), receipt("w-b 2", 1), receipt("w-b 3", 2)},
 				}, map[string][]bool{"w-b": {true, true, true}}), load()),
 				one(deliver(60*second, nil, nil), load()),
+			),
+		},
+		{
+			Name: "witness/chain-order-no-predecessor-row",
+			Description: "A witness with no row for a checkpoint's prev_size (it was added after that checkpoint) is " +
+				"sent the checkpoint, and its own answer decides; the witness that has the predecessor row is " +
+				"delivered in order.",
+			Requires: []string{"chain-order"},
+			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a", "w-b"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
+			Steps: steps(
+				one(appendStep(1, 0), checkpointStepFor(10*second, "w-a"), appendStep(2, 11*second), checkpointStep(12*second)),
+				one(deliver(12*second, map[string][]Outcome{
+					"w-a": {receipt("w-a 1", 0), receipt("w-a 2", 1)},
+					"w-b": {receipt("w-b 2", 1)},
+				}, map[string][]bool{"w-a": {true, true}, "w-b": {true}}), load()),
+			),
+		},
+		{
+			Name: "witness/chain-order-no-predecessor-row-refused",
+			Description: "A witness with no row for a checkpoint's prev_size is sent the checkpoint, and its refusal " +
+				"decides: the row becomes permanent with no receipt, while the other witness is delivered in order.",
+			Requires: []string{"chain-order"},
+			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a", "w-b"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
+			Steps: steps(
+				one(appendStep(1, 0), checkpointStepFor(10*second, "w-a"), appendStep(2, 11*second), checkpointStep(12*second)),
+				one(deliver(12*second, map[string][]Outcome{
+					"w-a": {receipt("w-a 1", 0), receipt("w-a 2", 1)},
+					"w-b": {permanent},
+				}, map[string][]bool{"w-a": {true, true}}), load()),
 			),
 		},
 		{
