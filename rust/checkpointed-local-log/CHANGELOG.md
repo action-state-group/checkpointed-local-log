@@ -1,6 +1,6 @@
 # Changelog: checkpointed-local-log (Rust)
 
-## Unreleased
+## 0.5.0 — 2026-11-06
 
 - **Breaking for implementers: `WitnessStateStore::pending_witnesses_for`.**
   The trait gained a required method that returns one witness's due rows,
@@ -14,7 +14,8 @@
   ("Held and permanent witness rows" in `docs/backend-contract.md`). `run_once`
   reads at most `limit` due rows per witness, and no longer reads rows of a
   witness it has no client for (checkpointed-local-log#91,
-  checkpointed-local-log#129, checkpointed-local-log#130).
+  checkpointed-local-log#129, checkpointed-local-log#130,
+  checkpointed-local-log#131).
 
 ## 0.4.0
 
