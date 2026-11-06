@@ -33,6 +33,7 @@ from .engine import (
     check_append,
     check_expected_attempts,
     check_pending,
+    check_pending_for,
     check_scan,
     check_value,
     check_witness_key,
@@ -233,6 +234,11 @@ def commit_cll(cursor: Any, log_id: str, expected_size: int, expected_checkpoint
 def pending_witnesses(cursor: Any, log_id: str, now: Any, limit: int) -> list:
     now = check_pending(now, limit)
     return pending(load_witnesses(cursor, log_id), now, limit)
+
+
+def pending_witnesses_for(cursor: Any, log_id: str, witness_id: str, now: Any, limit: int) -> list:
+    now = check_pending_for(witness_id, now, limit)
+    return pending(load_witnesses(cursor, log_id), now, limit, witness_id)
 
 
 def get_witness(cursor: Any, log_id: str, witness_id: str, checkpoint_size: int) -> WitnessState | None:

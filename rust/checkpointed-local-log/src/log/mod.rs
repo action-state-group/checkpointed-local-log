@@ -13,7 +13,7 @@
 //! | Entry source (`scanEntries`) | [`EntrySource`] |
 //! | Entry log (+ `append`, `getEntry`) | [`EntryStore`] |
 //! | Checkpoint state (`loadCll`, `commitCll`) | [`CheckpointStateStore`] |
-//! | Witness state (`pendingWitnesses`, `getWitness`, `commitWitness`) | [`WitnessStateStore`] |
+//! | Witness state (`pendingWitnesses`, `pendingWitnessesFor`, `getWitness`, `commitWitness`) | [`WitnessStateStore`] |
 //! | Checkpoint store (entry source + checkpoint and witness state) | [`CheckpointStore`] |
 //! | Full backend (all of the above + `close`) | [`Backend`] |
 //!
@@ -406,6 +406,18 @@ pub trait WitnessStateStore {
     /// by checkpoint size then witness ID, at most `limit`
     /// (1..=[`MAX_WITNESSES`]).
     fn pending_witnesses(&self, now: Timestamp, limit: usize) -> Result<Vec<WitnessState>>;
+
+    /// [`pending_witnesses`](Self::pending_witnesses) restricted to one
+    /// witness and ordered by checkpoint size, so a witness with a long
+    /// backlog cannot fill the page of the others. A malformed identifier, a
+    /// `limit` outside 1..=[`MAX_WITNESSES`] or a non-portable `now` is
+    /// `invalid`.
+    fn pending_witnesses_for(
+        &self,
+        witness_id: &str,
+        now: Timestamp,
+        limit: usize,
+    ) -> Result<Vec<WitnessState>>;
 
     /// The row for the key, or `Ok(None)` when there is none (the contract's
     /// not-found convention for Rust). A malformed key is still `invalid`.

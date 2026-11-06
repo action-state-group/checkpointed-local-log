@@ -250,6 +250,22 @@ func execute(ctx context.Context, subject any, step stepArgs) (any, error) {
 			}
 		}
 		return wire, nil
+	case "pendingWitnessesFor":
+		now, err := decodeTime(step.Now)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := subject.(cll.WitnessStateStore).PendingWitnessesFor(ctx, step.WitnessID, now, step.Limit)
+		if err != nil {
+			return nil, err
+		}
+		wire := make([]backend.WireWitness, len(rows))
+		for index, row := range rows {
+			if wire[index], err = backend.WitnessToWire(row); err != nil {
+				return nil, err
+			}
+		}
+		return wire, nil
 	case "getWitness":
 		size, err := decodeDecimal(step.CheckpointSize)
 		if err != nil {

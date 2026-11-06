@@ -514,6 +514,19 @@ impl WitnessStateStore for SqliteStore {
         })
     }
 
+    fn pending_witnesses_for(
+        &self,
+        witness_id: &str,
+        now: Timestamp,
+        limit: usize,
+    ) -> Result<Vec<WitnessState>> {
+        self.read(|tx, log_id| {
+            engine::validate_pending_query_for(witness_id, now, limit)?;
+            let rows = sql::witnesses_from_rows(&witness_rows(tx, log_id)?)?;
+            engine::pending_witnesses_for(&rows, witness_id, now, limit)
+        })
+    }
+
     fn get_witness(&self, witness_id: &str, checkpoint_size: u64) -> Result<Option<WitnessState>> {
         self.read(|tx, log_id| {
             engine::validate_witness_key(witness_id, checkpoint_size)?;

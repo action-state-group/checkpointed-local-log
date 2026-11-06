@@ -8,6 +8,7 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  selectPendingWitnessesFor,
   validateWitness,
   validateWitnessKey,
   validateAppendInput,
@@ -397,6 +398,21 @@ export class MysqlStore implements CllBackend, EntryCounter {
     return this.read(async (query) =>
       selectPendingWitnesses(
         (await this.witnessRows(query)).map(witnessFromSqlRow),
+        now,
+        limit,
+      ),
+    );
+  }
+
+  public pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]> {
+    return this.read(async (query) =>
+      selectPendingWitnessesFor(
+        (await this.witnessRows(query)).map(witnessFromSqlRow),
+        witnessId,
         now,
         limit,
       ),

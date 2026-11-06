@@ -63,7 +63,8 @@ const vectors = JSON.parse(
 
 // The TypeScript checkpoint runner catches up on the whole backlog in one
 // pass, and its delivery runner keeps delivering a witness's later rows after
-// a retryable failure, so it lacks these two capabilities.
+// a retryable failure, and it does not apply the chain-order rule, so it lacks
+// these three capabilities.
 const capabilities = new Set<string>();
 
 const normalize = (state: CllState): unknown => {
@@ -189,6 +190,7 @@ describe("runner conformance vectors", () => {
     expect(vectors.version).toBe(1);
     expect(Object.keys(vectors.capabilities).sort()).toEqual([
       "bounded-run",
+      "chain-order",
       "stop-after-retryable",
     ]);
   });
@@ -201,6 +203,11 @@ describe("runner conformance vectors", () => {
       vectors.cases
         .filter((item) => (item.requires ?? []).length > 0)
         .map((item) => item.name),
-    ).toEqual(["checkpoint/bounded-batches", "witness/stop-after-retryable"]);
+    ).toEqual([
+      "checkpoint/bounded-batches",
+      "witness/stop-after-retryable",
+      "witness/chain-order-held",
+      "witness/chain-order-permanent",
+    ]);
   });
 });

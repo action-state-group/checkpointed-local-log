@@ -72,6 +72,15 @@ export class MemoryStore implements CllBackend, EntryCounter {
     return this.state.pendingWitnesses(now, limit);
   }
 
+  public async pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ) {
+    this.ensureOpen();
+    return this.state.pendingWitnessesFor(witnessId, now, limit);
+  }
+
   public async getWitness(witnessId: string, checkpointSize: bigint) {
     this.ensureOpen();
     return this.state.getWitness(witnessId, checkpointSize);

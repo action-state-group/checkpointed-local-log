@@ -500,6 +500,26 @@ func (s *Store) PendingWitnesses(ctx context.Context, now time.Time, limit int) 
 	return result, err
 }
 
+func (s *Store) PendingWitnessesFor(ctx context.Context, witnessID string, now time.Time, limit int) (result []cll.WitnessState, err error) {
+	err = s.read(ctx, func(q queryer) error {
+		witnesses, err := loadWireWitnesses(ctx, q, s.logID)
+		if err != nil {
+			return err
+		}
+		state, err := backend.StateFromWire(backend.WireState{Size: "0", IndexedSeq: "0", Nodes: []string{}, Witnesses: witnesses})
+		if err != nil {
+			return err
+		}
+		engine := backend.New()
+		if err := engine.Replace(nil, state); err != nil {
+			return err
+		}
+		result, err = engine.PendingWitnessesFor(witnessID, now, limit)
+		return err
+	})
+	return result, err
+}
+
 func (s *Store) GetWitness(ctx context.Context, witnessID string, checkpointSize uint64) (result cll.WitnessState, err error) {
 	err = s.read(ctx, func(q queryer) error {
 		if cll.ValidateIdentifier(witnessID) != nil || checkpointSize == 0 {

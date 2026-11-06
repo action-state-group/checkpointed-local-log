@@ -438,6 +438,19 @@ fn execute<T: Target>(subject: &T, op: &str, step: &Value) -> Result<Value> {
                     .collect(),
             ))
         }
+        "pendingWitnessesFor" => {
+            let now = arg_time(step, "now")?;
+            let rows = witnesses()?.pending_witnesses_for(
+                arg_str(step, "witnessId")?,
+                now,
+                arg_limit(step)?,
+            )?;
+            Ok(Value::Array(
+                rows.iter()
+                    .map(|w| json(wire::witness_to_value(w)))
+                    .collect(),
+            ))
+        }
         "getWitness" => {
             let size = arg_decimal(step, "checkpointSize")?;
             match witnesses()?.get_witness(arg_str(step, "witnessId")?, size)? {

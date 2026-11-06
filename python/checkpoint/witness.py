@@ -76,14 +76,20 @@ class Verifier(Protocol):
     def verify(self, checkpoint: bytes, receipt: WitnessReceipt) -> None: ...
 
 
+def _verified_checkpoint(checkpoint: bytes):
+    """The decoded checkpoint of a statement that verifies. Raises
+    ``RejectedError`` if it does not."""
+    verified = verify_checkpoint_cose_offline(checkpoint)
+    if not verified.ok or verified.decoded is None:
+        raise RejectedError(f"signed checkpoint failed verification: {verified.errors}")
+    return verified.decoded
+
+
 def _checkpoint_entry_hash(checkpoint: bytes) -> str:
     """The witness log's entry hash for a verified checkpoint statement:
     SHA-256 of the checkpoint digest's bytes. Raises ``RejectedError`` if
     the statement does not verify."""
-    verified = verify_checkpoint_cose_offline(checkpoint)
-    if not verified.ok or verified.decoded is None:
-        raise RejectedError(f"signed checkpoint failed verification: {verified.errors}")
-    digest = verified.decoded.to_checkpoint_record().digest()
+    digest = _verified_checkpoint(checkpoint).to_checkpoint_record().digest()
     return hashlib.sha256(bytes.fromhex(digest)).hexdigest()
 
 
@@ -359,8 +365,10 @@ class WitnessDeliveryRunner:
         with self._lock:
             now = normalize_time(datetime.now(timezone.utc) if now is None else now)
             groups: dict = {}
-            for item in self._store.pending_witnesses(now, limit):
-                groups.setdefault(item.witness_id, []).append(item)
+            for witness_id in self._clients:
+                items = list(self._store.pending_witnesses_for(witness_id, now, limit))
+                if items:
+                    groups[witness_id] = items
             if not groups:
                 return 0
             with ThreadPoolExecutor(max_workers=len(groups)) as pool:
@@ -374,22 +382,29 @@ class WitnessDeliveryRunner:
     def _deliver_all(self, now: datetime, items: list) -> int:
         completed = 0
         for item in items:
-            success, retryable = self._deliver(now, item)
+            success, stop = self._deliver(now, item)
             completed += success
-            if retryable:
+            if stop:
                 break
         return completed
 
     def _deliver(self, now: datetime, item: WitnessState) -> tuple:
+        """Returns ``(received_receipt, stop_this_witness_pass)``: the pass
+        stops after a retryable failure and while the row's predecessor on this
+        witness has no receipt."""
         client = self._clients.get(item.witness_id)
         verifier = self._verifiers.get(item.witness_id)
         if client is None or verifier is None:
             raise InvalidError(f"no configured client and verifier for witness {item.witness_id!r}")
         try:
-            _checkpoint_entry_hash(item.checkpoint)
+            prev_size = _verified_checkpoint(item.checkpoint).prev_size
         except RejectedError:
             self._fail(now, item, True, "stored checkpoint failed verification")
             return False, False
+        if prev_size > 0:
+            predecessor = self._store.get_witness(item.witness_id, prev_size)
+            if predecessor is not None and predecessor.receipt is None:
+                return False, True
         try:
             receipt = client.submit(item.checkpoint)
         except Exception as exc:  # noqa: BLE001 -- every failure is recorded on the row

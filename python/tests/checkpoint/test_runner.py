@@ -294,7 +294,7 @@ def test_a_stored_checkpoint_that_fails_verification_is_permanent_without_submit
     client = _Fixed(RECEIPT)
 
     class Bad(MemoryStore):
-        def pending_witnesses(self, now, limit):
+        def pending_witnesses_for(self, witness_id, now, limit):
             return [replace(row, checkpoint=b"\x00")]
 
         def commit_witness(self, expected_attempts, next):

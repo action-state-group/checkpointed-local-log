@@ -30,7 +30,7 @@ qualify them with the module (`cll.Entry`, `cll.Backend`). `cll.Backend` and
 | Entry log | entry source + `append`, `getEntry` | `EntryStore` | `EntryStore` | `EntryStore` | `EntryStore` |
 | Entry count | `entryCount` | `EntryCounter` | `EntryCounter` | `cll.log.counter.EntryCounter` | `EntryCounter` |
 | Checkpoint state | `loadCll`, `commitCll` | `CheckpointStateStore` | `CheckpointStateStore` | `CheckpointStateStore` | `CheckpointStateStore` |
-| Witness state | `pendingWitnesses`, `getWitness`, `commitWitness` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` |
+| Witness state | `pendingWitnesses`, `pendingWitnessesFor`, `getWitness`, `commitWitness` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` | `WitnessStateStore` |
 | Checkpoint store | entry source + checkpoint state + witness state | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` | `CheckpointStore` |
 | Full backend | entry log + checkpoint state + witness state + `close` | `Backend` | `CllBackend` | `Backend` | `Backend` |
 
@@ -57,6 +57,7 @@ entryCount()                            -> count
 loadCll()                               -> State
 commitCll(expectedSize, expectedCheckpoint, next)
 pendingWitnesses(now, limit)            -> WitnessState[]
+pendingWitnessesFor(witnessId, now, limit) -> WitnessState[]
 getWitness(witnessId, checkpointSize)   -> WitnessState, or not found
 commitWitness(expectedAttempts, next)
 close()
@@ -207,6 +208,8 @@ witness lists by key.
 |---|---|
 | `pendingWitnesses(now, limit)` | Rows with no receipt, not permanent and `nextAttemptAt <= now`, ordered by numeric `checkpointSize` and then by `witnessId` (byte order), at most `limit` |
 | `pendingWitnesses` with `limit` outside 1..`MaxWitnesses` or `now` outside the portable range | `invalid` |
+| `pendingWitnessesFor(witnessId, now, limit)` | The `pendingWitnesses` rows of that witness only, ordered by numeric `checkpointSize`, at most `limit`; empty for a witness with no due row |
+| `pendingWitnessesFor` with a `witnessId` outside the [identifier rules](#limits), `limit` outside 1..`MaxWitnesses` or `now` outside the portable range | `invalid` |
 | `getWitness` with an identifier outside the [identifier rules](#limits), or `checkpointSize` 0 | `invalid` |
 | `getWitness` of an absent key | not found, as described in [Not found](#not-found) |
 | `commitWitness(expectedAttempts, next)` with `next` breaking the witness rules | `invalid` |

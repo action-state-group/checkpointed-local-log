@@ -4,6 +4,7 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  selectPendingWitnessesFor,
   validateWitness,
   validateWitnessKey,
   validateAppendInput,
@@ -363,6 +364,21 @@ export class SqliteStore implements CllBackend, EntryCounter {
     return this.read(() =>
       selectPendingWitnesses(
         this.witnessRows().map(witnessFromSqlRow),
+        now,
+        limit,
+      ),
+    );
+  }
+
+  public pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]> {
+    return this.read(() =>
+      selectPendingWitnessesFor(
+        this.witnessRows().map(witnessFromSqlRow),
+        witnessId,
         now,
         limit,
       ),

@@ -135,6 +135,7 @@ type CheckpointStateStore interface {
 // returns ErrNotFound for an absent key.
 type WitnessStateStore interface {
 	PendingWitnesses(context.Context, time.Time, int) ([]WitnessState, error)
+	PendingWitnessesFor(context.Context, string, time.Time, int) ([]WitnessState, error)
 	GetWitness(context.Context, string, uint64) (WitnessState, error)
 	CommitWitness(context.Context, uint32, WitnessState) error
 }

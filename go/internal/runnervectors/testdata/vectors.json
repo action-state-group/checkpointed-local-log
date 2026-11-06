@@ -5,6 +5,7 @@
  "logId": "runner-vectors",
  "capabilities": {
   "bounded-run": "a checkpoint pass scans one batch of scanLimit entries and checkpoints it when due",
+  "chain-order": "a checkpoint is released to a witness only once the witness's row for its prev_size has a receipt",
   "stop-after-retryable": "a retryable failure ends that witness's delivery pass"
  },
  "cases": [
@@ -1139,6 +1140,510 @@
          "entryHashScheme": "legacy",
          "leafIndex": 1,
          "treeSize": 2,
+         "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/chain-order-held",
+   "description": "A checkpoint is not sent to a witness while the witness's row for its prev_size has no receipt, even once that row's retry is not yet due; both are delivered in order after the first succeeds.",
+   "requires": [
+    "chain-order"
+   ],
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:11.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:12.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:12.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "retryable"
+       }
+      ]
+     },
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:12.500Z",
+     "limit": 32,
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": false,
+         "lastError": "\u003cset\u003e"
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:14.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1
+        }
+       },
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2
+        }
+       }
+      ]
+     },
+     "verify": {
+      "w-a": [
+       true,
+       true
+      ]
+     },
+     "expect": {
+      "result": 2
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 2,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2,
+         "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/chain-order-permanent",
+   "description": "A permanent row holds every later checkpoint for that witness and never sends them, while the other witnesses are delivered in order.",
+   "requires": [
+    "chain-order"
+   ],
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a",
+     "w-b"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:11.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:12.000Z"
+    },
+    {
+     "op": "append",
+     "value": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+     "appendedAt": "2026-10-01T12:00:13.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:14.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:14.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "error": "permanent"
+       }
+      ],
+      "w-b": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWIgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1
+        }
+       },
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWIgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2
+        }
+       },
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWIgMw==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 2,
+         "treeSize": 3
+        }
+       }
+      ]
+     },
+     "verify": {
+      "w-b": [
+       true,
+       true,
+       true
+      ]
+     },
+     "expect": {
+      "result": 3
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpointSize": "4",
+       "checkpointIndexedSeq": "3",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:15.000Z",
+         "permanent": true,
+         "lastError": "\u003cset\u003e"
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMw==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 2,
+         "treeSize": 3,
+         "permanent": false
+        }
+       ]
+      }
+     }
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:01:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": 0
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "4",
+       "indexedSeq": "3",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpointSize": "4",
+       "checkpointIndexedSeq": "3",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
+        "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:15.000Z",
+         "permanent": true,
+         "lastError": "\u003cset\u003e"
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "attempts": 0,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "4",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:14.000Z",
+         "receipt": "cmVjZWlwdCB3LWIgMw==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 2,
+         "treeSize": 3,
          "permanent": false
         }
        ]

@@ -55,7 +55,7 @@ __all__ = ["Case", "cases", "load_vectors", "INTERFACES", "BACKEND_INTERFACES"]
 INTERFACES = {
     "entries": ("append", "get_entry", "scan_entries"),
     "checkpoint": ("load_cll", "commit_cll"),
-    "witness": ("pending_witnesses", "get_witness", "commit_witness"),
+    "witness": ("pending_witnesses", "pending_witnesses_for", "get_witness", "commit_witness"),
     "count": ("entry_count",),
     "close": ("close",),
 }
@@ -175,6 +175,9 @@ def _execute(subject: Any, step: dict) -> Any:
     if op == "pendingWitnesses":
         now = parse_time(step["now"], InvalidError)
         return [witness_to_wire(row) for row in subject.pending_witnesses(now, step["limit"])]
+    if op == "pendingWitnessesFor":
+        now = parse_time(step["now"], InvalidError)
+        return [witness_to_wire(row) for row in subject.pending_witnesses_for(step["witnessId"], now, step["limit"])]
     if op == "getWitness":
         size = parse_decimal(step["checkpointSize"], InvalidError)
         row = subject.get_witness(step["witnessId"], size)

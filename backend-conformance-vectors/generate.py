@@ -463,6 +463,35 @@ def witness_cases() -> list[dict]:
                 fail("pendingWitnesses", "invalid", now=T0, limit=33),
             ],
         },
+        {
+            "name": "witness/pending-for",
+            "description": (
+                "pendingWitnessesFor returns one witness's due rows without receipt or permanent failure by numeric "
+                "size, at most limit, whatever the other witnesses have pending."
+            ),
+            "interfaces": ["checkpoint", "witness"],
+            "steps": [
+                commit(0, None, state(N[:1], 1, witnesses=[
+                    witness("alpha", 10, CP1),
+                    witness("alpha", 9, CP1),
+                    witness("alpha", 2, CP1, at=LATER),
+                    witness("alpha", 3, CP1, receipt=text("receipt")),
+                    witness("alpha", 4, CP1, permanent=True),
+                    witness("beta", 1, CP1),
+                ])),
+                step("pendingWitnessesFor", {"witnessId": "alpha", "now": T0, "limit": 32}, [
+                    witness("alpha", 9, CP1),
+                    witness("alpha", 10, CP1),
+                ]),
+                step("pendingWitnessesFor", {"witnessId": "alpha", "now": T0, "limit": 1}, [witness("alpha", 9, CP1)]),
+                step("pendingWitnessesFor", {"witnessId": "alpha", "now": LATER, "limit": 1}, [witness("alpha", 2, CP1, at=LATER)]),
+                step("pendingWitnessesFor", {"witnessId": "beta", "now": T0, "limit": 32}, [witness("beta", 1, CP1)]),
+                step("pendingWitnessesFor", {"witnessId": "gamma", "now": T0, "limit": 32}, []),
+                fail("pendingWitnessesFor", "invalid", witnessId="alpha", now=T0, limit=0),
+                fail("pendingWitnessesFor", "invalid", witnessId="alpha", now=T0, limit=33),
+                fail("pendingWitnessesFor", "invalid", witnessId="", now=T0, limit=1),
+            ],
+        },
     ]
 
 
@@ -564,7 +593,7 @@ def build() -> dict:
         "interfaces": {
             "entries": "EntryStore: append, getEntry, scanEntries",
             "checkpoint": "CheckpointStateStore: loadCll, commitCll",
-            "witness": "WitnessStateStore: pendingWitnesses, getWitness, commitWitness",
+            "witness": "WitnessStateStore: pendingWitnesses, pendingWitnessesFor, getWitness, commitWitness",
             "count": "EntryCounter: entryCount",
             "close": "close",
         },

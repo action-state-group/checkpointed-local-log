@@ -278,6 +278,13 @@ export class PostgresBackend implements CllBackend {
   pendingWitnesses(now: Date, limit: number): Promise<readonly WitnessState[]> {
     throw new Error("implement");
   }
+  pendingWitnessesFor(
+    id: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]> {
+    throw new Error("implement");
+  }
   getWitness(id: string, size: bigint): Promise<WitnessState | undefined> {
     throw new Error("implement");
   }

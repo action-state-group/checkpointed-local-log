@@ -114,6 +114,7 @@ func Build() (Document, error) {
 		Capabilities: map[string]string{
 			"bounded-run":          "a checkpoint pass scans one batch of scanLimit entries and checkpoints it when due",
 			"stop-after-retryable": "a retryable failure ends that witness's delivery pass",
+			"chain-order":          "a checkpoint is released to a witness only once the witness's row for its prev_size has a receipt",
 		},
 		Cases: scenarios(),
 	}
