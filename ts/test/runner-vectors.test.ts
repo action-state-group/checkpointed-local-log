@@ -208,6 +208,7 @@ describe("runner conformance vectors", () => {
       "witness/stop-after-retryable",
       "witness/chain-order-held",
       "witness/chain-order-permanent",
+      "witness/chain-order-no-predecessor-row",
       "witness/chain-order-limit-per-witness",
     ]);
   });

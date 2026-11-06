@@ -66,13 +66,16 @@ type Config struct {
 }
 
 // Step is one operation. append adds an entry to the backend; runCheckpoint
-// is one checkpoint runner pass; deliverWitnesses is one delivery pass whose
+// is one checkpoint runner pass, which gives its checkpoint rows to witnessIds
+// instead of the case's witnesses when the step names them (a witness added
+// later); deliverWitnesses is one delivery pass whose
 // witnesses answer from Submit and Verify, in order; loadCll reads the state.
 type Step struct {
 	Op         string               `json:"op"`
 	Value      string               `json:"value,omitempty"`
 	AppendedAt string               `json:"appendedAt,omitempty"`
 	Now        string               `json:"now,omitempty"`
+	WitnessIDs []string             `json:"witnessIds,omitempty"`
 	Limit      int                  `json:"limit,omitempty"`
 	Submit     map[string][]Outcome `json:"submit,omitempty"`
 	Verify     map[string][]bool    `json:"verify,omitempty"`
@@ -114,7 +117,7 @@ func Build() (Document, error) {
 		Capabilities: map[string]string{
 			"bounded-run":          "a checkpoint pass scans one batch of scanLimit entries and checkpoints it when due",
 			"stop-after-retryable": "a retryable failure ends that witness's delivery pass",
-			"chain-order":          "a checkpoint is released to a witness only once the witness's row for its prev_size has a receipt",
+			"chain-order":          "a checkpoint is released to a witness only once the witness's row for its prev_size has a receipt, or when it has no such row",
 		},
 		Cases: scenarios(),
 	}
@@ -155,6 +158,16 @@ func run(ctx context.Context, document Document, item *Case, record bool) error 
 	runner, err := checkpoint.NewRunner(config, store, signer)
 	if err != nil {
 		return err
+	}
+	// A checkpoint runner keeps no state between passes, so a step that names
+	// its own witnesses gets a fresh one over the same store.
+	runnerFor := func(ids []string) (*checkpoint.Runner, error) {
+		if ids == nil {
+			return runner, nil
+		}
+		stepConfig := config
+		stepConfig.WitnessIDs = ids
+		return checkpoint.NewRunner(stepConfig, store, signer)
 	}
 	script := &script{}
 	clients := make(map[string]witness.Submitter)
@@ -197,7 +210,11 @@ func run(ctx context.Context, document Document, item *Case, record bool) error 
 			if err != nil {
 				return err
 			}
-			if _, err := runner.RunOnce(ctx, now); err != nil {
+			stepRunner, err := runnerFor(step.WitnessIDs)
+			if err != nil {
+				return err
+			}
+			if _, err := stepRunner.RunOnce(ctx, now); err != nil {
 				return fmt.Errorf("step %d: %w", index, err)
 			}
 			continue

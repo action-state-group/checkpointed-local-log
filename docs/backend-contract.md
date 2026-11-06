@@ -225,6 +225,25 @@ Witness rules: a valid identifier, `checkpointSize` above 0, checkpoint bytes of
 0..`MaxPortableInteger`. Receipt metadata without receipt bytes is not
 representable.
 
+#### Held and permanent witness rows
+
+The delivery runners release a checkpoint to a witness only once that witness's
+row for the checkpoint's `prev_size` has a receipt, or when the witness has no
+row for it (the witness's own answer then decides). A row without a receipt
+therefore holds every later checkpoint of that witness. A permanent row is never
+returned by `pendingWitnesses` or `pendingWitnessesFor`, so it holds that witness
+until the row changes; the runners never change it.
+
+There is no automatic recovery. To resume delivery to the witness, an operator
+reads the row with `getWitness` and writes it back with `commitWitness`
+(`expectedAttempts` equal to the stored `attempts`) with `permanent` false and
+`nextAttemptAt` at or before now. The runner then retries it and, on success,
+releases the later checkpoints in order. If the witness refuses the checkpoint
+again, the row becomes permanent again. A witness that is already at or past the
+held checkpoint is not detected: the runners have no way to read a witness's
+position, so a row it refuses stays held until an operator clears it
+(checkpointed-local-log#130 records this as deferred from #91).
+
 ### Lifecycle
 
 | Condition | Result |

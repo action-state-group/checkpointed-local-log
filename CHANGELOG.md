@@ -17,11 +17,21 @@ are documented here. The format follows
 
 - The Go, Rust and Python witness delivery runners release a checkpoint to a
   witness only once that witness's row for the checkpoint's `prev_size` has a
-  receipt (or has no row), and `RunOnce` now reads at most `limit` due rows per
-  witness, so one witness's backlog no longer fills the page of the others
-  (checkpointed-local-log#91). The TypeScript runner is unchanged. The delivery
-  runners no longer read rows of a witness they have no client for; before,
-  such a row ended the Go `Run` loop with an `invalid` error.
+  receipt, or when that witness has no row for it (the witness's own answer then
+  decides). A row without a receipt, permanent or not, now holds every later
+  checkpoint for that witness. A permanent row stops delivery to that witness,
+  and nothing clears it automatically: an operator writes the row back as not
+  permanent with `commitWitness` (see "Held and permanent witness rows" in
+  `docs/backend-contract.md`). A witness that is already ahead of the held
+  checkpoint is not detected. `RunOnce` now reads at most `limit` due rows per
+  witness (before: `limit` rows in total), so one witness's backlog no longer
+  fills the page of the others (checkpointed-local-log#91). The TypeScript
+  runner is unchanged. The runners no longer read rows of a witness they have
+  no client for; before, such a row ended the Go `Run` loop with an `invalid`
+  error.
+- `runner-conformance-vectors`: a `runCheckpoint` step may name `witnessIds`,
+  the witnesses that get that pass's rows, so a case can add a witness late;
+  new case `witness/chain-order-no-predecessor-row`.
 
 ## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
 
