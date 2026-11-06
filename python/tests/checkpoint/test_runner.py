@@ -305,6 +305,43 @@ def test_a_stored_checkpoint_that_fails_verification_is_permanent_without_submit
     assert store.load_cll().witnesses[0].permanent
 
 
+def test_chain_order_holds_a_row_behind_its_predecessor_but_sends_one_without_a_predecessor_row():
+    # Witness "a" has rows for checkpoints 1 and 2; "b" joined after checkpoint 1,
+    # so its only row (checkpoint 2, prev_size 1) has no predecessor row.
+    store = _store(0)
+    signer = _signer()
+    for byte, ids in enumerate((("a",), ("a", "b")), start=1):
+        store.append(AppendInput(bytes([byte]) * 32, T0))
+        runner = CheckpointRunner(store, signer, "log", witness_ids=ids, cadence_entries=1)
+        assert runner.run_once(T0)
+    rows = store.load_cll().witnesses
+    assert [row.witness_id for row in rows] == ["a", "a", "b"]
+    assert rows[0].checkpoint_size < rows[1].checkpoint_size == rows[2].checkpoint_size
+
+    a_client, b_client = _Fixed(ContentionError("busy")), _Fixed(RECEIPT)
+
+    def run(a_outcome, at):
+        a_client.outcome = a_outcome
+        runner = WitnessDeliveryRunner(
+            store,
+            {"a": a_client, "b": b_client},
+            {"a": _Fixed(None), "b": _Fixed(None)},
+            jitter=False,
+        )
+        return runner.run_once(at)
+
+    # a/1 fails retryably; b/2 has no predecessor row, so it is sent.
+    assert run(ContentionError("busy"), T0) == 1
+    assert (a_client.calls, b_client.calls) == (1, 1)
+    # Inside a/1's backoff only a/2 is due, and it is held: nothing is sent.
+    assert run(ContentionError("busy"), T0 + timedelta(milliseconds=500)) == 0
+    assert a_client.calls == 1
+    # Once a/1 succeeds, a/2 follows in the same pass.
+    assert run(RECEIPT, T0 + timedelta(seconds=2)) == 2
+    assert a_client.calls == 3
+    assert all(row.receipt is not None for row in store.load_cll().witnesses)
+
+
 def test_last_error_is_bounded_valid_utf8():
     store, _, _ = _checkpointed()
     _delivery(store, _Fixed(ContentionError("é" * MAX_REASON_BYTES + "\ud800"))).run_once(T0)

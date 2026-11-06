@@ -33,6 +33,12 @@ func deliver(offset time.Duration, submit map[string][]Outcome, verify map[strin
 	return Step{Op: "deliverWitnesses", Now: at(offset), Limit: 32, Submit: submit, Verify: verify}
 }
 
+func deliverLimit(offset time.Duration, limit int, submit map[string][]Outcome, verify map[string][]bool) Step {
+	step := deliver(offset, submit, verify)
+	step.Limit = limit
+	return step
+}
+
 func receipt(label string, leaf int64) Outcome {
 	return Outcome{Receipt: &Receipt{
 		Bytes:           base64.StdEncoding.EncodeToString([]byte("receipt " + label)),
@@ -177,6 +183,20 @@ func scenarios() []Case {
 					"w-b": {receipt("w-b 1", 0), receipt("w-b 2", 1), receipt("w-b 3", 2)},
 				}, map[string][]bool{"w-b": {true, true, true}}), load()),
 				one(deliver(60*second, nil, nil), load()),
+			),
+		},
+		{
+			Name: "witness/chain-order-limit-per-witness",
+			Description: "A delivery pass reads at most limit due rows per witness: a witness whose due rows are all " +
+				"held behind a permanent row does not use up the page of the others.",
+			Requires: []string{"chain-order"},
+			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a", "w-b"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
+			Steps: steps(
+				one(appendStep(1, 0), checkpointStep(10*second)),
+				one(deliverLimit(10*second, 1, map[string][]Outcome{"w-a": {permanent}, "w-b": {receipt("w-b 1", 0)}}, map[string][]bool{"w-b": {true}})),
+				one(appendStep(2, 11*second), checkpointStep(12*second), appendStep(3, 13*second), checkpointStep(14*second)),
+				one(deliverLimit(14*second, 1, map[string][]Outcome{"w-b": {receipt("w-b 2", 1)}}, map[string][]bool{"w-b": {true}}), load()),
+				one(deliverLimit(15*second, 1, map[string][]Outcome{"w-b": {receipt("w-b 3", 2)}}, map[string][]bool{"w-b": {true}}), load()),
 			),
 		},
 	}

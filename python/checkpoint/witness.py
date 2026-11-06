@@ -305,7 +305,9 @@ class WitnessDeliveryRunner:
     and ``Verifier``. Each pass handles witnesses concurrently and one
     witness's rows in order. A failed delivery is retried after
     ``base_backoff`` doubled per earlier attempt, capped at ``max_backoff``,
-    and drawn uniformly below that when ``jitter`` is set.
+    and drawn uniformly below that when ``jitter`` is set. A row of a witness
+    whose predecessor row (its ``prev_size``) has no receipt, permanent or not,
+    is held, so a permanent row stops all later checkpoints for that witness.
     """
 
     def __init__(
@@ -360,8 +362,8 @@ class WitnessDeliveryRunner:
             self._wake.clear()
 
     def run_once(self, now: datetime | None = None, limit: int = MAX_WITNESSES) -> int:
-        """Deliver the rows due at ``now``, at most ``limit``. Returns the
-        number that received a verified receipt."""
+        """Deliver the rows due at ``now``, at most ``limit`` per witness.
+        Returns the number that received a verified receipt."""
         with self._lock:
             now = normalize_time(datetime.now(timezone.utc) if now is None else now)
             groups: dict = {}

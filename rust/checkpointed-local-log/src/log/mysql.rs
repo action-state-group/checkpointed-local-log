@@ -242,15 +242,33 @@ fn witness_rows(conn: &mut impl Queryable, log_id: &str) -> Result<Vec<WitnessRo
         "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
         (log_id,),
     )?;
-    Ok(rows
-        .into_iter()
+    Ok(witness_row_values(rows))
+}
+
+/// The rows of one witness, served by the primary key
+/// `(log_id, witness_id, checkpoint_size)`.
+fn witness_rows_for(
+    conn: &mut impl Queryable,
+    log_id: &str,
+    witness_id: &str,
+) -> Result<Vec<WitnessRow>> {
+    let rows: Vec<(String, String, i64, Vec<u8>)> = all(
+        conn,
+        "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? ORDER BY checkpoint_size,witness_id",
+        (log_id, witness_id),
+    )?;
+    Ok(witness_row_values(rows))
+}
+
+fn witness_row_values(rows: Vec<(String, String, i64, Vec<u8>)>) -> Vec<WitnessRow> {
+    rows.into_iter()
         .map(|(witness_id, checkpoint_size, attempts, json)| WitnessRow {
             witness_id,
             checkpoint_size,
             attempts,
             json,
         })
-        .collect())
+        .collect()
 }
 
 fn load_state(conn: &mut impl Queryable, log_id: &str, metadata: Option<Vec<u8>>) -> Result<State> {
@@ -507,7 +525,7 @@ impl WitnessStateStore for MysqlStore {
     ) -> Result<Vec<WitnessState>> {
         self.read(|conn, log_id| {
             engine::validate_pending_query_for(witness_id, now, limit)?;
-            let rows = sql::witnesses_from_rows(&witness_rows(conn, log_id)?)?;
+            let rows = sql::witnesses_from_rows(&witness_rows_for(conn, log_id, witness_id)?)?;
             engine::pending_witnesses_for(&rows, witness_id, now, limit)
         })
     }

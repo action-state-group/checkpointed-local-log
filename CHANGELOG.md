@@ -19,7 +19,9 @@ are documented here. The format follows
   witness only once that witness's row for the checkpoint's `prev_size` has a
   receipt (or has no row), and `RunOnce` now reads at most `limit` due rows per
   witness, so one witness's backlog no longer fills the page of the others
-  (checkpointed-local-log#91). The TypeScript runner is unchanged.
+  (checkpointed-local-log#91). The TypeScript runner is unchanged. The delivery
+  runners no longer read rows of a witness they have no client for; before,
+  such a row ended the Go `Run` loop with an `invalid` error.
 
 ## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
 
