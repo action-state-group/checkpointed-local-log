@@ -33,6 +33,7 @@ from .engine import (
     check_append,
     check_expected_attempts,
     check_pending,
+    check_pending_for,
     check_scan,
     check_value,
     check_witness_key,
@@ -108,12 +109,20 @@ def validate_entries(cursor: Any, log_id: str, width_function: str) -> None:
         expected += 1
 
 
-def load_witnesses(cursor: Any, log_id: str) -> tuple:
-    cursor.execute(
-        "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? "
-        "ORDER BY checkpoint_size,witness_id",
-        (log_id,),
-    )
+def load_witnesses(cursor: Any, log_id: str, witness_id: str | None = None) -> tuple:
+    """All witness rows of the log, or only ``witness_id``'s (primary-key range)."""
+    if witness_id is None:
+        cursor.execute(
+            "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? "
+            "ORDER BY checkpoint_size,witness_id",
+            (log_id,),
+        )
+    else:
+        cursor.execute(
+            "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? "
+            "ORDER BY checkpoint_size,witness_id",
+            (log_id, witness_id),
+        )
     rows = tuple(witness_from_row(*row) for row in cursor.fetchall())
     keys = {witness_key(row.witness_id, row.checkpoint_size) for row in rows}
     if len(keys) != len(rows):
@@ -233,6 +242,11 @@ def commit_cll(cursor: Any, log_id: str, expected_size: int, expected_checkpoint
 def pending_witnesses(cursor: Any, log_id: str, now: Any, limit: int) -> list:
     now = check_pending(now, limit)
     return pending(load_witnesses(cursor, log_id), now, limit)
+
+
+def pending_witnesses_for(cursor: Any, log_id: str, witness_id: str, now: Any, limit: int) -> list:
+    now = check_pending_for(witness_id, now, limit)
+    return pending(load_witnesses(cursor, log_id, witness_id), now, limit, witness_id)
 
 
 def get_witness(cursor: Any, log_id: str, witness_id: str, checkpoint_size: int) -> WitnessState | None:

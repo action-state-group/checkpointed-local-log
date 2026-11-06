@@ -24,7 +24,7 @@ const VECTORS: &str = include_str!(concat!(
 ));
 
 /// What this implementation offers of the document's `capabilities`.
-const CAPABILITIES: &[&str] = &["bounded-run", "stop-after-retryable"];
+const CAPABILITIES: &[&str] = &["bounded-run", "chain-order", "stop-after-retryable"];
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -277,6 +277,25 @@ func (e *Engine) PendingWitnesses(now time.Time, limit int) ([]cll.WitnessState,
 	return result, nil
 }
 
+// PendingWitnessesFor is PendingWitnesses restricted to one witness, so a
+// witness with a long backlog cannot fill the page of the others.
+func (e *Engine) PendingWitnessesFor(id string, now time.Time, limit int) ([]cll.WitnessState, error) {
+	if cll.ValidateIdentifier(id) != nil || portable.ValidateTime(now) != nil || limit < 1 || limit > cll.MaxWitnesses {
+		return nil, fmt.Errorf("%w: invalid pending witness query", cll.ErrInvalid)
+	}
+	result := make([]cll.WitnessState, 0)
+	for _, witness := range e.state.Witnesses {
+		if witness.WitnessID == id && witness.Receipt == nil && !witness.Permanent && !witness.NextAttemptAt.After(now) {
+			result = append(result, CloneWitness(witness))
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].CheckpointSize < result[j].CheckpointSize })
+	if len(result) > limit {
+		result = result[:limit]
+	}
+	return result, nil
+}
+
 func (e *Engine) GetWitness(id string, size uint64) (cll.WitnessState, error) {
 	if cll.ValidateIdentifier(id) != nil || size == 0 {
 		return cll.WitnessState{}, fmt.Errorf("%w: invalid witness key", cll.ErrInvalid)

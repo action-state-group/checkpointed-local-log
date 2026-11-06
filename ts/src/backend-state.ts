@@ -195,6 +195,34 @@ export function selectPendingWitnesses(
   return state.pendingWitnesses(now, limit);
 }
 
+/** Validate a per-witness pending query; SQL stores call it before reading. */
+export function checkPendingWitnessesFor(
+  witnessId: string,
+  now: Date,
+  limit: number,
+): void {
+  validateIdentifier(witnessId);
+  if (
+    !validTime(now) ||
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > limits.witnesses
+  )
+    throw new CllError("invalid", "invalid pending witness query");
+}
+
+/** Select one witness's due rows through the same rules as in-memory backends. */
+export function selectPendingWitnessesFor(
+  witnesses: readonly WitnessState[],
+  witnessId: string,
+  now: Date,
+  limit: number,
+): readonly WitnessState[] {
+  checkPendingWitnessesFor(witnessId, now, limit);
+  const state = new BackendState(emptyCll(witnesses));
+  return state.pendingWitnessesFor(witnessId, now, limit);
+}
+
 /** Apply one witness compare-and-set transition without loading unrelated rows. */
 export function applyWitness(
   current: WitnessState,
@@ -377,6 +405,25 @@ export class BackendState {
     return this.cll_.witnesses
       .filter(
         (item) =>
+          item.receipt === undefined &&
+          !item.permanent &&
+          item.nextAttemptAt <= now,
+      )
+      .sort(comparePending)
+      .slice(0, limit)
+      .map(cloneWitness);
+  }
+
+  public pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): readonly WitnessState[] {
+    checkPendingWitnessesFor(witnessId, now, limit);
+    return this.cll_.witnesses
+      .filter(
+        (item) =>
+          item.witnessId === witnessId &&
           item.receipt === undefined &&
           !item.permanent &&
           item.nextAttemptAt <= now,

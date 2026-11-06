@@ -8,7 +8,9 @@
 //! is worth retrying ([`SubmitError::is_retryable`]: a transport failure or
 //! HTTP 408, 429 or 5xx). A retryable failure backs the row off and ends
 //! that witness's pass; a permanent one, or a receipt the [`Verifier`]
-//! refuses, marks the row permanent.
+//! refuses, marks the row permanent. A row whose predecessor (the witness's
+//! row for the checkpoint's `prev_size`) exists without a receipt is held:
+//! that witness's pass ends with no submit and no state change.
 //!
 //! This crate has no SCITT receipt verifier yet: the host supplies the
 //! [`Verifier`] that checks each receipt under the witness's pinned
@@ -200,19 +202,22 @@ impl<B: WitnessStateStore + Send + Sync + ?Sized> DeliveryRunner<B> {
         Ok(())
     }
 
-    /// Delivers the rows due at `now`, at most `limit`
+    /// Delivers the rows due at `now`, at most `limit` per witness
     /// (1..=[`MAX_WITNESSES`]). Returns the number that received a verified
     /// receipt. A store error stops that witness's pass; the first one is
-    /// returned once every witness's pass has ended.
+    /// returned once every witness's pass has ended. A row is released to a
+    /// witness only when that witness's row for the checkpoint's `prev_size`
+    /// has a receipt (or there is no such row, and the witness's own answer
+    /// decides); until then that witness's pass stops, so a held row never
+    /// starves the other witnesses.
     pub fn run_once(&self, now: Timestamp, limit: usize) -> Result<usize> {
         let _guard = self.lock.lock().unwrap_or_else(|e| e.into_inner());
         let mut groups: BTreeMap<&str, Vec<WitnessState>> = BTreeMap::new();
-        let pending = self.store.pending_witnesses(now, limit)?;
-        for item in &pending {
-            groups
-                .entry(item.witness_id.as_str())
-                .or_default()
-                .push(item.clone());
+        for id in self.clients.keys() {
+            let items = self.store.pending_witnesses_for(id, now, limit)?;
+            if !items.is_empty() {
+                groups.insert(id.as_str(), items);
+            }
         }
         let outcomes: Vec<(usize, Option<Error>)> = std::thread::scope(|scope| {
             let handles: Vec<_> = groups
@@ -258,7 +263,9 @@ impl<B: WitnessStateStore + Send + Sync + ?Sized> DeliveryRunner<B> {
         (completed, None)
     }
 
-    /// One row: `(verified receipt, retryable failure)`.
+    /// One row: `(verified receipt, stop this witness's pass)`. The pass stops
+    /// after a retryable failure, or while the row's predecessor on this
+    /// witness has no receipt (a hold changes no state).
     fn deliver(&self, now: Timestamp, item: WitnessState) -> Result<(bool, bool)> {
         let (Some(client), Some(verifier)) = (
             self.clients.get(&item.witness_id),
@@ -269,9 +276,22 @@ impl<B: WitnessStateStore + Send + Sync + ?Sized> DeliveryRunner<B> {
                 item.witness_id
             )));
         };
-        if !verify_checkpoint_cose_offline(&item.checkpoint).ok {
+        let decoded = Some(verify_checkpoint_cose_offline(&item.checkpoint))
+            .filter(|v| v.ok)
+            .and_then(|v| v.decoded);
+        let Some(decoded) = decoded else {
             self.fail(now, item, true, "stored checkpoint failed verification")?;
             return Ok((false, false));
+        };
+        if decoded.prev_size > 0 {
+            if let Some(predecessor) = self
+                .store
+                .get_witness(&item.witness_id, decoded.prev_size)?
+            {
+                if predecessor.receipt.is_none() {
+                    return Ok((false, true));
+                }
+            }
         }
         let receipt = match client.submit(&item.checkpoint) {
             Ok(receipt) => receipt,
@@ -804,6 +824,20 @@ mod tests {
             Ok(vec![self.0.lock().unwrap().clone()])
         }
 
+        fn pending_witnesses_for(
+            &self,
+            w: &str,
+            _: Timestamp,
+            _: usize,
+        ) -> Result<Vec<WitnessState>> {
+            let row = self.0.lock().unwrap().clone();
+            Ok(if row.witness_id == w {
+                vec![row]
+            } else {
+                Vec::new()
+            })
+        }
+
         fn get_witness(&self, _: &str, _: u64) -> Result<Option<WitnessState>> {
             Ok(Some(self.0.lock().unwrap().clone()))
         }
@@ -903,6 +937,111 @@ mod tests {
         assert_eq!(failing.1.load(Ordering::SeqCst), 1);
         assert_eq!(store.get_witness("w-a", 1).unwrap().unwrap().attempts, 1);
         assert_eq!(store.get_witness("w-a", 3).unwrap().unwrap().attempts, 0);
+    }
+
+    /// Mirrors Go `TestDeliveryRunnerChainOrder`: "a" has rows for checkpoints
+    /// 1 and 3 (the second checkpoint's MMR size); "b" joined after checkpoint 1, so its checkpoint-2 row has a
+    /// `prev_size` of 1 with no row to wait on and is sent, while "a"'s second
+    /// row is held until its first has a receipt.
+    #[test]
+    fn chain_order_holds_behind_a_predecessor_but_not_behind_no_row() {
+        use std::sync::atomic::AtomicBool;
+
+        struct Counting(Arc<AtomicUsize>, Arc<AtomicBool>);
+        impl Submitter for Counting {
+            fn submit(&self, _: &[u8]) -> std::result::Result<Receipt, SubmitError> {
+                self.0.fetch_add(1, Ordering::SeqCst);
+                if self.1.load(Ordering::SeqCst) {
+                    Err(SubmitError::Http {
+                        status: 429,
+                        body: String::new(),
+                    })
+                } else {
+                    receipt()
+                }
+            }
+        }
+
+        let t0 = at("2026-10-01T12:00:00.000Z");
+        let store = Arc::new(MemoryStore::new());
+        let checkpoint_with = |value: u8, witnesses: &[&str]| {
+            store
+                .append(&AppendInput {
+                    value: vec![value; 32],
+                    appended_at: t0,
+                })
+                .unwrap();
+            let config = RunnerConfig {
+                cadence_entries: 1,
+                witness_ids: witnesses.iter().map(|w| w.to_string()).collect(),
+                ..RunnerConfig::new("unit-log")
+            };
+            CheckpointRunner::new(config, store.clone(), SigningKey::from_bytes(&[7; 32]))
+                .unwrap()
+                .run_once(t0)
+                .unwrap();
+        };
+        checkpoint_with(1, &["a"]);
+        checkpoint_with(2, &["a", "b"]);
+        assert!(store.get_witness("b", 1).unwrap().is_none());
+        assert!(store.get_witness("b", 3).unwrap().is_some());
+
+        let (a_calls, b_calls) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
+        let a_fails = Arc::new(AtomicBool::new(true));
+        let clients: HashMap<String, Box<dyn Submitter>> = HashMap::from([
+            (
+                "a".to_string(),
+                Box::new(Counting(a_calls.clone(), a_fails.clone())) as _,
+            ),
+            (
+                "b".to_string(),
+                Box::new(Counting(b_calls.clone(), Arc::new(AtomicBool::new(false)))) as _,
+            ),
+        ]);
+        let verifiers: HashMap<String, Box<dyn Verifier>> = HashMap::from([
+            ("a".to_string(), Box::new(Accept(true)) as _),
+            ("b".to_string(), Box::new(Accept(true)) as _),
+        ]);
+        let runner = DeliveryRunner::new(no_jitter(), store.clone(), clients, verifiers).unwrap();
+
+        // "a"'s first row fails retryably; "b" has no predecessor row, so its row is sent.
+        assert_eq!(runner.run_once(t0, 32).unwrap(), 1);
+        assert_eq!(a_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(b_calls.load(Ordering::SeqCst), 1);
+        assert!(store
+            .get_witness("b", 3)
+            .unwrap()
+            .unwrap()
+            .receipt
+            .is_some());
+        // Inside "a"'s backoff its second row is due but held, not sent.
+        assert_eq!(
+            runner.run_once(at("2026-10-01T12:00:00.500Z"), 32).unwrap(),
+            0
+        );
+        assert_eq!(a_calls.load(Ordering::SeqCst), 1);
+        assert!(store
+            .get_witness("a", 3)
+            .unwrap()
+            .unwrap()
+            .receipt
+            .is_none());
+        // Once the first succeeds, the second follows in the same pass.
+        a_fails.store(false, Ordering::SeqCst);
+        assert_eq!(
+            runner.run_once(at("2026-10-01T12:00:02.000Z"), 32).unwrap(),
+            2
+        );
+        assert_eq!(a_calls.load(Ordering::SeqCst), 3);
+        assert_eq!(b_calls.load(Ordering::SeqCst), 1);
+        for (witness, size) in [("a", 1), ("a", 3), ("b", 3)] {
+            assert!(store
+                .get_witness(witness, size)
+                .unwrap()
+                .unwrap()
+                .receipt
+                .is_some());
+        }
     }
 
     #[test]

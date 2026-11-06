@@ -267,6 +267,10 @@ class JsonlStore:
         with self._lock:
             return self._read().pending_witnesses(now, limit)
 
+    def pending_witnesses_for(self, witness_id: str, now: datetime, limit: int) -> list:
+        with self._lock:
+            return self._read().pending_witnesses_for(witness_id, now, limit)
+
     def get_witness(self, witness_id: str, checkpoint_size: int) -> WitnessState | None:
         with self._lock:
             return self._read().get_witness(witness_id, checkpoint_size)

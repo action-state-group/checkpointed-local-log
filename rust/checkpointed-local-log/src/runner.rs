@@ -727,6 +727,15 @@ mod tests {
     }
 
     impl WitnessStateStore for Tampered {
+        fn pending_witnesses_for(
+            &self,
+            _: &str,
+            _: Timestamp,
+            _: usize,
+        ) -> Result<Vec<WitnessState>> {
+            Ok(Vec::new())
+        }
+
         fn pending_witnesses(&self, _: Timestamp, _: usize) -> Result<Vec<WitnessState>> {
             Ok(Vec::new())
         }
@@ -813,6 +822,14 @@ mod tests {
             fn pending_witnesses(&self, n: Timestamp, l: usize) -> Result<Vec<WitnessState>> {
                 self.0.pending_witnesses(n, l)
             }
+            fn pending_witnesses_for(
+                &self,
+                w: &str,
+                n: Timestamp,
+                l: usize,
+            ) -> Result<Vec<WitnessState>> {
+                self.0.pending_witnesses_for(w, n, l)
+            }
             fn get_witness(&self, w: &str, s: u64) -> Result<Option<WitnessState>> {
                 self.0.get_witness(w, s)
             }
@@ -874,6 +891,14 @@ mod tests {
     impl WitnessStateStore for Racing {
         fn pending_witnesses(&self, n: Timestamp, l: usize) -> Result<Vec<WitnessState>> {
             self.inner.pending_witnesses(n, l)
+        }
+        fn pending_witnesses_for(
+            &self,
+            w: &str,
+            n: Timestamp,
+            l: usize,
+        ) -> Result<Vec<WitnessState>> {
+            self.inner.pending_witnesses_for(w, n, l)
         }
         fn get_witness(&self, w: &str, s: u64) -> Result<Option<WitnessState>> {
             self.inner.get_witness(w, s)

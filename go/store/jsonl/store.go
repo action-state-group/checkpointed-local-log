@@ -394,6 +394,18 @@ func (s *Store) PendingWitnesses(ctx context.Context, now time.Time, limit int) 
 	return s.engine.PendingWitnesses(now, limit)
 }
 
+func (s *Store) PendingWitnessesFor(ctx context.Context, witnessID string, now time.Time, limit int) ([]cll.WitnessState, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.closed {
+		return nil, cll.ErrClosed
+	}
+	return s.engine.PendingWitnessesFor(witnessID, now, limit)
+}
+
 func (s *Store) GetWitness(ctx context.Context, witnessID string, checkpointSize uint64) (cll.WitnessState, error) {
 	if err := ctx.Err(); err != nil {
 		return cll.WitnessState{}, err

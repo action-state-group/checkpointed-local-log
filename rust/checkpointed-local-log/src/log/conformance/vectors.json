@@ -5,7 +5,7 @@
  "interfaces": {
   "entries": "EntryStore: append, getEntry, scanEntries",
   "checkpoint": "CheckpointStateStore: loadCll, commitCll",
-  "witness": "WitnessStateStore: pendingWitnesses, getWitness, commitWitness",
+  "witness": "WitnessStateStore: pendingWitnesses, pendingWitnessesFor, getWitness, commitWitness",
   "count": "EntryCounter: entryCount",
   "close": "close"
  },
@@ -3049,6 +3049,197 @@
      "op": "pendingWitnesses",
      "now": "2026-09-01T12:00:00.000Z",
      "limit": 33,
+     "expect": {
+      "error": "invalid"
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/pending-for",
+   "description": "pendingWitnessesFor returns one witness's due rows without receipt or permanent failure by numeric size, at most limit, whatever the other witnesses have pending.",
+   "interfaces": [
+    "checkpoint",
+    "witness"
+   ],
+   "steps": [
+    {
+     "op": "commitCll",
+     "expectedSize": "0",
+     "next": {
+      "size": "1",
+      "indexedSeq": "1",
+      "nodes": [
+       "MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA="
+      ],
+      "witnesses": [
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "10",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "3",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false,
+        "receipt": "cmVjZWlwdA=="
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "4",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": true
+       },
+       {
+        "witnessId": "beta",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     },
+     "expect": {
+      "result": null
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "alpha",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       },
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "10",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "alpha",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 1,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "9",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "alpha",
+     "now": "2026-09-01T13:00:00.000Z",
+     "limit": 1,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "alpha",
+        "checkpointSize": "2",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T13:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "beta",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": [
+       {
+        "witnessId": "beta",
+        "checkpointSize": "1",
+        "checkpoint": "Y2hlY2twb2ludC0x",
+        "attempts": 0,
+        "nextAttemptAt": "2026-09-01T12:00:00.000Z",
+        "permanent": false
+       }
+      ]
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "gamma",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 32,
+     "expect": {
+      "result": []
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "alpha",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 0,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "alpha",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 33,
+     "expect": {
+      "error": "invalid"
+     }
+    },
+    {
+     "op": "pendingWitnessesFor",
+     "witnessId": "",
+     "now": "2026-09-01T12:00:00.000Z",
+     "limit": 1,
      "expect": {
       "error": "invalid"
      }

@@ -9,7 +9,7 @@ use cll::log::{
 };
 use std::sync::Mutex;
 
-const CASES: usize = 26;
+const CASES: usize = 27;
 
 fn check(report: &Report, passed: usize) {
     report.assert_ok();

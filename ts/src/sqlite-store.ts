@@ -4,6 +4,8 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  checkPendingWitnessesFor,
+  selectPendingWitnessesFor,
   validateWitness,
   validateWitnessKey,
   validateAppendInput,
@@ -219,13 +221,20 @@ export class SqliteStore implements CllBackend, EntryCounter {
     );
   }
 
-  private witnessRows(): SqlWitnessRow[] {
-    const rows = this.db
-      .prepare(
-        "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
-      )
-      .all(this.logId) as SqlWitnessRow[];
-    return rows;
+  private witnessRows(witnessId?: string): SqlWitnessRow[] {
+    const rows =
+      witnessId === undefined
+        ? this.db
+            .prepare(
+              "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
+            )
+            .all(this.logId)
+        : this.db
+            .prepare(
+              "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? ORDER BY checkpoint_size,witness_id",
+            )
+            .all(this.logId, witnessId);
+    return rows as SqlWitnessRow[];
   }
 
   public append(input: AppendInput): Promise<AppendResult> {
@@ -367,6 +376,22 @@ export class SqliteStore implements CllBackend, EntryCounter {
         limit,
       ),
     );
+  }
+
+  public pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]> {
+    return this.read(() => {
+      checkPendingWitnessesFor(witnessId, now, limit);
+      return selectPendingWitnessesFor(
+        this.witnessRows(witnessId).map(witnessFromSqlRow),
+        witnessId,
+        now,
+        limit,
+      );
+    });
   }
 
   public getWitness(

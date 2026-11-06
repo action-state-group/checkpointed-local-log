@@ -181,6 +181,10 @@ class SqliteStore:
         with self._read() as cursor:
             return sql.pending_witnesses(cursor, self._log_id, now, limit)
 
+    def pending_witnesses_for(self, witness_id: str, now: datetime, limit: int) -> list:
+        with self._read() as cursor:
+            return sql.pending_witnesses_for(cursor, self._log_id, witness_id, now, limit)
+
     def get_witness(self, witness_id: str, checkpoint_size: int) -> WitnessState | None:
         with self._read() as cursor:
             return sql.get_witness(cursor, self._log_id, witness_id, checkpoint_size)

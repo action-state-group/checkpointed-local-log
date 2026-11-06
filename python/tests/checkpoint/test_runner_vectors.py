@@ -26,7 +26,7 @@ from cll.log.wire import parse_time, state_to_wire
 
 ROOT = Path(__file__).parents[3]
 VECTORS = json.loads((ROOT / "runner-conformance-vectors" / "vectors.json").read_text())
-CAPABILITIES = {"bounded-run", "stop-after-retryable"}
+CAPABILITIES = {"bounded-run", "chain-order", "stop-after-retryable"}
 
 
 class _Script:

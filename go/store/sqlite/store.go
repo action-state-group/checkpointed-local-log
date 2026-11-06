@@ -287,15 +287,21 @@ func loadState(ctx context.Context, q queryer, logID string) (cll.State, error) 
 	if err := rows.Close(); err != nil {
 		return cll.State{}, err
 	}
-	wire.Witnesses, err = loadWireWitnesses(ctx, q, logID)
+	wire.Witnesses, err = loadWireWitnesses(ctx, q, logID, "")
 	if err != nil {
 		return cll.State{}, err
 	}
 	return backend.StateFromWire(wire)
 }
 
-func loadWireWitnesses(ctx context.Context, q queryer, logID string) ([]backend.WireWitness, error) {
-	rows, err := q.QueryContext(ctx, "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id", logID)
+// loadWireWitnesses reads the log's witness rows, or only witnessID's when it
+// is not empty (the primary key serves that prefix).
+func loadWireWitnesses(ctx context.Context, q queryer, logID, witnessID string) ([]backend.WireWitness, error) {
+	query, args := "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id", []any{logID}
+	if witnessID != "" {
+		query, args = "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? ORDER BY checkpoint_size", []any{logID, witnessID}
+	}
+	rows, err := q.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +510,7 @@ func (s *Store) CommitCLL(ctx context.Context, expectedSize uint64, expectedChec
 
 func (s *Store) PendingWitnesses(ctx context.Context, now time.Time, limit int) (result []cll.WitnessState, err error) {
 	err = s.withRead(ctx, func(q queryer) error {
-		witnesses, err := loadWireWitnesses(ctx, q, s.logID)
+		witnesses, err := loadWireWitnesses(ctx, q, s.logID, "")
 		if err != nil {
 			return err
 		}
@@ -517,6 +523,26 @@ func (s *Store) PendingWitnesses(ctx context.Context, now time.Time, limit int) 
 			return err
 		}
 		result, err = engine.PendingWitnesses(now, limit)
+		return err
+	})
+	return result, err
+}
+
+func (s *Store) PendingWitnessesFor(ctx context.Context, witnessID string, now time.Time, limit int) (result []cll.WitnessState, err error) {
+	err = s.withRead(ctx, func(q queryer) error {
+		witnesses, err := loadWireWitnesses(ctx, q, s.logID, witnessID)
+		if err != nil {
+			return err
+		}
+		state, err := backend.StateFromWire(backend.WireState{Size: "0", IndexedSeq: "0", Nodes: []string{}, Witnesses: witnesses})
+		if err != nil {
+			return err
+		}
+		engine := backend.New()
+		if err := engine.Replace(nil, state); err != nil {
+			return err
+		}
+		result, err = engine.PendingWitnessesFor(witnessID, now, limit)
 		return err
 	})
 	return result, err

@@ -5,6 +5,24 @@ are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [Semantic Versioning](https://semver.org/) once it reaches 1.0.
 
+## Unreleased
+
+### Added
+
+- `WitnessStateStore.pendingWitnessesFor(witnessId, now, limit)` in the Go,
+  Rust, Python and TypeScript backend contracts, with backend conformance
+  vectors. Backends implementing the store trait must add it.
+
+### Changed
+
+- The Go, Rust and Python witness delivery runners release a checkpoint to a
+  witness only once that witness's row for the checkpoint's `prev_size` has a
+  receipt (or has no row), and `RunOnce` now reads at most `limit` due rows per
+  witness, so one witness's backlog no longer fills the page of the others
+  (checkpointed-local-log#91). The TypeScript runner is unchanged. The delivery
+  runners no longer read rows of a witness they have no client for; before,
+  such a row ended the Go `Run` loop with an `invalid` error.
+
 ## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
 
 ### Added

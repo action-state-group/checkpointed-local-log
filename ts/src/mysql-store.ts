@@ -8,6 +8,8 @@ import {
   applyCll,
   applyWitness,
   selectPendingWitnesses,
+  checkPendingWitnessesFor,
+  selectPendingWitnessesFor,
   validateWitness,
   validateWitnessKey,
   validateAppendInput,
@@ -249,11 +251,18 @@ export class MysqlStore implements CllBackend, EntryCounter {
 
   private async witnessRows(
     query: Pool | PoolConnection,
+    witnessId?: string,
   ): Promise<SqlWitnessRow[]> {
-    const [rows] = await query.execute(
-      "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
-      [this.logId],
-    );
+    const [rows] =
+      witnessId === undefined
+        ? await query.execute(
+            "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
+            [this.logId],
+          )
+        : await query.execute(
+            "SELECT witness_id AS witnessId,checkpoint_size AS checkpointSize,attempts,witness FROM cll_witnesses WHERE log_id=? AND witness_id=? ORDER BY checkpoint_size,witness_id",
+            [this.logId, witnessId],
+          );
     return rows as SqlWitnessRow[];
   }
 
@@ -401,6 +410,22 @@ export class MysqlStore implements CllBackend, EntryCounter {
         limit,
       ),
     );
+  }
+
+  public pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]> {
+    return this.read(async (query) => {
+      checkPendingWitnessesFor(witnessId, now, limit);
+      return selectPendingWitnessesFor(
+        (await this.witnessRows(query, witnessId)).map(witnessFromSqlRow),
+        witnessId,
+        now,
+        limit,
+      );
+    });
   }
 
   public getWitness(

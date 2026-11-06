@@ -221,6 +221,14 @@ if err != nil {
 _, err = delivery.RunOnce(ctx, time.Now().UTC(), cll.MaxWitnesses)
 ```
 
+`RunOnce` delivers a witness's checkpoints in chain order, reading at most
+`limit` due rows per witness: a checkpoint is sent only once that witness's
+row for the checkpoint's `prev_size` has a receipt (or the witness has no such
+row). A row without a receipt, permanent or not, holds every later checkpoint
+for that witness, so a stalled witness shows as one permanent row and rows
+behind it with no attempts. Rows of a witness the runner has no client for are
+not read.
+
 `witness.NewSCRAPIClient` is a `Submitter` for a SCITT Transparency Service
 (`POST /entries`, draft-ietf-scitt-scrapi). It sends the checkpoint's COSE
 statement octets exactly as signed, so its Receipt's leaf entry is SHA-256 of

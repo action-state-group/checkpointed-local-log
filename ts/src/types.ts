@@ -96,6 +96,15 @@ export interface CheckpointStateStore {
 
 export interface WitnessStateStore {
   pendingWitnesses(now: Date, limit: number): Promise<readonly WitnessState[]>;
+  /**
+   * `pendingWitnesses` restricted to one witness, so a witness with a long
+   * backlog cannot fill the page of the others.
+   */
+  pendingWitnessesFor(
+    witnessId: string,
+    now: Date,
+    limit: number,
+  ): Promise<readonly WitnessState[]>;
   /** Resolves `undefined` for an absent key: the contract's `not_found`. */
   getWitness(
     witnessId: string,

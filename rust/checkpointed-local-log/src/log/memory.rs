@@ -93,6 +93,17 @@ impl WitnessStateStore for MemoryStore {
         self.open()?.engine.pending_witnesses(now, limit)
     }
 
+    fn pending_witnesses_for(
+        &self,
+        witness_id: &str,
+        now: Timestamp,
+        limit: usize,
+    ) -> Result<Vec<WitnessState>> {
+        self.open()?
+            .engine
+            .pending_witnesses_for(witness_id, now, limit)
+    }
+
     fn get_witness(&self, witness_id: &str, checkpoint_size: u64) -> Result<Option<WitnessState>> {
         self.open()?.engine.get_witness(witness_id, checkpoint_size)
     }

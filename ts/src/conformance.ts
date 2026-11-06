@@ -71,7 +71,12 @@ interface Case {
 const operations: Record<string, readonly string[]> = {
   entries: ["append", "getEntry", "scanEntries"],
   checkpoint: ["loadCll", "commitCll"],
-  witness: ["pendingWitnesses", "getWitness", "commitWitness"],
+  witness: [
+    "pendingWitnesses",
+    "pendingWitnessesFor",
+    "getWitness",
+    "commitWitness",
+  ],
   count: ["entryCount"],
   close: ["close"],
 };
@@ -189,6 +194,14 @@ async function execute(
     case "pendingWitnesses":
       return (
         await witnesses.pendingWitnesses(
+          new Date(step["now"] as string),
+          step["limit"] as number,
+        )
+      ).map((row) => toJson(witnessToWire(row)));
+    case "pendingWitnessesFor":
+      return (
+        await witnesses.pendingWitnessesFor(
+          step["witnessId"] as string,
           new Date(step["now"] as string),
           step["limit"] as number,
         )

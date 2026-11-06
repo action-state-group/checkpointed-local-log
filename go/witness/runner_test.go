@@ -186,3 +186,69 @@ func pendingStore(t *testing.T, witnessIDs []string) (*memory.Store, time.Time) 
 	require.NotEmpty(t, state.Witnesses)
 	return store, state.Witnesses[0].NextAttemptAt
 }
+
+type countingSubmitter struct {
+	receipt Receipt
+	err     error
+	calls   *int
+}
+
+func (c countingSubmitter) Submit(context.Context, []byte) (Receipt, error) {
+	*c.calls++
+	return c.receipt, c.err
+}
+
+func TestDeliveryRunnerChainOrder(t *testing.T) {
+	store := memory.New()
+	t.Cleanup(func() { require.NoError(t, store.Close()) })
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	_, private, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	signer, err := checkpoint.NewEd25519Signer(private)
+	require.NoError(t, err)
+	checkpointWith := func(value byte, witnessIDs []string) {
+		_, err := store.Append(t.Context(), cll.AppendInput{Value: bytes.Repeat([]byte{value}, cll.EntryBytes), AppendedAt: now})
+		require.NoError(t, err)
+		config := checkpoint.DefaultRunnerConfig("delivery-log")
+		config.Cadence.CadenceEntries = 1
+		config.WitnessIDs = witnessIDs
+		runner, err := checkpoint.NewRunner(config, store, signer)
+		require.NoError(t, err)
+		_, err = runner.RunOnce(t.Context(), now)
+		require.NoError(t, err)
+	}
+	// Witness "a" has rows for both checkpoints; "b" joined after the first,
+	// so it has no row for the second checkpoint's predecessor.
+	checkpointWith(1, []string{"a"})
+	checkpointWith(2, []string{"a", "b"})
+	receipt := Receipt{Bytes: []byte("receipt"), EntryHashScheme: EntryHashSchemeCheckpointDigest, TreeSize: 1}
+	var aCalls, bCalls int
+	aSubmit := countingSubmitter{err: &HTTPError{StatusCode: http.StatusTooManyRequests}, calls: &aCalls}
+	run := func(a countingSubmitter, at time.Time) int {
+		config := DefaultDeliveryConfig()
+		config.Jitter = false
+		runner, err := NewDeliveryRunner(config, store,
+			map[string]Submitter{"a": a, "b": countingSubmitter{receipt: receipt, calls: &bCalls}},
+			map[string]Verifier{"a": fakeVerifier{}, "b": fakeVerifier{}},
+		)
+		require.NoError(t, err)
+		completed, err := runner.RunOnce(t.Context(), at, 32)
+		require.NoError(t, err)
+		return completed
+	}
+	// The first checkpoint fails retryably for "a"; "b" has no predecessor row, so its row is sent.
+	require.Equal(t, 1, run(aSubmit, now))
+	require.Equal(t, 1, aCalls)
+	require.Equal(t, 1, bCalls)
+	// Still inside "a"'s backoff: its second checkpoint is due but held, and not sent.
+	require.Zero(t, run(aSubmit, now.Add(500*time.Millisecond)))
+	require.Equal(t, 1, aCalls)
+	// Once the first succeeds, the second follows in the same pass.
+	require.Equal(t, 2, run(countingSubmitter{receipt: receipt, calls: &aCalls}, now.Add(2*time.Second)))
+	require.Equal(t, 3, aCalls)
+	state, err := store.LoadCLL(t.Context())
+	require.NoError(t, err)
+	for _, item := range state.Witnesses {
+		require.NotNil(t, item.Receipt, "%s/%d", item.WitnessID, item.CheckpointSize)
+	}
+}

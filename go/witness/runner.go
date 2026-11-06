@@ -89,18 +89,24 @@ func (r *DeliveryRunner) Run(ctx context.Context) error {
 }
 
 // RunOnce processes due rows concurrently across witnesses and sequentially
-// within each witness. A retryable failure stops that witness's current pass.
+// within each witness, at most limit rows per witness. A retryable failure
+// stops that witness's current pass. A row is released to a witness only when
+// the witness's row for the checkpoint's prev_size has a receipt (or there is
+// no such row, and the witness's own answer decides); until then the witness's
+// pass stops, so a held row never starves the other witnesses.
 func (r *DeliveryRunner) RunOnce(ctx context.Context, now time.Time, limit int) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	now = portable.NormalizeTime(now)
-	pending, err := r.store.PendingWitnesses(ctx, now, limit)
-	if err != nil {
-		return 0, err
-	}
-	groups := make(map[string][]cll.WitnessState)
-	for _, item := range pending {
-		groups[item.WitnessID] = append(groups[item.WitnessID], item)
+	groups := make(map[string][]cll.WitnessState, len(r.clients))
+	for id := range r.clients {
+		items, err := r.store.PendingWitnessesFor(ctx, id, now, limit)
+		if err != nil {
+			return 0, err
+		}
+		if len(items) > 0 {
+			groups[id] = items
+		}
 	}
 	type outcome struct {
 		completed int
@@ -142,6 +148,9 @@ func (r *DeliveryRunner) RunOnce(ctx context.Context, now time.Time, limit int) 
 	return completed, nil
 }
 
+// deliver reports whether the row received a receipt and whether the
+// witness's pass must stop: after a retryable failure, or while the row's
+// predecessor on this witness has no receipt.
 func (r *DeliveryRunner) deliver(ctx context.Context, now time.Time, id string, item cll.WitnessState) (bool, bool, error) {
 	client, clientOK := r.clients[id]
 	verifier, verifierOK := r.verifiers[id]
@@ -152,6 +161,15 @@ func (r *DeliveryRunner) deliver(ctx context.Context, now time.Time, id string, 
 	if err != nil || record.VerifySignature() != nil {
 		next := failedWitness(item, now, true, "stored checkpoint failed verification", r.backoff(item.Attempts))
 		return false, false, r.store.CommitWitness(ctx, item.Attempts, next)
+	}
+	if record.PrevSize > 0 {
+		predecessor, err := r.store.GetWitness(ctx, id, record.PrevSize)
+		if err == nil && predecessor.Receipt == nil {
+			return false, true, nil
+		}
+		if err != nil && !errors.Is(err, cll.ErrNotFound) {
+			return false, false, err
+		}
 	}
 	receipt, err := client.Submit(ctx, item.Checkpoint)
 	if ctxErr := ctx.Err(); ctxErr != nil {

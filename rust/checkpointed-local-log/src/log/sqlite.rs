@@ -209,13 +209,29 @@ fn validate_entries(tx: &Transaction<'_>, log_id: &str) -> Result<()> {
 }
 
 fn witness_rows(tx: &Transaction<'_>, log_id: &str) -> Result<Vec<WitnessRow>> {
-    let mut statement = tx
-        .prepare(
-            "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=? ORDER BY checkpoint_size,witness_id",
-        )
-        .map_err(classify)?;
+    witness_rows_where(tx, log_id, None)
+}
+
+/// The witness rows of `log_id`, restricted to `witness_id` when given (served
+/// by the primary key `(log_id, witness_id, checkpoint_size)`).
+fn witness_rows_where(
+    tx: &Transaction<'_>,
+    log_id: &str,
+    witness_id: Option<&str>,
+) -> Result<Vec<WitnessRow>> {
+    // Two fixed statements, so the filtered one stays a plain primary-key range.
+    let sql = if witness_id.is_some() {
+        "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=?1 AND witness_id=?2 ORDER BY checkpoint_size,witness_id"
+    } else {
+        "SELECT witness_id,checkpoint_size,attempts,witness FROM cll_witnesses WHERE log_id=?1 ORDER BY checkpoint_size,witness_id"
+    };
+    let mut statement = tx.prepare(sql).map_err(classify)?;
+    let params: Vec<&dyn rusqlite::ToSql> = match &witness_id {
+        Some(id) => vec![&log_id, id],
+        None => vec![&log_id],
+    };
     let rows = statement
-        .query_map([log_id], |row| {
+        .query_map(params.as_slice(), |row| {
             Ok(WitnessRow {
                 witness_id: row.get(0)?,
                 checkpoint_size: row.get(1)?,
@@ -511,6 +527,20 @@ impl WitnessStateStore for SqliteStore {
             engine::validate_pending_query(now, limit)?;
             let rows = sql::witnesses_from_rows(&witness_rows(tx, log_id)?)?;
             engine::pending_witnesses(&rows, now, limit)
+        })
+    }
+
+    fn pending_witnesses_for(
+        &self,
+        witness_id: &str,
+        now: Timestamp,
+        limit: usize,
+    ) -> Result<Vec<WitnessState>> {
+        self.read(|tx, log_id| {
+            engine::validate_pending_query_for(witness_id, now, limit)?;
+            let rows =
+                sql::witnesses_from_rows(&witness_rows_where(tx, log_id, Some(witness_id))?)?;
+            engine::pending_witnesses_for(&rows, witness_id, now, limit)
         })
     }
 

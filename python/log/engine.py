@@ -153,6 +153,12 @@ def check_pending(now: object, limit: object) -> datetime:
     return normalize_time(now)
 
 
+def check_pending_for(witness_id: object, now: object, limit: object) -> datetime:
+    if not validate_identifier(witness_id):
+        raise InvalidError("invalid witness id")
+    return check_pending(now, limit)
+
+
 def check_expected_attempts(expected_attempts: object) -> None:
     if not _is_int(expected_attempts) or not 0 <= expected_attempts <= MAX_ATTEMPTS:
         raise InvalidError("expected_attempts is outside 0..4294967295")
@@ -411,10 +417,18 @@ def apply_witness(rows: Sequence[WitnessState], expected_attempts: object, next:
     raise ContentionError("witness state changed")
 
 
-def pending(rows: Sequence[WitnessState], now: datetime, limit: int) -> list:
+def pending(rows: Sequence[WitnessState], now: datetime, limit: int, witness_id: str | None = None) -> list:
     """Due rows without receipt or permanent failure, by numeric
-    ``checkpoint_size`` then ``witness_id`` byte order, at most ``limit``."""
-    due = [row for row in rows if row.receipt is None and not row.permanent and row.next_attempt_at <= now]
+    ``checkpoint_size`` then ``witness_id`` byte order, at most ``limit``;
+    only ``witness_id``'s rows when given."""
+    due = [
+        row
+        for row in rows
+        if row.receipt is None
+        and not row.permanent
+        and row.next_attempt_at <= now
+        and (witness_id is None or row.witness_id == witness_id)
+    ]
     due.sort(key=lambda row: (row.checkpoint_size, row.witness_id.encode("utf-8")))
     return due[:limit]
 
@@ -504,6 +518,10 @@ class Engine:
     def pending_witnesses(self, now: datetime, limit: int) -> list:
         now = check_pending(now, limit)
         return pending(self._state.witnesses, now, limit)
+
+    def pending_witnesses_for(self, witness_id: str, now: datetime, limit: int) -> list:
+        now = check_pending_for(witness_id, now, limit)
+        return pending(self._state.witnesses, now, limit, witness_id)
 
     def get_witness(self, witness_id: str, checkpoint_size: int) -> WitnessState | None:
         check_witness_key(witness_id, checkpoint_size)

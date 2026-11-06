@@ -157,6 +157,15 @@ impl Engine {
         pending_witnesses(&self.state.witnesses, now, limit)
     }
 
+    pub(crate) fn pending_witnesses_for(
+        &self,
+        witness_id: &str,
+        now: Timestamp,
+        limit: usize,
+    ) -> Result<Vec<WitnessState>> {
+        pending_witnesses_for(&self.state.witnesses, witness_id, now, limit)
+    }
+
     pub(crate) fn get_witness(
         &self,
         witness_id: &str,
@@ -406,6 +415,40 @@ pub(crate) fn pending_witnesses(
         (a.checkpoint_size, a.witness_id.as_bytes())
             .cmp(&(b.checkpoint_size, b.witness_id.as_bytes()))
     });
+    Ok(due.into_iter().take(limit).cloned().collect())
+}
+
+/// Validates `pendingWitnessesFor` arguments (the identifier too), with the
+/// same check order as [`validate_pending_query`].
+pub(crate) fn validate_pending_query_for(
+    witness_id: &str,
+    now: Timestamp,
+    limit: usize,
+) -> Result<()> {
+    if crate::log::validate_identifier(witness_id).is_err() {
+        return Err(Error::invalid("pending witness query is out of range"));
+    }
+    validate_pending_query(now, limit)
+}
+
+/// `pending_witnesses` restricted to one witness, ordered by checkpoint size.
+pub(crate) fn pending_witnesses_for(
+    rows: &[WitnessState],
+    witness_id: &str,
+    now: Timestamp,
+    limit: usize,
+) -> Result<Vec<WitnessState>> {
+    validate_pending_query_for(witness_id, now, limit)?;
+    let mut due: Vec<&WitnessState> = rows
+        .iter()
+        .filter(|row| {
+            row.witness_id == witness_id
+                && row.receipt.is_none()
+                && !row.permanent
+                && row.next_attempt_at <= now
+        })
+        .collect();
+    due.sort_by_key(|row| row.checkpoint_size);
     Ok(due.into_iter().take(limit).cloned().collect())
 }
 
