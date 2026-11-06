@@ -1150,7 +1150,7 @@
   },
   {
    "name": "witness/chain-order-held",
-   "description": "A checkpoint is not sent to a witness while the witness's row for its prev_size has no receipt, even once that row's retry is not yet due; both are delivered in order after the first succeeds.",
+   "description": "A checkpoint is not sent to a witness while that witness's row for its prev_size has no receipt, even when the checkpoint's own row is due and the predecessor's retry is not; once the predecessor succeeds, both are delivered in order.",
    "requires": [
     "chain-order"
    ],
@@ -1797,6 +1797,145 @@
          "leafIndex": 1,
          "treeSize": 2,
          "permanent": false
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  {
+   "name": "witness/chain-order-no-predecessor-row-refused",
+   "description": "A witness with no row for a checkpoint's prev_size is sent the checkpoint, and its refusal decides: the row becomes permanent with no receipt, while the other witness is delivered in order.",
+   "requires": [
+    "chain-order"
+   ],
+   "config": {
+    "cadenceEntries": 1,
+    "cadenceAgeMs": 3600000,
+    "scanLimit": 10,
+    "witnessIds": [
+     "w-a",
+     "w-b"
+    ],
+    "baseBackoffMs": 1000,
+    "maxBackoffMs": 4000
+   },
+   "steps": [
+    {
+     "op": "append",
+     "value": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=",
+     "appendedAt": "2026-10-01T12:00:00.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:10.000Z",
+     "witnessIds": [
+      "w-a"
+     ]
+    },
+    {
+     "op": "append",
+     "value": "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI=",
+     "appendedAt": "2026-10-01T12:00:11.000Z"
+    },
+    {
+     "op": "runCheckpoint",
+     "now": "2026-10-01T12:00:12.000Z"
+    },
+    {
+     "op": "deliverWitnesses",
+     "now": "2026-10-01T12:00:12.000Z",
+     "limit": 32,
+     "submit": {
+      "w-a": [
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1
+        }
+       },
+       {
+        "receipt": {
+         "bytes": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2
+        }
+       }
+      ],
+      "w-b": [
+       {
+        "error": "permanent"
+       }
+      ]
+     },
+     "verify": {
+      "w-a": [
+       true,
+       true
+      ]
+     },
+     "expect": {
+      "result": 2
+     }
+    },
+    {
+     "op": "loadCll",
+     "expect": {
+      "result": {
+       "size": "3",
+       "indexedSeq": "2",
+       "nodes": [
+        "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4=",
+        "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpointSize": "3",
+       "checkpointIndexedSeq": "2",
+       "checkpointPeaks": [
+        "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
+       ],
+       "witnesses": [
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "1",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMQ==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 0,
+         "treeSize": 1,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-a",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:12.000Z",
+         "receipt": "cmVjZWlwdCB3LWEgMg==",
+         "entryHash": "abababababababababababababababababababababababababababababababab",
+         "entryHashScheme": "legacy",
+         "leafIndex": 1,
+         "treeSize": 2,
+         "permanent": false
+        },
+        {
+         "witnessId": "w-b",
+         "checkpointSize": "3",
+         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "attempts": 1,
+         "nextAttemptAt": "2026-10-01T12:00:13.000Z",
+         "permanent": true,
+         "lastError": "\u003cset\u003e"
         }
        ]
       }

@@ -166,8 +166,9 @@ func scenarios() []Case {
 		},
 		{
 			Name: "witness/chain-order-held",
-			Description: "A checkpoint is not sent to a witness while the witness's row for its prev_size has no receipt, " +
-				"even once that row's retry is not yet due; both are delivered in order after the first succeeds.",
+			Description: "A checkpoint is not sent to a witness while that witness's row for its prev_size has no receipt, " +
+				"even when the checkpoint's own row is due and the predecessor's retry is not; once the predecessor " +
+				"succeeds, both are delivered in order.",
 			Requires: []string{"chain-order"},
 			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
 			Steps: steps(
@@ -205,6 +206,20 @@ func scenarios() []Case {
 					"w-a": {receipt("w-a 1", 0), receipt("w-a 2", 1)},
 					"w-b": {receipt("w-b 2", 1)},
 				}, map[string][]bool{"w-a": {true, true}, "w-b": {true}}), load()),
+			),
+		},
+		{
+			Name: "witness/chain-order-no-predecessor-row-refused",
+			Description: "A witness with no row for a checkpoint's prev_size is sent the checkpoint, and its refusal " +
+				"decides: the row becomes permanent with no receipt, while the other witness is delivered in order.",
+			Requires: []string{"chain-order"},
+			Config:   Config{CadenceEntries: 1, CadenceAgeMs: 3_600_000, ScanLimit: 10, WitnessIDs: []string{"w-a", "w-b"}, BaseBackoffMs: 1000, MaxBackoffMs: 4000},
+			Steps: steps(
+				one(appendStep(1, 0), checkpointStepFor(10*second, "w-a"), appendStep(2, 11*second), checkpointStep(12*second)),
+				one(deliver(12*second, map[string][]Outcome{
+					"w-a": {receipt("w-a 1", 0), receipt("w-a 2", 1)},
+					"w-b": {permanent},
+				}, map[string][]bool{"w-a": {true, true}}), load()),
 			),
 		},
 		{
