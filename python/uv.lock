@@ -9,11 +9,11 @@ resolution-markers = [
 
 [[package]]
 name = "agent-action-capsule"
-version = "0.6.0"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/6e/1f/49755f9afa84563780fb2022c80f5648fd614089f201999fef8df093f266/agent_action_capsule-0.6.0.tar.gz", hash = "sha256:f89089d5d159b47dab9a59b88524813686e9fb5c6a3645aba280c7e15de622ed", size = 142148, upload-time = "2026-09-28T03:28:59.316Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d5/4b/7a7d91d4e0d680a1124407745ab4d0a417a0c910d59c6649656e97abb248/agent_action_capsule-0.16.0.tar.gz", hash = "sha256:3ab5904e55bc70fa60846d1f236f11ea96126bf98b2e45ed87932254fb97736d", size = 514476, upload-time = "2026-11-09T05:08:48.104Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f5/d7/548662c4bc6efe57609d9aca108e61c6ef969dc81a6f3445c2763ab49ba7/agent_action_capsule-0.6.0-py3-none-any.whl", hash = "sha256:5edad9b5f77a966c755fd7bb57031978e81116fa1713f51cc824c8d706a3dfc6", size = 86690, upload-time = "2026-09-28T03:28:58.044Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/3a/bba95fe35d17b165aefcdd45f0a3c54b744282efb28c6d375d5d666d9143/agent_action_capsule-0.16.0-py3-none-any.whl", hash = "sha256:69f70bfcc3ebac683b57b11b56edb58e99b5eaa28176398a06a634efbac1c954", size = 249316, upload-time = "2026-11-09T05:08:46.556Z" },
 ]
 
 [[package]]
@@ -366,7 +366,7 @@ mysql = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-action-capsule", specifier = ">=0.6.0" },
+    { name = "agent-action-capsule", specifier = ">=0.16.0" },
     { name = "cbor2", specifier = ">=5.5" },
     { name = "cryptography", specifier = ">=42.0" },
     { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1" },
