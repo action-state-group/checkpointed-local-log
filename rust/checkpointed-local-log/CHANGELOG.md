@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+## 0.6.0 — 2026-11-16
+
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
   requires (it was `<log_id>#<mmr_size>`). `verify_checkpoint_cose_offline`
-  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it.
+  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it. A
+  verifier that insists on `<log_id>#<mmr_size>` rejects the new checkpoints;
+  run capsule-anchor with capsule-anchor#94 (accepts both forms, merged
+  2026-11-16, not yet released) before adopting this writer
+  (checkpointed-local-log#137).
 
 ## 0.5.0 — 2026-11-06
 

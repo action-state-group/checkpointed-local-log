@@ -7,56 +7,133 @@ are documented here. The format follows
 
 ## Unreleased
 
+## Go module 0.4.0 (`go/v0.4.0`) — 2026-11-16
+
 ### Added
 
-- TypeScript `await checkpointRejectionField(cose)` (Node and browser entries):
-  returns `"issued_at"` when a checkpoint's `issued_at` is not RFC 3339 text and
-  its Ed25519 signature verifies, so a page can say that field failed its format
-  (not a signature) instead of "does not verify". A tampered or otherwise broken
-  statement returns `undefined`. It changes nothing about what `verifyCheckpoint`
-  accepts (capsule-viewer#311).
-- `WitnessStateStore.pendingWitnessesFor(witnessId, now, limit)` in the Go,
-  Rust, Python and TypeScript backend contracts, with backend conformance
-  vectors. Backends implementing the store trait must add it.
+- **Breaking for implementers:**
+  `WitnessStateStore.PendingWitnessesFor(witnessId, now, limit)` in the backend
+  contract, with backend conformance vectors. Backends implementing the store
+  must add it (checkpointed-local-log#129).
 
 ### Changed
 
-- **Checkpoint CWT `sub` is the log id in every language**, constant per log,
-  as CLL -02 requires (it was `<log_id>#<mmr_size>`, which gave each checkpoint
-  a new log identity). Readers still accept the pre-02 `<log_id>#<mmr_size>`
-  form, so stored checkpoints keep verifying; writers no longer emit it. The
-  COSE vectors pin both forms (`cose_hex`, `pre02_cose_hex`), and the runner
-  vectors and the Go/Rust interop statement are regenerated. A verifier that
-  insists on `<log_id>#<mmr_size>`, such as capsule-anchor's witness check
-  before it is updated, rejects the new checkpoints.
-- The Go, Rust and Python witness delivery runners release a checkpoint to a
-  witness only once that witness's row for the checkpoint's `prev_size` has a
-  receipt, or when that witness has no row for it (the witness's own answer then
-  decides). A row without a receipt, permanent or not, now holds the
-  checkpoints that follow it on that witness (through each one's `prev_size`
-  row). A permanent row stops delivery to that witness, and nothing clears it
-  automatically: an operator writes the row back as not permanent with
-  `commitWitness` (see "Held and permanent witness rows" in
-  `docs/backend-contract.md`), which helps only when the refusal was transient.
-  A witness that is already ahead of the held checkpoint is not detected
-  (deferred, checkpointed-local-log#130). `RunOnce` now reads at most `limit`
-  due rows per witness (before: `limit` rows in total), so one witness's backlog
-  no longer fills the page of the others (checkpointed-local-log#91). The
-  TypeScript runner is unchanged. The runners no longer read rows of a witness
-  they have no client for; before, such a row ended the Go `Run` loop with an
-  `invalid` error.
-- `runner-conformance-vectors`: a `runCheckpoint` step may name `witnessIds`,
-  the witnesses that get that pass's rows, so a case can add a witness late;
-  new cases `witness/chain-order-no-predecessor-row` and
-  `witness/chain-order-no-predecessor-row-refused`.
+- **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
+  requires (it was `<log_id>#<mmr_size>`, which gave each checkpoint a new log
+  identity). The reader still accepts the pre-02 form, so stored checkpoints
+  keep verifying; the writer no longer emits it. A verifier that insists on
+  `<log_id>#<mmr_size>` rejects the new checkpoints. capsule-anchor's witness
+  check accepts both forms from capsule-anchor#94 (merged 2026-11-16, not yet
+  released): run capsule-anchor with #94 before adopting these writers
+  (checkpointed-local-log#137).
+- The witness delivery runner releases a checkpoint to a witness only once that
+  witness's row for the checkpoint's `prev_size` has a receipt, or when that
+  witness has no row for it, and `RunOnce` reads at most `limit` due rows per
+  witness. A row without a receipt, permanent or not, holds the checkpoints
+  that follow it on that witness. A permanent row stops delivery to that
+  witness and nothing clears it automatically: an operator writes the row back
+  as not permanent with `commitWitness`, which helps only when the refusal was
+  transient ("Held and permanent witness rows" in `docs/backend-contract.md`;
+  checkpointed-local-log#91,
+  checkpointed-local-log#129, checkpointed-local-log#130,
+  checkpointed-local-log#131).
+- `witness.ReceiptVerifier` and `witness.NewSCRAPIClient` decode a receipt, its
+  protected header and each inclusion proof under agent-action-capsule's
+  receipt encoding rule (checkpointed-local-log#126).
+- `LoadCLL` on the JSONL store serves a published state snapshot instead of
+  holding the read lock for a full clone (checkpointed-local-log#128).
+
+## checkpointed-local-log (Rust crate) 0.6.0 — 2026-11-16
+
+### Changed
+
+- **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
+  requires (it was `<log_id>#<mmr_size>`). `verify_checkpoint_cose_offline`
+  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it. A
+  verifier that insists on `<log_id>#<mmr_size>` rejects the new checkpoints;
+  run capsule-anchor with capsule-anchor#94 (accepts both forms, merged
+  2026-11-16, not yet released) before adopting this writer
+  (checkpointed-local-log#137).
+
+The 0.5.0 release (2026-11-06) is in the crate's own CHANGELOG
+(`rust/checkpointed-local-log/CHANGELOG.md`). It added the required trait
+method `WitnessStateStore::pending_witnesses_for`, which breaks backends that
+implement the trait, and chain-ordered witness delivery.
+
+## @action-state-group/cll (TypeScript) 0.4.0 — 2026-11-16
+
+### Added
+
+- `checkpointRejectionField(cose)` (Node and browser entries, async): returns
+  `"issued_at"` when a checkpoint's `issued_at` is not RFC 3339 text and the
+  Ed25519 signature over the statement verifies under its own `kid`, so a page
+  can say that field failed its format instead of "does not verify". A
+  tampered signature gives `undefined`, so the page shows the signature failure
+  whatever the format. It changes nothing about what `verifyCheckpoint`
+  accepts. "Verifies under its own `kid`" shows only that the statement was not
+  altered after signing, not whose key signed it: a page must not present it
+  as "signature valid" (capsule-viewer#311, checkpointed-local-log#138,
+  checkpointed-local-log#139).
+- **Breaking for implementers:**
+  `pendingWitnessesFor(witnessId, now, limit)` on the witness state store, with
+  backend conformance vectors. Backends implementing the store must add it
+  (checkpointed-local-log#129).
+
+### Changed
+
+- The TypeScript runner does not yet deliver in chain order; its runner
+  vectors skip the two no-predecessor-row cases (checkpointed-local-log#131).
+- **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
+  requires (it was `<log_id>#<mmr_size>`). The verifier still accepts the
+  pre-02 form; the writer no longer emits it. A verifier that insists on
+  `<log_id>#<mmr_size>` rejects the new checkpoints. capsule-anchor's witness
+  check accepts both forms from capsule-anchor#94 (merged 2026-11-16, not yet
+  released): run capsule-anchor with #94 before adopting these writers
+  (checkpointed-local-log#137).
+- `ReceiptVerifier` applies the receipt profile that scitt-cose and
+  agent-action-capsule `VerifyReceipts` share, and decodes a receipt, its
+  protected header and each inclusion proof under agent-action-capsule's
+  receipt encoding rule (checkpointed-local-log#120,
+  checkpointed-local-log#126).
 
 ### Fixed
 
-- The TypeScript checkpoint verifier no longer rejects a checkpoint whose
-  `issued_at` is valid RFC 3339 but not the canonical spelling (for example
+- The checkpoint verifier no longer rejects a checkpoint whose `issued_at` is
+  valid RFC 3339 but not the canonical spelling (for example
   `2026-10-02T02:40:00.000Z`). The draft requires only "per RFC3339" and the
   Go, Rust and Python readers already accept it, so logs written with the
-  longer spelling now verify in the History page. Writers are unchanged.
+  longer spelling now verify in the History page. Writers are unchanged
+  (checkpointed-local-log#136).
+
+## Python package 0.9.0 (`python/v0.9.0`) — 2026-11-16
+
+### Added
+
+- **Breaking for implementers:**
+  `pending_witnesses_for(witness_id, now, limit)` on the witness state store,
+  with backend conformance vectors. Backends implementing the store must add it
+  (checkpointed-local-log#129).
+
+### Changed
+
+- **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
+  requires (it was `<log_id>#<mmr_size>`). The reader still accepts the pre-02
+  form; the writer no longer emits it. A verifier that insists on
+  `<log_id>#<mmr_size>` rejects the new checkpoints; run capsule-anchor with
+  capsule-anchor#94 (accepts both forms, merged 2026-11-16, not yet released)
+  before adopting this writer (checkpointed-local-log#137).
+- The witness delivery runner releases a checkpoint to a witness only once that
+  witness's row for the checkpoint's `prev_size` has a receipt, or when that
+  witness has no row for it, and reads at most `limit` due rows per witness.
+  A permanent row stops delivery to that witness and nothing clears it
+  automatically: an operator writes the row back as not permanent with
+  `commit_witness`, which helps only when the refusal was transient ("Held
+  and permanent witness rows" in `docs/backend-contract.md`;
+  checkpointed-local-log#91, checkpointed-local-log#129,
+  checkpointed-local-log#130, checkpointed-local-log#131).
+- `ReceiptVerifier` checks agent-action-capsule's receipt encoding rule on the
+  receipt bytes (checkpointed-local-log#120, checkpointed-local-log#126).
+- Requires `agent-action-capsule>=0.16.0` (checkpointed-local-log#133).
 
 ## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
 
