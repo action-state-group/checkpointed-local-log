@@ -111,7 +111,7 @@ const isRfc3339 = (value: string): boolean => {
  * The part of verification every checkpoint check shares: the COSE shape, the
  * protected header, the content type and the canonical claims map with its
  * allowed members and `kind`. It checks no signature and none of the claims'
- * values. `verifyCheckpointWith` and `checkpointRejectionField` both start
+ * values. `verifyCheckpointWith` and `checkpointRejectionFieldWith` both start
  * here, so the second can name a field only for a statement the first would
  * have carried that far. Throws on malformed CBOR or identifiers.
  */
@@ -209,22 +209,31 @@ function decodeCheckpointStatement(cose: Uint8Array):
 /**
  * Name the field when `verifyCheckpoint` refuses a checkpoint because its
  * `issued_at` is not RFC 3339 text: a format rejection, not a failed signature.
- * It names `issued_at` only for a statement that passes the shared structure
- * checks (`decodeCheckpointStatement`) and whose `issued_at` is malformed, so a
- * statement broken elsewhere, or a tampered one with a well-formed `issued_at`,
- * returns `undefined` and the caller keeps its generic failure. It checks no
- * signature and changes nothing about what verifies.
+ * It names `issued_at` only when the statement passes the shared structure
+ * checks (`decodeCheckpointStatement`), `issued_at` is malformed, and the
+ * Ed25519 signature over the statement verifies under its own key, so the
+ * "not a failed signature" claim is true. A tampered or forged statement, or
+ * one broken elsewhere, returns `undefined` and the caller keeps its generic
+ * failure. It changes nothing about what verifies.
  */
-export function checkpointRejectionField(
+export async function checkpointRejectionFieldWith(
+  crypto: CheckpointCrypto,
   cose: Uint8Array,
-): "issued_at" | undefined {
+): Promise<"issued_at" | undefined> {
   try {
     const statement = decodeCheckpointStatement(cose);
     if (statement === undefined) return undefined;
     const issuedAt = statement.claims.get("issued_at");
-    return typeof issuedAt === "string" && isRfc3339(issuedAt)
-      ? undefined
-      : "issued_at";
+    if (typeof issuedAt === "string" && isRfc3339(issuedAt)) return undefined;
+    const { items, kid } = statement;
+    // Only an exact `true` counts, as in verifyCheckpointWith.
+    return (await crypto.verifyEd25519(
+      kid,
+      encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]),
+      items[3],
+    )) === true
+      ? "issued_at"
+      : undefined;
   } catch {
     return undefined;
   }
