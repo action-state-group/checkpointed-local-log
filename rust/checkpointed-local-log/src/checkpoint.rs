@@ -877,7 +877,7 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
         && subject.as_deref() != Some(legacy_subject.as_str())
     {
         result.errors.push(format!(
-            "CWT subject {subject:?} does not match expected {issuer:?}"
+            "CWT subject {subject:?} must be the log id {issuer:?} (or the pre-02 \"<log>#<size>\" with this checkpoint's size)"
         ));
         return result;
     }

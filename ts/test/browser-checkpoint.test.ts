@@ -97,6 +97,13 @@ describe("browser entry checkpoint verifier", () => {
           expect(metadata).toMatchObject(vector.metadata);
         });
 
+        it(`still accepts the pre-02 per-checkpoint sub of ${vector.name}`, async () => {
+          const check = setUp();
+          expect(await browser.verifyCheckpoint(vector.pre02)).toBe(true);
+          check();
+          expect(await node.verifyCheckpoint(vector.pre02)).toBe(true);
+        });
+
         it(`refuses every one-bit change to ${vector.name}, as Node does`, async () => {
           const statements = mutations(vector.cose);
           const expected = await Promise.all(

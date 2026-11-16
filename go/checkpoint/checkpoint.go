@@ -220,7 +220,7 @@ func ParseRecord(data []byte) (Record, error) {
 	// -02 requires one `sub` per log, so the log's own id is what writers emit now. Checkpoints
 	// signed before that carry "<log>#<size>", which stays verifiable so stored history still reads.
 	if subject != issuer && subject != fmt.Sprintf("%s#%d", issuer, wire.LogSize) {
-		return Record{}, fmt.Errorf("checkpoint CWT subject is invalid")
+		return Record{}, fmt.Errorf("checkpoint CWT subject must be the log id (or the pre-02 \"<log>#<size>\" with this checkpoint's size)")
 	}
 	newPeaks, err := decodeCommitment(wire.Commitment, "commitment")
 	if err != nil {

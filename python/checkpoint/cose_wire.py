@@ -524,7 +524,7 @@ def _decode_claims(claims, *, issuer: str | None, subject: str | None, key_id: s
     # The log's own id is what -02 requires; "<log>#<size>" is the pre-02 form, still accepted
     # so stored checkpoints keep verifying.
     if subject not in (issuer, f"{issuer}#{mmr_size}"):
-        raise ValueError(f"CWT subject {subject!r} does not match expected {issuer!r}")
+        raise ValueError(f"CWT subject {subject!r} must be the log id {issuer!r} (or the pre-02 '<log>#<size>' with this checkpoint's size)")
 
     cadence = claims.get("cadence")
     if cadence is not None and (not isinstance(cadence, int) or isinstance(cadence, bool)):
