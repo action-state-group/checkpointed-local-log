@@ -15,7 +15,8 @@ use cll::checkpoint::{
     checkpoint_to_cose, encode_checkpoint_claims, verify_checkpoint_cose_offline, CheckpointRecord,
 };
 use cll::mmr::{ConsistencyProof, Hash, MemoryNodeStore, NodeReader};
-use coset::{CoseSign1, TaggedCborSerializable};
+use coset::cbor::value::Value as CborValue;
+use coset::{iana, CoseSign1, CoseSign1Builder, HeaderBuilder, TaggedCborSerializable};
 use ed25519_dalek::SigningKey;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -124,6 +125,15 @@ fn cose_checkpoint_vectors_pass() {
             "{name}: claims payload is not the pinned deterministic encoding"
         );
 
+        // The pre-02 statement (per-checkpoint sub) still verifies; no producer emits it.
+        let pre02 = hex::decode(vector["pre02_cose_hex"].as_str().unwrap()).unwrap();
+        let old = verify_checkpoint_cose_offline(&pre02);
+        assert!(
+            old.ok,
+            "{name}: pre-02 statement rejected: {:?}",
+            old.errors
+        );
+
         // The reference statement verifies here.
         let reference = hex::decode(vector["cose_hex"].as_str().unwrap()).unwrap();
         let result = verify_checkpoint_cose_offline(&reference);
@@ -153,5 +163,74 @@ fn cose_checkpoint_vectors_pass() {
         );
         let payload = CoseSign1::from_tagged_slice(&own).unwrap().payload.unwrap();
         assert_eq!(payload, claims, "{name}: own statement signs other claims");
+    }
+}
+
+/// `statement` with its CWT `sub` replaced and re-signed, so only the subject rule can refuse it.
+fn with_subject(statement: &[u8], key: &SigningKey, subject: Option<&str>) -> Vec<u8> {
+    let sign1 = CoseSign1::from_tagged_slice(statement).unwrap();
+    let header = &sign1.protected.header;
+    let cwt = header
+        .rest
+        .iter()
+        .find(|(label, _)| *label == coset::Label::Int(15))
+        .map(|(_, v)| v.clone())
+        .unwrap();
+    let mut claims: Vec<(CborValue, CborValue)> = cwt.into_map().unwrap();
+    claims.retain(|(k, _)| k.as_integer() != Some(2.into()));
+    if let Some(subject) = subject {
+        claims.push((CborValue::from(2), CborValue::from(subject)));
+    }
+    let protected = HeaderBuilder::new()
+        .algorithm(iana::Algorithm::EdDSA)
+        .content_type(
+            header
+                .content_type
+                .clone()
+                .and_then(|c| match c {
+                    coset::RegisteredLabel::Text(t) => Some(t),
+                    _ => None,
+                })
+                .unwrap(),
+        )
+        .value(15, CborValue::Map(claims))
+        .key_id(header.key_id.clone())
+        .build();
+    CoseSign1Builder::new()
+        .protected(protected)
+        .payload(sign1.payload.unwrap())
+        .create_signature(b"", |tbs| {
+            ed25519_dalek::Signer::sign(key, tbs).to_bytes().to_vec()
+        })
+        .build()
+        .to_tagged_vec()
+        .unwrap()
+}
+
+#[test]
+fn cose_checkpoint_refuses_a_subject_other_than_the_log_or_its_own_pre_02_form() {
+    let doc = load("vectors.json");
+    let pinned = load("cose-vectors.json");
+    let seed: Hash = hex::decode(doc["signing_key_seed_hex"].as_str().unwrap())
+        .unwrap()
+        .try_into()
+        .unwrap();
+    let key = SigningKey::from_bytes(&seed);
+    let vector = &pinned["cases"][0];
+    let statement = hex::decode(vector["cose_hex"].as_str().unwrap()).unwrap();
+    let case = &doc["cases"][0];
+    let log_id = case["log_id"].as_str().unwrap();
+    let size = case["mmr_size"].as_u64().unwrap();
+
+    // Re-signing with the log id, or this checkpoint's own pre-02 form, verifies.
+    assert!(verify_checkpoint_cose_offline(&with_subject(&statement, &key, Some(log_id))).ok);
+    let own_old = format!("{log_id}#{size}");
+    assert!(verify_checkpoint_cose_offline(&with_subject(&statement, &key, Some(&own_old))).ok);
+
+    // Anything else is refused: another log, another checkpoint's size, empty, or no sub at all.
+    let other = format!("{log_id}#{}", size + 1);
+    for bad in [Some("other-log"), Some(other.as_str()), Some(""), None] {
+        let result = verify_checkpoint_cose_offline(&with_subject(&statement, &key, bad));
+        assert!(!result.ok, "{bad:?} must be refused");
     }
 }

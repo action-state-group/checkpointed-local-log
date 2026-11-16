@@ -146,7 +146,6 @@ class _SubjectCapture:
         return b""
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=WIRE_PENDING)
 def test_wire_sub_is_the_log():
     from cll.checkpoint.cose_wire import checkpoint_to_cose
 

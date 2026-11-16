@@ -204,7 +204,7 @@ export async function signCheckpoint(
         15,
         new Map([
           [1, input.logId],
-          [2, `${input.logId}#${input.mmrSize}`],
+          [2, input.logId],
         ]),
       ],
     ]),

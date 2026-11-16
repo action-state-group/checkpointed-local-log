@@ -19,6 +19,7 @@ export interface CoseVectors {
     readonly name: string;
     readonly claims_hex: string;
     readonly cose_hex: string;
+    readonly pre02_cose_hex: string;
   }[];
 }
 export interface CheckpointVectors {
@@ -47,6 +48,7 @@ export const expectedMetadata = (
     return {
       name: cose.name,
       cose: fromHex(cose.cose_hex),
+      pre02: fromHex(cose.pre02_cose_hex),
       metadata: {
         logId: legacy.log_id,
         size: BigInt(legacy.mmr_size),

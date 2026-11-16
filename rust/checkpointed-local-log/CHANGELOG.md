@@ -1,5 +1,11 @@
 # Changelog: checkpointed-local-log (Rust)
 
+## Unreleased
+
+- **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
+  requires (it was `<log_id>#<mmr_size>`). `verify_checkpoint_cose_offline`
+  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it.
+
 ## 0.5.0 — 2026-11-06
 
 - **Breaking for implementers: `WitnessStateStore::pending_witnesses_for`.**

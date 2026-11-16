@@ -46,9 +46,9 @@ dev / JSON (CheckpointRecord)  wire / CBOR (this module)
                                 resolved)
 ``log_id``                     CWT ``iss`` (claim 1) -- moves off a plaintext
                                 field onto the SIGNED protected header
-(``log_id``, ``mmr_size``)     CWT ``sub`` (claim 2) = ``"{log_id}#{mmr_size}"``
-                                -- identifies this specific checkpoint
-                                instance, also signed
+``log_id``                     CWT ``sub`` (claim 2) = ``log_id``, the same value
+                                in every checkpoint of the log (-02 MUST NOT
+                                vary per checkpoint), also signed
 ``key_id`` (hex)                COSE ``kid`` (protected header label 4, raw
                                 32 bytes) -- same convention as the #107
                                 producer-envelope profile
@@ -60,19 +60,11 @@ dev / JSON (CheckpointRecord)  wire / CBOR (this module)
 ``CheckpointConfig.cadence_seconds``  ``cadence`` (optional, integer seconds)
 ============================  ================================================
 
-**Known deviation from the I-D's stated `iss`/`sub` semantics (flagging, not
-fixing, in this pass).** The spec's Witnessing section says CWT `iss`
-identifies the *producer* and `sub` identifies the *log*. This module
-instead puts ``log_id`` on `iss` and constructs `sub` as the
-per-checkpoint-instance string ``"{log_id}#{mmr_size}"`` -- collapsing
-producer and log into one identity (true for this implementation's
-one-log-one-signing-identity model) and using `sub` to pin the specific
-checkpoint instance rather than the log itself. Round-trips fine against
-this module's own decoder (:func:`_decode_claims` checks the same
-convention), but a stranger cross-checking against the I-D's literal
-iss/sub prose, or against another implementation that follows it literally,
-would see a mismatch. Worth a spec or code reconciliation before this is
-relied on for cross-implementation identity matching.
+**`iss`/`sub` semantics.** The I-D says CWT `iss` identifies the *producer* and
+`sub` the *log*, and that `sub` MUST NOT vary per checkpoint. This module puts
+``log_id`` on both: one log, one signing identity. The decoder also accepts the
+pre-02 per-checkpoint ``"{log_id}#{mmr_size}"`` form so stored checkpoints keep
+verifying; the writer never emits it.
 
 **Commitment shape reconciled with the commitment-interop requirement (2026-08-27).**
 ``cp.root``/``cp.prev_root`` are this module's OWN internal fold
@@ -351,7 +343,8 @@ def checkpoint_to_cose(
             "implements sign_cose_statement, not the narrower checkpoint.emit.Signer "
             "adapter used for the JSON signing_body path"
         )
-    subject = f"{cp.log_id}#{cp.mmr_size}"
+    # -02: `sub` is one value per log, never per checkpoint.
+    subject = cp.log_id
     return sign_cose_statement(
         payload,
         content_type=CLL_CHECKPOINT_CONTENT_TYPE,
@@ -528,9 +521,10 @@ def _decode_claims(claims, *, issuer: str | None, subject: str | None, key_id: s
     if not isinstance(issued_at, str):
         raise ValueError("issued_at must be a string (ISO 8601)")
 
-    expected_subject = f"{issuer}#{mmr_size}"
-    if subject != expected_subject:
-        raise ValueError(f"CWT subject {subject!r} does not match expected {expected_subject!r}")
+    # The log's own id is what -02 requires; "<log>#<size>" is the pre-02 form, still accepted
+    # so stored checkpoints keep verifying.
+    if subject not in (issuer, f"{issuer}#{mmr_size}"):
+        raise ValueError(f"CWT subject {subject!r} must be the log id {issuer!r} (or the pre-02 '<log>#<size>' with this checkpoint's size)")
 
     cadence = claims.get("cadence")
     if cadence is not None and (not isinstance(cadence, int) or isinstance(cadence, bool)):

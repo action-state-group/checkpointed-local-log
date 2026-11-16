@@ -535,6 +535,37 @@ def test_content_type_is_cbor_shaped(signer: Ed25519TestSigner) -> None:
     assert parsed["signature_verified"]
     assert parsed["content_type"] == CLL_CHECKPOINT_CONTENT_TYPE
     assert parsed["issuer"] == cp.log_id
-    assert parsed["subject"] == f"{cp.log_id}#{cp.mmr_size}"
+    assert parsed["subject"] == cp.log_id
     claims = cbor2.loads(parsed["payload"])
     assert claims["kind"] == "cll-checkpoint"
+
+
+def test_subject_is_constant_per_log_and_the_pre_02_form_still_verifies(signer: Ed25519TestSigner) -> None:
+    """CLL -02: sub is one value per log. The pre-02 "<log>#<size>" still verifies; anything else does not."""
+    store = MemoryNodeStore()
+    _grow(store, 3, seed=1)
+    cp = _checkpoint(
+        log_id="log-a", mmr_size=store.size(), root_hex=_root_hex(store, store.size()), key_id=signer.key_id
+    )
+    peaks = _peak_hashes(store, store.size())
+    subjects: dict[str, str] = {}
+
+    class Capture:
+        key_id = signer.key_id
+
+        def sign_cose_statement(self, payload, *, content_type, issuer, subject, **kw):
+            subjects["sub"] = subject
+            return signer.sign_cose_statement(
+                payload, content_type=content_type, issuer=issuer, subject=subjects.get("force", subject), **kw
+            )
+
+    assert checkpoint_to_cose(cp, Capture(), peaks)
+    assert subjects["sub"] == "log-a"
+    assert verify_checkpoint_cose_offline(checkpoint_to_cose(cp, Capture(), peaks)).ok
+
+    subjects["force"] = f"log-a#{cp.mmr_size}"
+    assert verify_checkpoint_cose_offline(checkpoint_to_cose(cp, Capture(), peaks)).ok
+    for bad in ("log-b", f"log-a#{cp.mmr_size + 1}", ""):
+        subjects["force"] = bad
+        result = verify_checkpoint_cose_offline(checkpoint_to_cose(cp, Capture(), peaks))
+        assert not result.ok, bad

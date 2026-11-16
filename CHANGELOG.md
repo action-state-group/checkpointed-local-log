@@ -20,6 +20,14 @@ are documented here. The format follows
 
 ### Changed
 
+- **Checkpoint CWT `sub` is the log id in every language**, constant per log,
+  as CLL -02 requires (it was `<log_id>#<mmr_size>`, which gave each checkpoint
+  a new log identity). Readers still accept the pre-02 `<log_id>#<mmr_size>`
+  form, so stored checkpoints keep verifying; writers no longer emit it. The
+  COSE vectors pin both forms (`cose_hex`, `pre02_cose_hex`), and the runner
+  vectors and the Go/Rust interop statement are regenerated. A verifier that
+  insists on `<log_id>#<mmr_size>`, such as capsule-anchor's witness check
+  before it is updated, rejects the new checkpoints.
 - The Go, Rust and Python witness delivery runners release a checkpoint to a
   witness only once that witness's row for the checkpoint's `prev_size` has a
   receipt, or when that witness has no row for it (the witness's own answer then

@@ -49,7 +49,7 @@ encoding, and the signed checkpoint record that wraps a root.
   every verifier MUST accept it. The protected header is not pinned across
   producers (its map order is each COSE library's own), so a producer's own
   statement is checked by verifying it and comparing its payload with
-  `claims_hex`. `reference_verifier.py` regenerates both byte-for-byte;
+  `claims_hex`. `pre02_cose_hex` is the same statement with the pre-02 per-checkpoint `sub` `<log>#<size>`; every verifier MUST still accept it and no producer emits it. `reference_verifier.py` regenerates both byte-for-byte;
   `rust/checkpointed-local-log/tests/checkpoint_cose_vectors.rs` checks the Rust crate.
 
 - `vectors.json` contains 2 cases: `checkpoint-first-2-leaves` (a log's

@@ -139,7 +139,7 @@ describe("cll -02 wire layer (pending the CLL 0.2 wire release)", () => {
         unknown
       >;
       const cwt = header.get(15) as Map<number, unknown>;
-      expect(cwt.get(2)).not.toBe(v.conventions.log_identity.sub);
+      expect(cwt.get(2)).toBe(v.conventions.log_identity.sub);
       compared += 1;
     }
     expect(compared).toBe(3);
