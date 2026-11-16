@@ -107,6 +107,45 @@ const isRfc3339 = (value: string): boolean => {
   }
 };
 
+/**
+ * Name the field when `verifyCheckpoint` would refuse a checkpoint because its
+ * `issued_at` is not RFC 3339 text: a format rejection, not a failed signature.
+ * It reads the claims without checking the signature or anything else, and
+ * returns `undefined` when the statement does not decode far enough to reach
+ * `issued_at` or `issued_at` is well formed, so a forged or tampered statement
+ * with a well-formed `issued_at` is never named here. It changes nothing about
+ * what verifies.
+ */
+export function checkpointRejectionField(
+  cose: Uint8Array,
+): "issued_at" | undefined {
+  try {
+    if (cose.length < 2 || cose.length > limits.checkpointPayload)
+      return undefined;
+    if (cose[0] !== 0xd2) return undefined;
+    const items = decode(cose.subarray(1), {
+      allowIndefinite: false,
+      coerceUndefinedToNull: false,
+      useMaps: true,
+    }) as unknown[];
+    if (!Array.isArray(items) || !(items[2] instanceof Uint8Array))
+      return undefined;
+    const claims = decode(items[2], {
+      allowIndefinite: false,
+      coerceUndefinedToNull: false,
+      useMaps: true,
+    }) as unknown;
+    if (!(claims instanceof Map) || claims.get("kind") !== "cll-checkpoint")
+      return undefined;
+    const issuedAt = claims.get("issued_at");
+    return typeof issuedAt === "string" && isRfc3339(issuedAt)
+      ? undefined
+      : "issued_at";
+  } catch {
+    return undefined;
+  }
+}
+
 export async function verifyCheckpointWith(
   crypto: CheckpointCrypto,
   cose: Uint8Array,

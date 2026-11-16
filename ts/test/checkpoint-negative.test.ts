@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   createCheckpointIdentity,
   MmrTree,
+  checkpointRejectionField,
   signCheckpoint,
   verifyCheckpoint,
   type SignedCheckpoint,
@@ -201,5 +202,46 @@ describe("checkpoint verifier negative boundaries", () => {
         }),
       ),
     ).toBe(false);
+  });
+
+  describe("checkpointRejectionField", () => {
+    const withIssuedAt = async (value: unknown) =>
+      authenticatedMutation(await firstCheckpoint(), (_headers, claims) => {
+        claims.set("issued_at", value);
+      });
+
+    it.each(["yesterday", "2026-02-30T00:00:00Z", "", 1760000000])(
+      "names issued_at when it is %j",
+      async (issuedAt) => {
+        const cose = await withIssuedAt(issuedAt);
+        expect(await verifyCheckpoint(cose)).toBe(false);
+        expect(checkpointRejectionField(cose)).toBe("issued_at");
+      },
+    );
+
+    it("names nothing for a valid checkpoint or a legacy .000Z spelling", async () => {
+      expect(
+        checkpointRejectionField((await firstCheckpoint()).cose),
+      ).toBeUndefined();
+      expect(
+        checkpointRejectionField(
+          await withIssuedAt("2026-10-02T02:40:00.000Z"),
+        ),
+      ).toBeUndefined();
+    });
+
+    it("names nothing for a tampered signature with a well-formed issued_at", async () => {
+      const cose = Uint8Array.from((await firstCheckpoint()).cose);
+      cose[cose.length - 1] = (cose[cose.length - 1] ?? 0) ^ 0xff;
+      expect(await verifyCheckpoint(cose)).toBe(false);
+      expect(checkpointRejectionField(cose)).toBeUndefined();
+    });
+
+    it("names nothing for bytes that are not a checkpoint", () => {
+      expect(checkpointRejectionField(new Uint8Array())).toBeUndefined();
+      expect(
+        checkpointRejectionField(Uint8Array.of(0xd2, 0x80)),
+      ).toBeUndefined();
+    });
   });
 });
