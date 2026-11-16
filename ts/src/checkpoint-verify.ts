@@ -206,6 +206,12 @@ function decodeCheckpointStatement(cose: Uint8Array):
   };
 }
 
+/** The COSE Sig_structure the checkpoint's Ed25519 signature covers. */
+const signatureMessage = (
+  items: readonly [Uint8Array, Map<unknown, unknown>, Uint8Array, Uint8Array],
+): Uint8Array =>
+  encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]);
+
 /**
  * Name the field when `verifyCheckpoint` refuses a checkpoint because its
  * `issued_at` is not RFC 3339 text: a format rejection, not a failed signature.
@@ -229,7 +235,7 @@ export async function checkpointRejectionFieldWith(
     // Only an exact `true` counts, as in verifyCheckpointWith.
     return (await crypto.verifyEd25519(
       kid,
-      encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]),
+      signatureMessage(items),
       items[3],
     )) === true
       ? "issued_at"
@@ -348,11 +354,8 @@ export async function verifyCheckpointWith(
     // Only an exact `true` passes, so a primitive that returns anything else
     // cannot make a statement verify.
     return (
-      (await crypto.verifyEd25519(
-        kid,
-        encodeCanonical(["Signature1", items[0], new Uint8Array(), items[2]]),
-        items[3],
-      )) === true
+      (await crypto.verifyEd25519(kid, signatureMessage(items), items[3])) ===
+      true
     );
   } catch {
     return false;
