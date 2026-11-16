@@ -20,6 +20,7 @@ import {
 } from "./mmr.js";
 import {
   checkpointMetadataWith,
+  checkpointRejectionFieldWith,
   verifyCheckpointWith,
   type CheckpointCrypto,
   type CheckpointMetadata,
@@ -109,7 +110,11 @@ const checkpointCrypto: CheckpointCrypto = {
   verifyEd25519: async (publicKey, message, signature) =>
     verifyEd25519(publicKey, message, signature),
 };
-export { checkpointRejectionField } from "./checkpoint-verify.js";
+/** Name `issued_at` when it alone failed its format and the signature verifies. */
+export const checkpointRejectionField = (
+  cose: Uint8Array,
+): Promise<"issued_at" | undefined> =>
+  checkpointRejectionFieldWith(checkpointCrypto, cose);
 export const verifyCheckpoint = (cose: Uint8Array): Promise<boolean> =>
   verifyCheckpointWith(checkpointCrypto, cose);
 /** Return linkage metadata only after the complete checkpoint validates. */

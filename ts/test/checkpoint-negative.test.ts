@@ -215,16 +215,16 @@ describe("checkpoint verifier negative boundaries", () => {
       async (issuedAt) => {
         const cose = await withIssuedAt(issuedAt);
         expect(await verifyCheckpoint(cose)).toBe(false);
-        expect(checkpointRejectionField(cose)).toBe("issued_at");
+        expect(await checkpointRejectionField(cose)).toBe("issued_at");
       },
     );
 
     it("names nothing for a valid checkpoint or a legacy .000Z spelling", async () => {
       expect(
-        checkpointRejectionField((await firstCheckpoint()).cose),
+        await checkpointRejectionField((await firstCheckpoint()).cose),
       ).toBeUndefined();
       expect(
-        checkpointRejectionField(
+        await checkpointRejectionField(
           await withIssuedAt("2026-10-02T02:40:00.000Z"),
         ),
       ).toBeUndefined();
@@ -234,7 +234,23 @@ describe("checkpoint verifier negative boundaries", () => {
       const cose = Uint8Array.from((await firstCheckpoint()).cose);
       cose[cose.length - 1] = (cose[cose.length - 1] ?? 0) ^ 0xff;
       expect(await verifyCheckpoint(cose)).toBe(false);
-      expect(checkpointRejectionField(cose)).toBeUndefined();
+      expect(await checkpointRejectionField(cose)).toBeUndefined();
+    });
+
+    it("names nothing for a malformed issued_at with a tampered signature", async () => {
+      const cose = Uint8Array.from(await withIssuedAt("yesterday"));
+      cose[cose.length - 1] = (cose[cose.length - 1] ?? 0) ^ 0xff;
+      expect(await verifyCheckpoint(cose)).toBe(false);
+      expect(await checkpointRejectionField(cose)).toBeUndefined();
+    });
+
+    it("names nothing for a malformed issued_at edited after signing", async () => {
+      const cose = Uint8Array.from((await firstCheckpoint()).cose);
+      const at = Buffer.from(cose).toString("latin1").indexOf("2026-09-01T");
+      expect(at).toBeGreaterThan(0);
+      cose[at + 10] = 0x20; // the T becomes a space: same length, not RFC 3339
+      expect(await verifyCheckpoint(cose)).toBe(false);
+      expect(await checkpointRejectionField(cose)).toBeUndefined();
     });
 
     it("names nothing when the statement is broken before issued_at is reached", async () => {
@@ -246,13 +262,13 @@ describe("checkpoint verifier negative boundaries", () => {
         },
       );
       expect(await verifyCheckpoint(cose)).toBe(false);
-      expect(checkpointRejectionField(cose)).toBeUndefined();
+      expect(await checkpointRejectionField(cose)).toBeUndefined();
     });
 
-    it("names nothing for bytes that are not a checkpoint", () => {
-      expect(checkpointRejectionField(new Uint8Array())).toBeUndefined();
+    it("names nothing for bytes that are not a checkpoint", async () => {
+      expect(await checkpointRejectionField(new Uint8Array())).toBeUndefined();
       expect(
-        checkpointRejectionField(Uint8Array.of(0xd2, 0x80)),
+        await checkpointRejectionField(Uint8Array.of(0xd2, 0x80)),
       ).toBeUndefined();
     });
   });

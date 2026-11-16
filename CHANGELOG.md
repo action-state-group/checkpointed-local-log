@@ -9,11 +9,12 @@ are documented here. The format follows
 
 ### Added
 
-- TypeScript `checkpointRejectionField(cose)` (Node and browser entries): returns
-  `"issued_at"` when a checkpoint's `issued_at` is not RFC 3339 text, so a page
-  can say that field failed its format instead of "does not verify". It reads
-  the claims only and changes nothing about what `verifyCheckpoint` accepts
-  (capsule-viewer#311).
+- TypeScript `await checkpointRejectionField(cose)` (Node and browser entries):
+  returns `"issued_at"` when a checkpoint's `issued_at` is not RFC 3339 text and
+  its Ed25519 signature verifies, so a page can say that field failed its format
+  (not a signature) instead of "does not verify". A tampered or otherwise broken
+  statement returns `undefined`. It changes nothing about what `verifyCheckpoint`
+  accepts (capsule-viewer#311).
 - `WitnessStateStore.pendingWitnessesFor(witnessId, now, limit)` in the Go,
   Rust, Python and TypeScript backend contracts, with backend conformance
   vectors. Backends implementing the store trait must add it.
