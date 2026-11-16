@@ -237,6 +237,18 @@ describe("checkpoint verifier negative boundaries", () => {
       expect(checkpointRejectionField(cose)).toBeUndefined();
     });
 
+    it("names nothing when the statement is broken before issued_at is reached", async () => {
+      const cose = authenticatedMutation(
+        await firstCheckpoint(),
+        (_headers, claims) => {
+          claims.set("issued_at", "yesterday");
+          claims.set("unknown_claim", 1);
+        },
+      );
+      expect(await verifyCheckpoint(cose)).toBe(false);
+      expect(checkpointRejectionField(cose)).toBeUndefined();
+    });
+
     it("names nothing for bytes that are not a checkpoint", () => {
       expect(checkpointRejectionField(new Uint8Array())).toBeUndefined();
       expect(
