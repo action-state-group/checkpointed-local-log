@@ -11,7 +11,8 @@ are documented here. The format follows
 
 ### Added
 
-- `WitnessStateStore.PendingWitnessesFor(witnessId, now, limit)` in the backend
+- **Breaking for implementers:**
+  `WitnessStateStore.PendingWitnessesFor(witnessId, now, limit)` in the backend
   contract, with backend conformance vectors. Backends implementing the store
   must add it (checkpointed-local-log#129).
 
@@ -73,14 +74,15 @@ implement the trait, and chain-ordered witness delivery.
   altered after signing, not whose key signed it: a page must not present it
   as "signature valid" (capsule-viewer#311, checkpointed-local-log#138,
   checkpointed-local-log#139).
-- `pendingWitnessesFor(witnessId, now, limit)` on the witness state store, with
+- **Breaking for implementers:**
+  `pendingWitnessesFor(witnessId, now, limit)` on the witness state store, with
   backend conformance vectors. Backends implementing the store must add it
   (checkpointed-local-log#129).
-- The TypeScript runner does not yet deliver in chain order; its runner
-  vectors skip the two no-predecessor-row cases (checkpointed-local-log#131).
 
 ### Changed
 
+- The TypeScript runner does not yet deliver in chain order; its runner
+  vectors skip the two no-predecessor-row cases (checkpointed-local-log#131).
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
   requires (it was `<log_id>#<mmr_size>`). The verifier still accepts the
   pre-02 form; the writer no longer emits it. A verifier that insists on
@@ -107,7 +109,8 @@ implement the trait, and chain-ordered witness delivery.
 
 ### Added
 
-- `pending_witnesses_for(witness_id, now, limit)` on the witness state store,
+- **Breaking for implementers:**
+  `pending_witnesses_for(witness_id, now, limit)` on the witness state store,
   with backend conformance vectors. Backends implementing the store must add it
   (checkpointed-local-log#129).
 
