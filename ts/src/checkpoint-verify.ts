@@ -70,6 +70,34 @@ export const formatTime = (value: Date | string): string => {
   return `${parsed.toISOString().slice(0, 19)}${trimmed === "" ? "" : `.${trimmed}`}Z`;
 };
 
+// The draft requires issued_at "per RFC3339" and nothing more, and the Go,
+// Rust and Python readers accept any such text, so a checkpoint whose zero
+// fraction was written out (":00.000Z") stays valid. formatTime throws on text
+// that does not have the shape of an RFC3339 date-time; the calendar check
+// rejects dates such as February 30 that Date would roll over.
+const isRfc3339 = (value: string): boolean => {
+  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/u.exec(value);
+  if (match === null) return false;
+  const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(year as number, (month as number) - 1, day));
+  date.setUTCFullYear(year as number);
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== (month as number) - 1 ||
+    date.getUTCDate() !== day ||
+    (hour as number) > 23 ||
+    (minute as number) > 59 ||
+    (second as number) > 59
+  )
+    return false;
+  try {
+    formatTime(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export async function verifyCheckpointWith(
   crypto: CheckpointCrypto,
   cose: Uint8Array,
@@ -157,7 +185,7 @@ export async function verifyCheckpointWith(
       (previousSize as number) < 0 ||
       (previousSize as number) >= (logSize as number) ||
       typeof issuedAt !== "string" ||
-      formatTime(issuedAt) !== issuedAt ||
+      !isRfc3339(issuedAt) ||
       subject !== `${logId}#${logSize as number}`
     )
       return false;

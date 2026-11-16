@@ -36,6 +36,14 @@ are documented here. The format follows
   new cases `witness/chain-order-no-predecessor-row` and
   `witness/chain-order-no-predecessor-row-refused`.
 
+### Fixed
+
+- The TypeScript checkpoint verifier no longer rejects a checkpoint whose
+  `issued_at` is valid RFC 3339 but not the canonical spelling (for example
+  `2026-10-02T02:40:00.000Z`). The draft requires only "per RFC3339" and the
+  Go, Rust and Python readers already accept it, so logs written with the
+  longer spelling now verify in the History page. Writers are unchanged.
+
 ## Go module 0.3.0 (`go/v0.3.0`) — 2026-10-31
 
 ### Added
