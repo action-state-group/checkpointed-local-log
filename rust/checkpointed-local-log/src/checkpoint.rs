@@ -576,7 +576,8 @@ pub fn checkpoint_to_cose(
         cadence_seconds,
     )?;
 
-    let subject = format!("{}#{}", cp.log_id, cp.mmr_size);
+    // -02: `sub` is one value per log, never per checkpoint.
+    let subject = cp.log_id.clone();
     let claims_hdr = CborValue::Map(vec![
         (CborValue::from(CWT_ISS), CborValue::from(cp.log_id.clone())),
         (CborValue::from(CWT_SUB), CborValue::from(subject)),
@@ -869,10 +870,14 @@ pub fn verify_checkpoint_cose_offline(cose_bytes: &[u8]) -> CoseCheckpointVerifi
         }
     };
 
-    let expected_subject = format!("{issuer}#{mmr_size}");
-    if subject.as_deref() != Some(expected_subject.as_str()) {
+    // The log's own id is what -02 requires; "<log>#<size>" is the pre-02 form, still accepted
+    // so stored checkpoints keep verifying.
+    let legacy_subject = format!("{issuer}#{mmr_size}");
+    if subject.as_deref() != Some(issuer.as_str())
+        && subject.as_deref() != Some(legacy_subject.as_str())
+    {
         result.errors.push(format!(
-            "CWT subject {subject:?} does not match expected {expected_subject:?}"
+            "CWT subject {subject:?} does not match expected {issuer:?}"
         ));
         return result;
     }

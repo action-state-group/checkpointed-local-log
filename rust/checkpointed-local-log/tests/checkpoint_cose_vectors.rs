@@ -124,6 +124,15 @@ fn cose_checkpoint_vectors_pass() {
             "{name}: claims payload is not the pinned deterministic encoding"
         );
 
+        // The pre-02 statement (per-checkpoint sub) still verifies; no producer emits it.
+        let pre02 = hex::decode(vector["pre02_cose_hex"].as_str().unwrap()).unwrap();
+        let old = verify_checkpoint_cose_offline(&pre02);
+        assert!(
+            old.ok,
+            "{name}: pre-02 statement rejected: {:?}",
+            old.errors
+        );
+
         // The reference statement verifies here.
         let reference = hex::decode(vector["cose_hex"].as_str().unwrap()).unwrap();
         let result = verify_checkpoint_cose_offline(&reference);

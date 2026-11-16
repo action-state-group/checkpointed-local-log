@@ -175,6 +175,10 @@ def check_cose_vectors(doc: VectorsDoc, sk: Ed25519PrivateKey, failures: list[st
             failures.append(f"{name}: COSE claims payload differs from the pinned bytes")
         if cose.hex() != vector["cose_hex"]:
             failures.append(f"{name}: COSE statement differs from the pinned bytes")
+        if "pre02_cose_hex" in vector:
+            old = verify_checkpoint_cose_offline(bytes.fromhex(vector["pre02_cose_hex"]))
+            if not old.ok:
+                failures.append(f"{name}: pinned pre-02 COSE statement does not verify: {old.errors}")
         result = verify_checkpoint_cose_offline(bytes.fromhex(vector["cose_hex"]))
         if not result.ok or result.decoded is None or result.decoded.root != case["root"]:
             failures.append(f"{name}: pinned COSE statement does not verify: {result.errors}")

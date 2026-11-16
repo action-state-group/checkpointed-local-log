@@ -106,7 +106,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -117,7 +117,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -125,7 +125,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -150,7 +150,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -161,7 +161,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -169,7 +169,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -215,7 +215,7 @@
         "URxlYpgsm/oFukFFyl8ruoWhGheKQTG1zr3ibdn/5wQ=",
         "EHMWuQwjpW9liKPygeDxD8wyVzvB532oRZ1ojJVqoSs="
        ],
-       "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAWiFTJQlUng+jarr3OjTcKx/KdEvRvilkZ3lU3S+nAVi3PDI62HrKpA2bwspKRQizn53eiIBpq5PxOEiUsgz7Bg==",
        "checkpointSize": "10",
        "checkpointIndexedSeq": "6",
        "checkpointPeaks": [
@@ -226,7 +226,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -234,7 +234,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBYrKZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQRpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MDRaaXByZXZfc2l6ZQBqY29tbWl0bWVudFhFglggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYIKyqBGY6hUei9wxgzBj5N4eWsTxPmgj3DWra5mI2WzDGb3ByZXZfY29tbWl0bWVudEBYQKTCLymAtGDTrvuNGWrxmInASkJCHxy87OakB06KbYbiarKO9w5vTu4Kf3GDJanQhSwKovCXMjgjpp969DNqJQ4=",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWKymZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjA0WmlwcmV2X3NpemUAamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRAWECs8ZLwNEYYQv8bfSchrIB8npuHyOeZGvdgV0VFa+f+4bBJUIdO8gdum6hoHRZutNfy4KNwu2Rh9BOa3N4+OhUL",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:04.000Z",
          "permanent": false
@@ -242,7 +242,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "10",
-         "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAWiFTJQlUng+jarr3OjTcKx/KdEvRvilkZ3lU3S+nAVi3PDI62HrKpA2bwspKRQizn53eiIBpq5PxOEiUsgz7Bg==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:09.500Z",
          "permanent": false
@@ -250,7 +250,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "10",
-         "checkpoint": "0oRYbaQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJxcnVubmVyLXZlY3RvcnMjMTCgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAzqrLRqc/oufv9nu442sTcro5ErauCXxSeNbDxaKmXLjO6LE1baYrzYhJY5SDlH4A7ZM2VKltCsWRanaFjFNCCg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQImp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplCmlpc3N1ZWRfYXR2MjAyNi0xMC0wMVQxMjowMDowOS41WmlwcmV2X3NpemUEamNvbW1pdG1lbnRYRYJYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCWCAQcxa5DCOlb2WIo/KB4PEPzDJXO8HnfahFnWiMlWqhK29wcmV2X2NvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxnFjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hBGZzaXplX2IKZ3dpdG5lc3OCgVgg345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAhqCWCAdoDO/iSftaTdtkVM3SElPf16IwgYD3t4q/Jv9Q9RvF1ggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtpbmV3X3BlYWtzglggm5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8JYIBBzFrkMI6VvZYij8oHg8Q/MMlc7wed9qEWdaIyVaqEraW9sZF9wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxlhAWiFTJQlUng+jarr3OjTcKx/KdEvRvilkZ3lU3S+nAVi3PDI62HrKpA2bwspKRQizn53eiIBpq5PxOEiUsgz7Bg==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:09.500Z",
          "permanent": false
@@ -309,7 +309,7 @@
        "nodes": [
         "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDE6MDBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1JeD5btol8Z99JVQox7pgINocS30ZjETtadiOyfJO+bB7bzJvLTmzBHBbybzAukZjUULcsybkx/B6e4ZrAHUBw==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAxOjAwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQD+JZbTbgQorm59yD2ZFeNNFJU7US41rZDgx3RiTFoE/nv05jIRVvV21jB3Zdq3XjybtI+eDPCTi1lYPUk8snQA=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -340,7 +340,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
        "firstPendingAt": "2026-10-01T12:01:01.000Z",
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDE6MDBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1JeD5btol8Z99JVQox7pgINocS30ZjETtadiOyfJO+bB7bzJvLTmzBHBbybzAukZjUULcsybkx/B6e4ZrAHUBw==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAxOjAwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQD+JZbTbgQorm59yD2ZFeNNFJU7US41rZDgx3RiTFoE/nv05jIRVvV21jB3Zdq3XjybtI+eDPCTi1lYPUk8snQA=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -365,7 +365,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAyOjAxWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWECYOGuQNzFjrOlTo7up1jMTsm8zQ+XvnJuCBgZjZjVsrBTTGZjfKskAyPveduXfTRfy5HjeGnEnUvfs+jGxP5UP",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMjowMVppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAmAf1ilyn8D9GUGW7CGM2qsuc3gnP62jYoxIe+VjcFb2FtqapvK+6wvXlD/Cw4xEgqEa4+GhBZra0af9EHJKTCA==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -432,7 +432,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -461,7 +461,7 @@
         "345osT0u9ik42IsUeNHWFGQ16TRPNJzHzbWxFptQAho=",
         "m5LqCfXNYhJqATqfKYHgOTbHPNSFeS7BHDEXZ4ViS8I="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjN6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUHaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjExWmlwcmV2X3NpemUDamNvbW1pdG1lbnRYI4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCb3ByZXZfY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtxY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQNmc2l6ZV9iB2d3aXRuZXNzgYFYIN+OaLE9LvYpONiLFHjR1hRkNek0TzScx821sRabUAIaaW5ld19wZWFrc4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCaW9sZF9wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWEDp09avljvrC0wHMS2rruOzbYCfD/lbEE0qJGrUsoOVEH2RKzX39RL2SuIlqZGhG5lXxWBKfJIBIFhv09R9zIoG",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplB2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMVppcHJldl9zaXplA2pjb21taXRtZW50WCOBWCCbkuoJ9c1iEmoBOp8pgeA5Nsc81IV5LsEcMRdnhWJLwm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgdnd2l0bmVzc4GBWCDfjmixPS72KTjYixR40dYUZDXpNE80nMfNtbEWm1ACGmluZXdfcGVha3OBWCCbkuoJ9c1iEmoBOp8pgeA5Nsc81IV5LsEcMRdnhWJLwmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAoVQLg11QqTTbWRQ8chpObNoITZZb8H/HHumjy3+OuYVs+txXONlqViKsA2rzSIBzPCuSk9ne64Tgtx0fKpE2BA==",
        "checkpointSize": "7",
        "checkpointIndexedSeq": "4",
        "checkpointPeaks": [
@@ -492,7 +492,7 @@
         "86tVXQamewirJQOf2+Km/LMFyDvBZUks6B096hPsH78="
        ],
        "firstPendingAt": "2026-10-01T12:00:04.000Z",
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjN6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUHaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjExWmlwcmV2X3NpemUDamNvbW1pdG1lbnRYI4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCb3ByZXZfY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtxY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQNmc2l6ZV9iB2d3aXRuZXNzgYFYIN+OaLE9LvYpONiLFHjR1hRkNek0TzScx821sRabUAIaaW5ld19wZWFrc4FYIJuS6gn1zWISagE6nymB4Dk2xzzUhXkuwRwxF2eFYkvCaW9sZF9wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWEDp09avljvrC0wHMS2rruOzbYCfD/lbEE0qJGrUsoOVEH2RKzX39RL2SuIlqZGhG5lXxWBKfJIBIFhv09R9zIoG",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplB2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMVppcHJldl9zaXplA2pjb21taXRtZW50WCOBWCCbkuoJ9c1iEmoBOp8pgeA5Nsc81IV5LsEcMRdnhWJLwm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgdnd2l0bmVzc4GBWCDfjmixPS72KTjYixR40dYUZDXpNE80nMfNtbEWm1ACGmluZXdfcGVha3OBWCCbkuoJ9c1iEmoBOp8pgeA5Nsc81IV5LsEcMRdnhWJLwmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAoVQLg11QqTTbWRQ8chpObNoITZZb8H/HHumjy3+OuYVs+txXONlqViKsA2rzSIBzPCuSk9ne64Tgtx0fKpE2BA==",
        "checkpointSize": "7",
        "checkpointIndexedSeq": "4",
        "checkpointPeaks": [
@@ -575,7 +575,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -585,7 +585,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:10.000Z",
          "receipt": "cmVjZWlwdCB3LWE=",
@@ -598,7 +598,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:11.000Z",
          "permanent": false,
@@ -642,7 +642,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -652,7 +652,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:10.000Z",
          "receipt": "cmVjZWlwdCB3LWE=",
@@ -665,7 +665,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
          "attempts": 2,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": true,
@@ -750,7 +750,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -760,7 +760,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQNpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtvcHJldl9jb21taXRtZW50QFhA2o3QaI/MbQoyA6Pq3fnSx1D9IBTCltEvs4QmHbzU+XyUW4r8yUo40uCv4tSZjch7vdoIuOqfSp7SZWAq68cMBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudEBYQE5H4Z8Nj4wQySfl9nM4gGUdM4nbeIENrI7XD6tT9vck/tRYzg3nc095YqZqVuzyHKxyvPcCxLZ7YQ/RQbIcCQM=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:11.000Z",
          "permanent": true,
@@ -819,7 +819,7 @@
        "nodes": [
         "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -829,7 +829,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:11.000Z",
          "permanent": false,
@@ -863,7 +863,7 @@
        "nodes": [
         "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -873,7 +873,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 2,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": false,
@@ -907,7 +907,7 @@
        "nodes": [
         "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -917,7 +917,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 3,
          "nextAttemptAt": "2026-10-01T12:00:15.500Z",
          "permanent": false,
@@ -951,7 +951,7 @@
        "nodes": [
         "3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A4="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
        "checkpointSize": "1",
        "checkpointIndexedSeq": "1",
        "checkpointPeaks": [
@@ -961,7 +961,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 4,
          "nextAttemptAt": "2026-10-01T12:00:18.000Z",
          "permanent": false,
@@ -1034,7 +1034,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1044,7 +1044,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": false,
@@ -1053,7 +1053,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -1109,7 +1109,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1119,7 +1119,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 2,
          "nextAttemptAt": "2026-10-01T12:00:20.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMQ==",
@@ -1132,7 +1132,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:20.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMg==",
@@ -1209,7 +1209,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1219,7 +1219,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": false,
@@ -1228,7 +1228,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -1256,7 +1256,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1266,7 +1266,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": false,
@@ -1275,7 +1275,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -1331,7 +1331,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1341,7 +1341,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 2,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMQ==",
@@ -1354,7 +1354,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMg==",
@@ -1478,7 +1478,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -1489,7 +1489,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:15.000Z",
          "permanent": true,
@@ -1498,7 +1498,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMQ==",
@@ -1511,7 +1511,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -1519,7 +1519,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMg==",
@@ -1532,7 +1532,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "permanent": false
@@ -1540,7 +1540,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMw==",
@@ -1574,7 +1574,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -1585,7 +1585,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:15.000Z",
          "permanent": true,
@@ -1594,7 +1594,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMQ==",
@@ -1607,7 +1607,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -1615,7 +1615,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMg==",
@@ -1628,7 +1628,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "permanent": false
@@ -1636,7 +1636,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMw==",
@@ -1752,7 +1752,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1762,7 +1762,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMQ==",
@@ -1775,7 +1775,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMg==",
@@ -1788,7 +1788,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMg==",
@@ -1895,7 +1895,7 @@
         "y6jFlhIL22neu9kj2Sy6lIvefH0GpGWhu32Y0xFgOPo=",
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
        "checkpointSize": "3",
        "checkpointIndexedSeq": "2",
        "checkpointPeaks": [
@@ -1905,7 +1905,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMQ==",
@@ -1918,7 +1918,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "receipt": "cmVjZWlwdCB3LWEgMg==",
@@ -1931,7 +1931,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:13.000Z",
          "permanent": true,
@@ -2057,7 +2057,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -2068,7 +2068,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:11.000Z",
          "permanent": true,
@@ -2077,7 +2077,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:10.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMQ==",
@@ -2090,7 +2090,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -2098,7 +2098,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMg==",
@@ -2111,7 +2111,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "permanent": false
@@ -2119,7 +2119,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "permanent": false
@@ -2166,7 +2166,7 @@
         "UQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxs=",
         "rKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMY="
        ],
-       "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+       "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
        "checkpointSize": "4",
        "checkpointIndexedSeq": "3",
        "checkpointPeaks": [
@@ -2177,7 +2177,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:11.000Z",
          "permanent": true,
@@ -2186,7 +2186,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "1",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjMaBYiqZka2luZG5jbGwtY2hlY2twb2ludGhsb2dfc2l6ZQFpaXNzdWVkX2F0dDIwMjYtMTAtMDFUMTI6MDA6MTBaaXByZXZfc2l6ZQBqY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5vcHJldl9jb21taXRtZW50QFhA1GWEDAMT9CW1rpZqsVYDo5Xn1ZV5dGUB9dQnhjjpff+0pt6JZ0xEWb//NFIvpLcDyq+7QB6WJSY5EXafNGgFAQ==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWIqmZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUBaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEwWmlwcmV2X3NpemUAamNvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOb3ByZXZfY29tbWl0bWVudEBYQJ/ZF9osRdR0D59cAA38KOlKX9dX/PK91tXFclVDXlqi4dai6P3DqZpT9miCJwOuZqbTaoJRs3OpwC5elgke7gU=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:10.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMQ==",
@@ -2199,7 +2199,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:12.000Z",
          "permanent": false
@@ -2207,7 +2207,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "3",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjM6BZAVenZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUDaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjEyWmlwcmV2X3NpemUBamNvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbb3ByZXZfY29tbWl0bWVudFgjgVgg3P/nht7RbSg8ZjhGrQxP8mVY/M3jbKnTCy6hnq3p/A5xY29uc2lzdGVuY3lfcHJvb2alZnNpemVfYQFmc2l6ZV9iA2d3aXRuZXNzgYFYIMuoxZYSC9tp3rvZI9ksupSL3nx9BqRlobt9mNMRYDj6aW5ld19wZWFrc4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbaW9sZF9wZWFrc4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOWEC4nE8QW4Im56ramYqgcGPDXUZ3H22/0+SG6pu9GGob/8d2fXR9+ttssiOchHI8thKG/qiY0RqtpLXfouzPzUsJ",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQFXp2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplA2lpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxMlppcHJldl9zaXplAWpjb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG29wcmV2X2NvbW1pdG1lbnRYI4FYINz/54be0W0oPGY4Rq0MT/JlWPzN42yp0wsuoZ6t6fwOcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EBZnNpemVfYgNnd2l0bmVzc4GBWCDLqMWWEgvbad672SPZLLqUi958fQakZaG7fZjTEWA4+mluZXdfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG2lvbGRfcGVha3OBWCDc/+eG3tFtKDxmOEatDE/yZVj8zeNsqdMLLqGeren8DlhAtmUh4+FLeNHdnk0qdPc+Si5mk7FImYsLUayyasmLyaUBIVxfthQBBNtlrgMgdNNdtNwQB9jVzAlBbbzqjV0HDQ==",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMg==",
@@ -2220,7 +2220,7 @@
         {
          "witnessId": "w-a",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 0,
          "nextAttemptAt": "2026-10-01T12:00:14.000Z",
          "permanent": false
@@ -2228,7 +2228,7 @@
         {
          "witnessId": "w-b",
          "checkpointSize": "4",
-         "checkpoint": "0oRYbKQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJwcnVubmVyLXZlY3RvcnMjNKBZAXmnZGtpbmRuY2xsLWNoZWNrcG9pbnRobG9nX3NpemUEaWlzc3VlZF9hdHQyMDI2LTEwLTAxVDEyOjAwOjE0WmlwcmV2X3NpemUDamNvbW1pdG1lbnRYRYJYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxm9wcmV2X2NvbW1pdG1lbnRYI4FYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbcWNvbnNpc3RlbmN5X3Byb29mpWZzaXplX2EDZnNpemVfYgRnd2l0bmVzc4GAaW5ld19wZWFrc4JYIFEHBMWnM2o3ls9OQY87rJAErGp/pzXDqVKrYmQ14ysbWCCsqgRmOoVHovcMYMwY+TeHlrE8T5oI9w1q2uZiNlswxmlvbGRfcGVha3OBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1hAUwpbnbMBXyWyRq09mp0d55gVtdyWuU6ofgSe5FcbV/fHnjQ4cSqjfFIAtGx+3wccewsm17/QlKMQ0KHUP1ygBg==",
+         "checkpoint": "0oRYaqQBJwN4H2FwcGxpY2F0aW9uL2NsbC1jaGVja3BvaW50K2Nib3IEWCDqSmxj4pxSCr71UHsTLsX5lUd2rr6+e5JCHuppFEbSLA+iAW5ydW5uZXItdmVjdG9ycwJucnVubmVyLXZlY3RvcnOgWQF5p2RraW5kbmNsbC1jaGVja3BvaW50aGxvZ19zaXplBGlpc3N1ZWRfYXR0MjAyNi0xMC0wMVQxMjowMDoxNFppcHJldl9zaXplA2pjb21taXRtZW50WEWCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZvcHJldl9jb21taXRtZW50WCOBWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG3Fjb25zaXN0ZW5jeV9wcm9vZqVmc2l6ZV9hA2ZzaXplX2IEZ3dpdG5lc3OBgGluZXdfcGVha3OCWCBRBwTFpzNqN5bPTkGPO6yQBKxqf6c1w6lSq2JkNeMrG1ggrKoEZjqFR6L3DGDMGPk3h5axPE+aCPcNatrmYjZbMMZpb2xkX3BlYWtzgVggUQcExaczajeWz05BjzuskASsan+nNcOpUqtiZDXjKxtYQLfxOXhzU9osXDikUge6jgPWlp/dPCtyfLHuncMzGRL8TrHFN+LT+REcBm8Vtl61mdwK/V7GNG++bbd/CSsM5wo=",
          "attempts": 1,
          "nextAttemptAt": "2026-10-01T12:00:15.000Z",
          "receipt": "cmVjZWlwdCB3LWIgMw==",

@@ -217,7 +217,9 @@ func ParseRecord(data []byte) (Record, error) {
 	if err != nil {
 		return Record{}, err
 	}
-	if subject != fmt.Sprintf("%s#%d", issuer, wire.LogSize) {
+	// -02 requires one `sub` per log, so the log's own id is what writers emit now. Checkpoints
+	// signed before that carry "<log>#<size>", which stays verifiable so stored history still reads.
+	if subject != issuer && subject != fmt.Sprintf("%s#%d", issuer, wire.LogSize) {
 		return Record{}, fmt.Errorf("checkpoint CWT subject is invalid")
 	}
 	newPeaks, err := decodeCommitment(wire.Commitment, "commitment")
@@ -356,7 +358,7 @@ func (s *Ed25519Signer) signCheckpoint(ctx context.Context, payload []byte, newP
 	message.Headers.Protected[cose.HeaderLabelContentType] = ContentType
 	message.Headers.Protected[cose.HeaderLabelKeyID] = append([]byte(nil), s.public...)
 	if _, err := message.Headers.Protected.SetCWTClaims(cose.CWTClaims{
-		cose.CWTClaimIssuer: parsed.LogID, cose.CWTClaimSubject: fmt.Sprintf("%s#%d", parsed.LogID, parsed.MMRSize),
+		cose.CWTClaimIssuer: parsed.LogID, cose.CWTClaimSubject: parsed.LogID,
 	}); err != nil {
 		return nil, fmt.Errorf("set checkpoint CWT claims: %w", err)
 	}

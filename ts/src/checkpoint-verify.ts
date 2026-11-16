@@ -195,7 +195,7 @@ export async function verifyCheckpointWith(
       (previousSize as number) >= (logSize as number) ||
       typeof issuedAt !== "string" ||
       !isRfc3339(issuedAt) ||
-      subject !== `${logId}#${logSize as number}`
+      (subject !== logId && subject !== `${logId}#${logSize as number}`)
     )
       return false;
     const decodePeaks = (value: unknown): Uint8Array[] | undefined => {

@@ -170,7 +170,7 @@ fn wire_claims_still_differ_from_02() {
 }
 
 #[test]
-fn wire_sub_is_still_per_checkpoint() {
+fn wire_sub_is_the_log() {
     let v = vectors();
     let (store, _) = build(&v);
     let cp = &v["checkpoints"][0];
@@ -201,9 +201,8 @@ fn wire_sub_is_still_per_checkpoint() {
         .find(|(k, _)| k.as_integer() == Some(2.into()))
         .map(|(_, s)| s.as_text().unwrap().to_string())
         .unwrap();
-    assert_ne!(
+    assert_eq!(
         sub,
-        v["conventions"]["log_identity"]["sub"].as_str().unwrap(),
-        "the crate now sets sub to the log; make this an equality test"
+        v["conventions"]["log_identity"]["sub"].as_str().unwrap()
     );
 }
