@@ -158,6 +158,8 @@ describe("checkpoint verifier negative boundaries", () => {
   it.each([
     "2026-10-02T02:40:00.000Z",
     "2026-10-02T02:40:00.5Z",
+    "2026-10-02T02:40:00.1234567891Z",
+    "0000-02-29T00:00:00Z",
     "2026-10-02T02:40:00+00:00",
   ])("accepts an authenticated issued_at spelled %s", async (issuedAt) => {
     const checkpoint = await firstCheckpoint();
@@ -170,19 +172,25 @@ describe("checkpoint verifier negative boundaries", () => {
     ).toBe(true);
   });
 
-  it.each(["yesterday", "2026-10-02 02:40:00Z", "2026-02-30T00:00:00Z", ""])(
-    "rejects an authenticated issued_at of %j",
-    async (issuedAt) => {
-      const checkpoint = await firstCheckpoint();
-      expect(
-        await verifyCheckpoint(
-          authenticatedMutation(checkpoint, (_headers, claims) => {
-            claims.set("issued_at", issuedAt);
-          }),
-        ),
-      ).toBe(false);
-    },
-  );
+  it.each([
+    "yesterday",
+    "2026-10-02 02:40:00Z",
+    "2026-02-30T00:00:00Z",
+    "2026-10-02T02:40:00,5Z",
+    "2026-10-02T02:40:00+24:00",
+    "2026-10-02T02:40:00.Z",
+    "2026-10-02T24:00:00Z",
+    "",
+  ])("rejects an authenticated issued_at of %j", async (issuedAt) => {
+    const checkpoint = await firstCheckpoint();
+    expect(
+      await verifyCheckpoint(
+        authenticatedMutation(checkpoint, (_headers, claims) => {
+          claims.set("issued_at", issuedAt);
+        }),
+      ),
+    ).toBe(false);
+  });
 
   it("rejects an authenticated issued_at that is not text", async () => {
     const checkpoint = await firstCheckpoint();

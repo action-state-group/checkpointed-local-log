@@ -71,27 +71,36 @@ export const formatTime = (value: Date | string): string => {
 };
 
 // The draft requires issued_at "per RFC3339" and nothing more, and the Go,
-// Rust and Python readers accept any such text, so a checkpoint whose zero
-// fraction was written out (":00.000Z") stays valid. formatTime throws on text
-// that does not have the shape of an RFC3339 date-time; the calendar check
-// rejects dates such as February 30 that Date would roll over.
+// Rust and Python readers accept RFC 3339 text, so a checkpoint whose zero
+// fraction was written out (":00.000Z") stays valid. The check follows the
+// RFC 3339 grammar, so Go's extra leniencies (a comma before the fraction,
+// offsets such as +24:00) stay rejected. The calendar check rejects dates such
+// as February 30 that Date would roll over; a fraction longer than formatTime's
+// nine digits is cut to nine, since only the shape matters here.
 const isRfc3339 = (value: string): boolean => {
-  const match = /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/u.exec(value);
+  const match =
+    /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)(?:\.(\d+))?(Z|[+-]\d\d:\d\d)$/u.exec(
+      value,
+    );
   if (match === null) return false;
-  const [year, month, day, hour, minute, second] = match.slice(1).map(Number);
-  const date = new Date(Date.UTC(year as number, (month as number) - 1, day));
-  date.setUTCFullYear(year as number);
+  const [year, month, day, hour, minute, second] = match
+    .slice(1, 7)
+    .map(Number) as [number, number, number, number, number, number];
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
   if (
     date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== (month as number) - 1 ||
+    date.getUTCMonth() !== month - 1 ||
     date.getUTCDate() !== day ||
-    (hour as number) > 23 ||
-    (minute as number) > 59 ||
-    (second as number) > 59
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
   )
     return false;
   try {
-    formatTime(value);
+    formatTime(
+      `${value.slice(0, 19)}${match[7] === undefined ? "" : `.${match[7].slice(0, 9)}`}${match[8]}`,
+    );
     return true;
   } catch {
     return false;
