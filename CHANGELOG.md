@@ -21,14 +21,19 @@ are documented here. The format follows
   requires (it was `<log_id>#<mmr_size>`, which gave each checkpoint a new log
   identity). The reader still accepts the pre-02 form, so stored checkpoints
   keep verifying; the writer no longer emits it. A verifier that insists on
-  `<log_id>#<mmr_size>`, such as capsule-anchor's witness check before it is
-  updated, rejects the new checkpoints (checkpointed-local-log#137).
+  `<log_id>#<mmr_size>` rejects the new checkpoints. capsule-anchor's witness
+  check accepts both forms from capsule-anchor#94 (merged 2026-11-16, not yet
+  released): run capsule-anchor with #94 before adopting these writers
+  (checkpointed-local-log#137).
 - The witness delivery runner releases a checkpoint to a witness only once that
   witness's row for the checkpoint's `prev_size` has a receipt, or when that
   witness has no row for it, and `RunOnce` reads at most `limit` due rows per
   witness. A row without a receipt, permanent or not, holds the checkpoints
-  that follow it on that witness; see "Held and permanent witness rows" in
-  `docs/backend-contract.md` (checkpointed-local-log#91,
+  that follow it on that witness. A permanent row stops delivery to that
+  witness and nothing clears it automatically: an operator writes the row back
+  as not permanent with `commitWitness`, which helps only when the refusal was
+  transient ("Held and permanent witness rows" in `docs/backend-contract.md`;
+  checkpointed-local-log#91,
   checkpointed-local-log#129, checkpointed-local-log#130,
   checkpointed-local-log#131).
 - `witness.ReceiptVerifier` and `witness.NewSCRAPIClient` decode a receipt, its
@@ -43,8 +48,16 @@ are documented here. The format follows
 
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
   requires (it was `<log_id>#<mmr_size>`). `verify_checkpoint_cose_offline`
-  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it
+  still accepts the pre-02 form; `checkpoint_to_cose` no longer emits it. A
+  verifier that insists on `<log_id>#<mmr_size>` rejects the new checkpoints;
+  run capsule-anchor with capsule-anchor#94 (accepts both forms, merged
+  2026-11-16, not yet released) before adopting this writer
   (checkpointed-local-log#137).
+
+The 0.5.0 release (2026-11-06) is in the crate's own CHANGELOG
+(`rust/checkpointed-local-log/CHANGELOG.md`). It added the required trait
+method `WitnessStateStore::pending_witnesses_for`, which breaks backends that
+implement the trait, and chain-ordered witness delivery.
 
 ## @action-state-group/cll (TypeScript) 0.4.0 — 2026-11-16
 
@@ -56,19 +69,25 @@ are documented here. The format follows
   can say that field failed its format instead of "does not verify". A
   tampered signature gives `undefined`, so the page shows the signature failure
   whatever the format. It changes nothing about what `verifyCheckpoint`
-  accepts (capsule-viewer#311, checkpointed-local-log#138,
+  accepts. "Verifies under its own `kid`" shows only that the statement was not
+  altered after signing, not whose key signed it: a page must not present it
+  as "signature valid" (capsule-viewer#311, checkpointed-local-log#138,
   checkpointed-local-log#139).
 - `pendingWitnessesFor(witnessId, now, limit)` on the witness state store, with
   backend conformance vectors. Backends implementing the store must add it
   (checkpointed-local-log#129).
+- The TypeScript runner does not yet deliver in chain order; its runner
+  vectors skip the two no-predecessor-row cases (checkpointed-local-log#131).
 
 ### Changed
 
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
   requires (it was `<log_id>#<mmr_size>`). The verifier still accepts the
   pre-02 form; the writer no longer emits it. A verifier that insists on
-  `<log_id>#<mmr_size>`, such as capsule-anchor's witness check before it is
-  updated, rejects the new checkpoints (checkpointed-local-log#137).
+  `<log_id>#<mmr_size>` rejects the new checkpoints. capsule-anchor's witness
+  check accepts both forms from capsule-anchor#94 (merged 2026-11-16, not yet
+  released): run capsule-anchor with #94 before adopting these writers
+  (checkpointed-local-log#137).
 - `ReceiptVerifier` applies the receipt profile that scitt-cose and
   agent-action-capsule `VerifyReceipts` share, and decodes a receipt, its
   protected header and each inclusion proof under agent-action-capsule's
@@ -84,7 +103,7 @@ are documented here. The format follows
   longer spelling now verify in the History page. Writers are unchanged
   (checkpointed-local-log#136).
 
-## 0.9.0 — 2026-11-16
+## Python package 0.9.0 (`python/v0.9.0`) — 2026-11-16
 
 ### Added
 
@@ -96,12 +115,18 @@ are documented here. The format follows
 
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
   requires (it was `<log_id>#<mmr_size>`). The reader still accepts the pre-02
-  form; the writer no longer emits it (checkpointed-local-log#137).
+  form; the writer no longer emits it. A verifier that insists on
+  `<log_id>#<mmr_size>` rejects the new checkpoints; run capsule-anchor with
+  capsule-anchor#94 (accepts both forms, merged 2026-11-16, not yet released)
+  before adopting this writer (checkpointed-local-log#137).
 - The witness delivery runner releases a checkpoint to a witness only once that
   witness's row for the checkpoint's `prev_size` has a receipt, or when that
   witness has no row for it, and reads at most `limit` due rows per witness.
-  See "Held and permanent witness rows" in `docs/backend-contract.md`
-  (checkpointed-local-log#91, checkpointed-local-log#129,
+  A permanent row stops delivery to that witness and nothing clears it
+  automatically: an operator writes the row back as not permanent with
+  `commit_witness`, which helps only when the refusal was transient ("Held
+  and permanent witness rows" in `docs/backend-contract.md`;
+  checkpointed-local-log#91, checkpointed-local-log#129,
   checkpointed-local-log#130, checkpointed-local-log#131).
 - `ReceiptVerifier` checks agent-action-capsule's receipt encoding rule on the
   receipt bytes (checkpointed-local-log#120, checkpointed-local-log#126).
