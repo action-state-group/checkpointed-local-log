@@ -109,6 +109,7 @@ const checkpointCrypto: CheckpointCrypto = {
   verifyEd25519: async (publicKey, message, signature) =>
     verifyEd25519(publicKey, message, signature),
 };
+export { checkpointRejectionField } from "./checkpoint-verify.js";
 export const verifyCheckpoint = (cose: Uint8Array): Promise<boolean> =>
   verifyCheckpointWith(checkpointCrypto, cose);
 /** Return linkage metadata only after the complete checkpoint validates. */

@@ -240,6 +240,7 @@ const nodeCrypto: CheckpointCrypto = {
     verifyEd25519(publicKey, message, signature),
 };
 
+export { checkpointRejectionField } from "./checkpoint-verify.js";
 export const verifyCheckpoint = (cose: Uint8Array): Promise<boolean> =>
   verifyCheckpointWith(nodeCrypto, cose);
 

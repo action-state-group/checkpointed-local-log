@@ -107,83 +107,137 @@ const isRfc3339 = (value: string): boolean => {
   }
 };
 
+/**
+ * The part of verification every checkpoint check shares: the COSE shape, the
+ * protected header, the content type and the canonical claims map with its
+ * allowed members and `kind`. It checks no signature and none of the claims'
+ * values. `verifyCheckpointWith` and `checkpointRejectionField` both start
+ * here, so the second can name a field only for a statement the first would
+ * have carried that far. Throws on malformed CBOR or identifiers.
+ */
+function decodeCheckpointStatement(cose: Uint8Array):
+  | {
+      items: [Uint8Array, Map<unknown, unknown>, Uint8Array, Uint8Array];
+      kid: Uint8Array;
+      logId: string;
+      subject: string;
+      claims: Map<unknown, unknown>;
+    }
+  | undefined {
+  if (
+    cose.length < 2 ||
+    cose.length > limits.checkpointPayload ||
+    cose[0] !== 0xd2
+  )
+    return undefined;
+  const items = decode(cose.subarray(1), {
+    allowIndefinite: false,
+    coerceUndefinedToNull: false,
+    useMaps: true,
+  }) as unknown[];
+  if (
+    !Array.isArray(items) ||
+    items.length !== 4 ||
+    !(items[0] instanceof Uint8Array) ||
+    !(items[1] instanceof Map) ||
+    items[1].size !== 0 ||
+    !(items[2] instanceof Uint8Array) ||
+    !(items[3] instanceof Uint8Array)
+  )
+    return undefined;
+  const headers = decode(items[0], {
+    allowIndefinite: false,
+    useMaps: true,
+  }) as unknown;
+  if (!(headers instanceof Map)) return undefined;
+  const kid = headers.get(4);
+  const cwt = headers.get(15);
+  if (
+    headers.size !== 4 ||
+    headers.get(1) !== -8 ||
+    headers.get(3) !== CHECKPOINT_CONTENT_TYPE ||
+    !(kid instanceof Uint8Array) ||
+    kid.length !== 32 ||
+    !(cwt instanceof Map) ||
+    cwt.size !== 2
+  )
+    return undefined;
+  const logId = cwt.get(1);
+  const subject = cwt.get(2);
+  if (typeof logId !== "string" || typeof subject !== "string")
+    return undefined;
+  validateIdentifier(logId);
+
+  const claims = decode(items[2], {
+    allowIndefinite: false,
+    coerceUndefinedToNull: false,
+    useMaps: true,
+  }) as unknown;
+  if (
+    !(claims instanceof Map) ||
+    !bytesEqual(encodeCanonical(claims), items[2])
+  )
+    return undefined;
+  const allowedClaims = new Set([
+    "kind",
+    "log_size",
+    "commitment",
+    "prev_size",
+    "prev_commitment",
+    "issued_at",
+    "cadence",
+    "consistency_proof",
+  ]);
+  if (
+    claims.size < 6 ||
+    claims.size > 8 ||
+    [...claims.keys()].some(
+      (key) => typeof key !== "string" || !allowedClaims.has(key),
+    ) ||
+    claims.get("kind") !== "cll-checkpoint"
+  )
+    return undefined;
+  return {
+    items: items as [Uint8Array, Map<unknown, unknown>, Uint8Array, Uint8Array],
+    kid,
+    logId,
+    subject,
+    claims,
+  };
+}
+
+/**
+ * Name the field when `verifyCheckpoint` refuses a checkpoint because its
+ * `issued_at` is not RFC 3339 text: a format rejection, not a failed signature.
+ * It names `issued_at` only for a statement that passes the shared structure
+ * checks (`decodeCheckpointStatement`) and whose `issued_at` is malformed, so a
+ * statement broken elsewhere, or a tampered one with a well-formed `issued_at`,
+ * returns `undefined` and the caller keeps its generic failure. It checks no
+ * signature and changes nothing about what verifies.
+ */
+export function checkpointRejectionField(
+  cose: Uint8Array,
+): "issued_at" | undefined {
+  try {
+    const statement = decodeCheckpointStatement(cose);
+    if (statement === undefined) return undefined;
+    const issuedAt = statement.claims.get("issued_at");
+    return typeof issuedAt === "string" && isRfc3339(issuedAt)
+      ? undefined
+      : "issued_at";
+  } catch {
+    return undefined;
+  }
+}
+
 export async function verifyCheckpointWith(
   crypto: CheckpointCrypto,
   cose: Uint8Array,
 ): Promise<boolean> {
   try {
-    if (
-      cose.length < 2 ||
-      cose.length > limits.checkpointPayload ||
-      cose[0] !== 0xd2
-    )
-      return false;
-    const items = decode(cose.subarray(1), {
-      allowIndefinite: false,
-      coerceUndefinedToNull: false,
-      useMaps: true,
-    }) as unknown[];
-    if (
-      !Array.isArray(items) ||
-      items.length !== 4 ||
-      !(items[0] instanceof Uint8Array) ||
-      !(items[1] instanceof Map) ||
-      items[1].size !== 0 ||
-      !(items[2] instanceof Uint8Array) ||
-      !(items[3] instanceof Uint8Array)
-    )
-      return false;
-    const headers = decode(items[0], {
-      allowIndefinite: false,
-      useMaps: true,
-    }) as unknown;
-    if (!(headers instanceof Map)) return false;
-    const kid = headers.get(4);
-    const cwt = headers.get(15);
-    if (
-      headers.size !== 4 ||
-      headers.get(1) !== -8 ||
-      headers.get(3) !== CHECKPOINT_CONTENT_TYPE ||
-      !(kid instanceof Uint8Array) ||
-      kid.length !== 32 ||
-      !(cwt instanceof Map) ||
-      cwt.size !== 2
-    )
-      return false;
-    const logId = cwt.get(1);
-    const subject = cwt.get(2);
-    if (typeof logId !== "string" || typeof subject !== "string") return false;
-    validateIdentifier(logId);
-
-    const claims = decode(items[2], {
-      allowIndefinite: false,
-      coerceUndefinedToNull: false,
-      useMaps: true,
-    }) as unknown;
-    if (
-      !(claims instanceof Map) ||
-      !bytesEqual(encodeCanonical(claims), items[2])
-    )
-      return false;
-    const allowedClaims = new Set([
-      "kind",
-      "log_size",
-      "commitment",
-      "prev_size",
-      "prev_commitment",
-      "issued_at",
-      "cadence",
-      "consistency_proof",
-    ]);
-    if (
-      claims.size < 6 ||
-      claims.size > 8 ||
-      [...claims.keys()].some(
-        (key) => typeof key !== "string" || !allowedClaims.has(key),
-      ) ||
-      claims.get("kind") !== "cll-checkpoint"
-    )
-      return false;
+    const statement = decodeCheckpointStatement(cose);
+    if (statement === undefined) return false;
+    const { items, kid, logId, subject, claims } = statement;
     const logSize = claims.get("log_size");
     const previousSize = claims.get("prev_size");
     const issuedAt = claims.get("issued_at");
