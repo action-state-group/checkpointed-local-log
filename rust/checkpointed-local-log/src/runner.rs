@@ -19,10 +19,7 @@
 //!
 //! [`CheckpointStateStore::commit_cll`]: crate::log::CheckpointStateStore::commit_cll
 
-use crate::checkpoint::{
-    checkpoint_to_cose, verify_checkpoint_cose_offline, CheckpointError, CheckpointRecord,
-    CheckpointSigner,
-};
+use crate::checkpoint::{verify_checkpoint_cose_offline, CheckpointError, CheckpointSigner};
 use crate::log::{
     validate_identifier, CheckpointState, CheckpointStore, Error, ErrorCode, Result, State,
     Timestamp, WitnessState, DEFAULT_SCAN_LIMIT, MAX_SCAN_LIMIT, MAX_WITNESSES,
@@ -399,7 +396,8 @@ where
         Ok(true)
     }
 
-    /// Signs the checkpoint of `nodes` at `size`, following `previous`.
+    /// Signs the checkpoint of `nodes` at `size`, following `previous`
+    /// ([`crate::checkpoint::cut_checkpoint`]).
     fn sign(
         &self,
         now: Timestamp,
@@ -407,43 +405,25 @@ where
         nodes: &MemoryNodeStore,
         size: u64,
     ) -> Result<Vec<u8>> {
+        // A size the store does not hold is a corrupt store, as before.
         let peaks = peak_hashes(nodes, size)?;
-        let (prev_size, prev_peaks, proof) = match previous {
-            None => (0, None, None),
-            Some(previous) => {
-                let proof = mmr::consistency_proof(nodes, previous.size, size)
-                    .map_err(|e| Error::with_source(ErrorCode::Corrupt, "consistency proof", e))?;
-                (
-                    previous.size,
-                    Some(peak_hashes(nodes, previous.size)?),
-                    Some(proof),
-                )
-            }
-        };
-        let record = CheckpointRecord {
-            v: 1,
-            kind: "mmr_checkpoint".to_string(),
-            log_id: self.config.log_id.clone(),
-            mmr_size: size,
-            root: hex::encode(mmr::root_from_peaks(&peaks)),
+        let prev_size = previous.map_or(0, |p| p.size);
+        if prev_size > 0 {
+            peak_hashes(nodes, prev_size)?;
+        }
+        let cut = crate::checkpoint::cut_checkpoint(
+            nodes,
+            size,
             prev_size,
-            prev_root: prev_peaks
-                .as_deref()
-                .map_or_else(String::new, |p| hex::encode(mmr::root_from_peaks(p))),
-            key_id: self.signer.key_id(),
-            timestamp: checkpoint_timestamp(now)?,
-            signature: String::new(),
-            witnesses: Vec::new(),
-        };
-        let statement = checkpoint_to_cose(
-            &record,
+            &self.config.log_id,
+            &checkpoint_timestamp(now)?,
             &self.signer,
-            &peaks,
-            prev_peaks.as_deref(),
-            proof.as_ref(),
-            None,
         )
-        .map_err(sign_error)?;
+        .map_err(|e| match e {
+            CheckpointError::Signer(_) => sign_error(e),
+            e => Error::with_source(ErrorCode::Corrupt, "consistency proof", e),
+        })?;
+        let statement = cut.statement.map_err(sign_error)?;
         // As in Go, a statement that does not verify is never committed.
         self.check_statement(&statement, size, &peaks)
             .map_err(|reason| Error::invalid(format!("newly signed checkpoint {reason}")))?;

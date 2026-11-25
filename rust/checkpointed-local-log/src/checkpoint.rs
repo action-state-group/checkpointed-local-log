@@ -304,6 +304,84 @@ pub fn try_sign_checkpoint_digest(
     Ok(hex::encode(sig.0))
 }
 
+/// A checkpoint cut by [`cut_checkpoint`]: the record, with an empty
+/// `signature` (a caller that keeps the JSON record signs it with
+/// [`try_sign_checkpoint_digest`]), and its COSE wire statement, or why the
+/// statement could not be built. Each caller decides what a statement
+/// failure means for it (a runner refuses to commit; a store may keep the
+/// JSON record and note the error).
+#[derive(Debug)]
+pub struct CutCheckpoint {
+    pub record: CheckpointRecord,
+    pub statement: Result<Vec<u8>, CheckpointError>,
+}
+
+/// Cut the checkpoint of the MMR held by `nodes` at `size` nodes, extending
+/// the one at `prev_size` nodes (0 for the first): the record (`v` 1, kind
+/// `mmr_checkpoint`, `log_id`, the root, the previous root, the signer's key
+/// id, `timestamp`), and its COSE statement, signed by `signer`, with the
+/// peaks, the previous peaks and the consistency proof from `prev_size`.
+/// Whether `prev_size`'s root is the one the previous checkpoint recorded is
+/// the caller's to check. The one implementation of the cut, over any node
+/// store, for the runner here and for stores elsewhere.
+pub fn cut_checkpoint(
+    nodes: &impl crate::mmr::NodeReader,
+    size: u64,
+    prev_size: u64,
+    log_id: &str,
+    timestamp: &str,
+    signer: &dyn CheckpointSigner,
+) -> Result<CutCheckpoint, CheckpointError> {
+    let peak_hashes = |size: u64| -> Result<Vec<Hash>, CheckpointError> {
+        if size > nodes.size() {
+            return Err(CheckpointError::Invalid(format!(
+                "the node store holds {} nodes, not {size}",
+                nodes.size()
+            )));
+        }
+        let positions = crate::mmr::peaks(size)
+            .map_err(|e| CheckpointError::Invalid(format!("MMR size {size}: {e}")))?;
+        Ok(positions.into_iter().map(|p| nodes.node(p)).collect())
+    };
+    if prev_size > size {
+        return Err(CheckpointError::Invalid(format!(
+            "the previous size {prev_size} is past {size}"
+        )));
+    }
+    let peaks = peak_hashes(size)?;
+    let (prev_peaks, proof) = if prev_size > 0 {
+        let proof = crate::mmr::consistency_proof(nodes, prev_size, size)
+            .map_err(|e| CheckpointError::Invalid(format!("consistency proof: {e}")))?;
+        (Some(peak_hashes(prev_size)?), Some(proof))
+    } else {
+        (None, None)
+    };
+    let record = CheckpointRecord {
+        v: 1,
+        kind: "mmr_checkpoint".to_string(),
+        log_id: log_id.to_string(),
+        mmr_size: size,
+        root: hex::encode(root_from_peaks(&peaks)),
+        prev_size,
+        prev_root: prev_peaks
+            .as_deref()
+            .map_or_else(String::new, |p| hex::encode(root_from_peaks(p))),
+        key_id: signer.key_id(),
+        timestamp: timestamp.to_string(),
+        signature: String::new(),
+        witnesses: Vec::new(),
+    };
+    let statement = checkpoint_to_cose(
+        &record,
+        signer,
+        &peaks,
+        prev_peaks.as_deref(),
+        proof.as_ref(),
+        None,
+    );
+    Ok(CutCheckpoint { record, statement })
+}
+
 /// Back-compat convenience over `try_sign_checkpoint_digest` for the common
 /// case -- a local `ed25519_dalek::SigningKey`, which never fails to sign.
 /// Panics if `signer` does fail; callers of a fallible signer should use
