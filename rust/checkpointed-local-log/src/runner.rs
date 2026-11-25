@@ -419,10 +419,9 @@ where
             &checkpoint_timestamp(now)?,
             &self.signer,
         )
-        .map_err(|e| match e {
-            CheckpointError::Signer(_) => sign_error(e),
-            e => Error::with_source(ErrorCode::Corrupt, "consistency proof", e),
-        })?;
+        // Signer failures come back in `statement`; the cut's own error is a
+        // store that cannot prove the sizes, as before.
+        .map_err(|e| Error::with_source(ErrorCode::Corrupt, "checkpoint cut", e))?;
         let statement = cut.statement.map_err(sign_error)?;
         // As in Go, a statement that does not verify is never committed.
         self.check_statement(&statement, size, &peaks)

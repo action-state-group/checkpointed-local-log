@@ -97,4 +97,16 @@ fn the_cut_refuses_sizes_it_cannot_prove() {
     )
     .is_err());
     assert!(cut_checkpoint(&nodes, 2, 0, "l", "2026-11-25T00:00:00Z", &key).is_err());
+    // Re-cutting at the same size is the cut's to make; whether a store
+    // allows a checkpoint that does not grow is the store's rule.
+    let same = cut_checkpoint(
+        &nodes,
+        node_count(3),
+        node_count(3),
+        "l",
+        "2026-11-25T00:00:00Z",
+        &key,
+    )
+    .unwrap();
+    assert_eq!(same.record.prev_root, same.record.root);
 }
