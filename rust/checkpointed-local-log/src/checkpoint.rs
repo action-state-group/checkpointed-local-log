@@ -306,7 +306,8 @@ pub fn try_sign_checkpoint_digest(
 
 /// A checkpoint cut by [`cut_checkpoint`]: the record, with an empty
 /// `signature` (a caller that keeps the JSON record signs it with
-/// [`try_sign_checkpoint_digest`]), and its COSE wire statement, or why the
+/// [`try_sign_checkpoint_digest`]; a record with an empty signature is never
+/// to be stored or served), and its COSE wire statement, or why the
 /// statement could not be built. Each caller decides what a statement
 /// failure means for it (a runner refuses to commit; a store may keep the
 /// JSON record and note the error).
