@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- **`checkpoint::cut_checkpoint`**: the checkpoint cut (record, root, previous root, and the COSE statement with peaks and consistency proof) over any `NodeReader`, public, so other stores cut checkpoints with this crate's code instead of their own copies. The record's `signature` is left empty for a caller that keeps the JSON record to fill with `try_sign_checkpoint_digest`, and the statement comes back as a `Result` for the caller to handle. The runner now cuts with it; its statements and error codes are unchanged (checkpointed-local-log#143).
+
 ## 0.6.0 — 2026-11-16
 
 - **Checkpoint CWT `sub` is the log id**, constant per log, as CLL -02
