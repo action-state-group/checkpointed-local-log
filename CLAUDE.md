@@ -36,16 +36,16 @@ Cross-language interop checks live in `.github/scripts/` and `go/scripts/`.
 ## Before you push
 
 Before every push: `scripts/check.sh` (about 14 min on an Apple-silicon Mac;
-needs Go, Node.js, Rust, Python 3.12 and a running Docker daemon for the
-MySQL tests, in any context via `DOCKER_HOST`; see the script's header).
+needs Go, npm, Rust, Python 3.12 and a running Docker daemon for the MySQL
+tests, in any context via `DOCKER_HOST`; see the script's header). It runs the
+TypeScript jobs on Node.js 22 and 24, fetched with `npx -p node@<version>`.
 Before pushing a change to `python/` or `spec/`, also `scripts/check.sh
 --full` (about 16 min; also needs Python 3.9, kramdown-rfc and the xml2rfc
 version that built the committed `spec/` files). Pull requests run only the
 fast set, with TypeScript on Node.js 24 only; the storage interlock,
 same-revision interoperability, the research vectors, crate packaging and
-TypeScript on Node.js 22 run nightly and on main. Neither tier runs a second
-Node.js version or the DCO, leak-lint and neutrality scans (they need the PR
-range or CI's secrets).
+TypeScript on Node.js 22 run nightly and on main. Neither tier runs the DCO,
+leak-lint and neutrality scans (they need the PR range or CI's secrets).
 
 ## Layout
 

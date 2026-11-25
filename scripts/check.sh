@@ -3,24 +3,25 @@
 # Local check before a push: the commands CI runs, on this machine.
 #
 #   scripts/check.sh          what every pull request ran before the heavy
-#                             suites left the PR path: Go, TypeScript, Python
-#                             and Rust CI, the storage interlock (jsonl, sqlite
-#                             and mysql), same-revision interoperability, the
-#                             research vectors and crate packaging.
+#                             suites left the PR path: Go, TypeScript (Node.js
+#                             22 and 24), Python and Rust CI, the storage
+#                             interlock (jsonl, sqlite and mysql),
+#                             same-revision interoperability, the research
+#                             vectors and crate packaging.
 #   scripts/check.sh --full   also Python 3.9 (CI's oldest matrix version) and
 #                             the spec build.
 #
-# Needs Go, Node.js with npm, Rust (stable, rustfmt, clippy), Python 3.12 (and
+# Needs Go, npm (Node.js 22 and 24 are fetched with `npx -p node@<version>`;
+# everything after the TypeScript steps runs on 24, as CI does), Rust (stable, rustfmt, clippy), Python 3.12 (and
 # 3.9 for --full) found by `uv python find` or as python3.12/python3.9, and a
 # running Docker daemon in any context (set DOCKER_HOST for a non-default one;
 # with Colima, testcontainers also needs
 # TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock). The Python, Rust
 # and interlock MySQL tests get a mysql:8.4 container from this script, as CI
 # gives them a service; the Go and TypeScript MySQL tests start their own
-# through testcontainers. --full also needs kramdown-rfc and xml2rfc (the version that
-# built the committed spec/ files; another version changes the generator line). It cannot run
-# CI's second Node.js version (22 and 24): TypeScript runs on the node on PATH.
-# DCO, leak lint and the neutrality scan need CI's secrets or PR range and are
+# through testcontainers. --full also needs kramdown-rfc and xml2rfc (the
+# version that built the committed spec/ files; another version changes the
+# generator line). DCO, leak lint and the neutrality scan need CI's secrets or PR range and are
 # not run (the neutrality scanner's self-test is).
 #
 # Every step runs even after one fails, and a step whose MySQL container does
@@ -126,7 +127,23 @@ go_unit() (cd go && go test ./...)
 go_race() (cd go && go test -race ./...)
 
 # --- TypeScript CI (ci-ts.yml) -----------------------------------------------
-# CI runs `npm ci` in every job; here once, before the other TypeScript steps.
+# CI runs `npm ci` in every job; here once per Node.js version, before that
+# version's other TypeScript steps, so native modules match the runtime.
+node_dir() { npx -y -p "node@$1" -- sh -c 'dirname "$(command -v node)"'; }
+node22_dir="" node24_dir=""
+resolve_node() {
+  node22_dir=$(node_dir 22) && node24_dir=$(node_dir 24) &&
+    export PATH="$node24_dir:$PATH" &&
+    PATH="$node22_dir:$PATH" node -v && node -v
+}
+# on_node <22|24> <function>: runs the function with that Node.js first on PATH.
+on_node() {
+  local dir
+  if [[ $1 == 22 ]]; then dir=$node22_dir; else dir=$node24_dir; fi
+  [[ -n $dir ]] || { echo "Node.js $1 was not resolved" >&2; return 1; }
+  shift
+  PATH="$dir:$PATH" "$@"
+}
 ts_install() (cd ts && npm ci)
 ts_quality() (cd ts && CLL_ROOT=.. npm run format:check && npm run lint && npm run typecheck)
 ts_unit_and_build() (
@@ -324,12 +341,16 @@ spec_build() (
 step "go: quality" go_quality
 step "go: unit tests" go_unit
 step "go: race tests" go_race
-step "ts: npm ci" ts_install
-step "ts: quality" ts_quality
-step "ts: unit and build" ts_unit_and_build
-step "ts: browser" ts_browser
-step "ts: mysql" ts_mysql
-step "ts: package smoke" ts_package_smoke
+step "node.js 22 and 24" resolve_node
+# 22 first: the later steps use ts/node_modules and ts/dist from the 24 pass.
+for v in 22 24; do
+  step "ts node $v: npm ci" on_node "$v" ts_install
+  step "ts node $v: quality" on_node "$v" ts_quality
+  step "ts node $v: unit and build" on_node "$v" ts_unit_and_build
+  [[ $v != 24 ]] || step "ts node $v: browser" on_node "$v" ts_browser
+  step "ts node $v: mysql" on_node "$v" ts_mysql
+  step "ts node $v: package smoke" on_node "$v" ts_package_smoke
+done
 step "python 3.12: test" python_test 3.12
 step "rust: test" rust_test
 step "rust: cross-language vectors" rust_cross_language_vectors

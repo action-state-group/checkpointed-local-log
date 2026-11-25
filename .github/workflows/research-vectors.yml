@@ -5,7 +5,7 @@ name: External MMR profile research vectors
 on:
   push:
     branches: [main]
-    paths: ["python/**", "*-vectors/**", ".github/workflows/research-vectors.yml"]
+    paths: ["python/**", "*-vectors/**", "go/cll/conformance/vectors.json", "ts/src/conformance/vectors.json", "rust/checkpointed-local-log/src/log/conformance/vectors.json", "go/mmr/testdata/cll02_vectors.json", "ts/test/testdata/cll-02-vectors.json", ".github/workflows/research-vectors.yml"]
   schedule:
     - cron: "15 8 * * *"
   workflow_dispatch:

@@ -7,7 +7,7 @@ on:
     branches: [main]
   # Pull requests run this workflow only when they touch its inputs.
   pull_request:
-    paths: ["go/**", "*-vectors/**", ".github/workflows/ci-go.yml"]
+    paths: ["go/**", "*-vectors/**", "ts/test/testdata/runner-vectors.json", ".github/workflows/ci-go.yml"]
 
 permissions:
   contents: read
