@@ -18,7 +18,9 @@ defaults:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # ubuntu-latest moved to 26.04, whose tool cache has no Python 3.9, the
+    # oldest version the package supports; 24.04 still has it.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
