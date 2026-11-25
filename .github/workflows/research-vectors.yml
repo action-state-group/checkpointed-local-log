@@ -1,9 +1,21 @@
 name: External MMR profile research vectors
+# Pull requests do not run this workflow, to keep their job count small.
+# Regenerating the research vectors runs nightly, on push to main when its inputs change, and
+# by hand; scripts/check.sh runs it locally before a push (CLAUDE.md).
 on:
   push:
-  pull_request:
+    branches: [main]
+    paths: ["python/**", "*-vectors/**", "go/cll/conformance/vectors.json", "ts/src/conformance/vectors.json", "rust/checkpointed-local-log/src/log/conformance/vectors.json", "go/mmr/testdata/cll02_vectors.json", "ts/test/testdata/cll-02-vectors.json", ".github/workflows/research-vectors.yml"]
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
 permissions:
   contents: read
+# Pull request runs share a group per ref and cancel older runs; every other
+# run gets its own group, so a main or nightly run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   reproduce:
     runs-on: ubuntu-latest
@@ -20,3 +32,20 @@ jobs:
       - run: python checkpoint-conformance-vectors/generate_receipts.py --check
       - run: python -m pytest tests/checkpoint/test_mmr_profile_vectors.py
         working-directory: python
+
+  # A red run on main or a nightly opens or comments on one ci-red issue.
+  report-failure:
+    needs: [reproduce]
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "External MMR profile research vectors failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh

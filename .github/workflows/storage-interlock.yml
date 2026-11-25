@@ -4,11 +4,23 @@ name: Storage interlock
 # witness rows and checkpoint roots. Each language also runs the shared
 # backend conformance vectors (docs/backend-contract.md), so all of them agree
 # on every error code. A pull request that adds a language extends both.
+# Pull requests do not run this workflow, to keep their job count small.
+# The storage interlock runs nightly, on push to main when its inputs change, and
+# by hand; scripts/check.sh runs it locally before a push (CLAUDE.md).
 on:
   push:
-  pull_request:
+    branches: [main]
+    paths: ["go/**", "ts/**", "python/**", "rust/**", "*-vectors/**", ".github/workflows/storage-interlock.yml"]
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
 permissions:
   contents: read
+# Pull request runs share a group per ref and cancel older runs; every other
+# run gets its own group, so a main or nightly run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   interlock:
     name: Storage interlock (${{ matrix.backend }})
@@ -16,6 +28,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         backend: [jsonl, sqlite, mysql]
     services:
@@ -89,3 +102,20 @@ jobs:
 
       - name: Every language writes, every other reads and verifies
         run: bash go/scripts/check-storage-interop.sh "${{ matrix.backend }}"
+
+  # A red run on main or a nightly opens or comments on one ci-red issue.
+  report-failure:
+    needs: [interlock]
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Storage interlock failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh

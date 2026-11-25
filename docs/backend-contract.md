@@ -484,11 +484,14 @@ backend tests also cover, against every backend that supports them:
 A JSONL journal, SQLite database or MySQL log written by one language opens,
 continues and verifies in every other, with identical checkpoint roots. The
 [storage interlock workflow](../.github/workflows/storage-interlock.yml) runs
-on every pull request. For each storage format it runs every language's
-conformance vectors, then
+nightly, on every push to main that changes its inputs, and by hand, and
+`scripts/check.sh` runs it locally, which contributors run before pushing
+(CLAUDE.md). For each storage format it runs every language's conformance
+vectors, then
 [`go/scripts/check-storage-interop.sh`](../go/scripts/check-storage-interop.sh),
 which, for every ordered pair of languages, creates a log in one, continues it
 in the other, and requires every language to read byte-identical entries,
 state, witness rows and checkpoint root. A pull request that adds a language's
-backend adds its driver and conformance step to both, so no language merges
-without passing them.
+backend adds its driver and conformance step to both. Since pull requests no
+longer run the interlock, a break shows up on main or in the nightly run after
+the merge, and the run opens a `ci-red` issue.

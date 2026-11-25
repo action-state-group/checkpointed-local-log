@@ -2,14 +2,23 @@ name: TypeScript CI
 
 on:
   push:
+    branches: [main]
+  # Pull requests run this workflow only when they touch its inputs.
   pull_request:
+    paths: ["ts/**", "*-vectors/**", ".github/workflows/ci-ts.yml"]
+  # Pull requests test Node.js 24 only; the nightly run and main test 22 too.
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# Pull request runs share a group per ref and cancel older runs; every other
+# run gets its own group, so a main or nightly run is never cancelled.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 defaults:
   run:
@@ -21,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -73,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -89,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -111,3 +120,21 @@ jobs:
           npm install "$package_dir"/*.tgz
           node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql"); const { conformanceCases } = await import("@action-state-group/cll/conformance"); if (conformanceCases({ open: () => ({}) }).length === 0) throw new Error("no conformance cases")'
           node --conditions=browser -e 'const { checkpointMetadata } = await import("@action-state-group/cll"); const { readFileSync } = await import("node:fs"); const { cases } = JSON.parse(readFileSync(`${process.env.GITHUB_WORKSPACE}/checkpoint-conformance-vectors/cose-vectors.json`, "utf8")); for (const vector of cases) if ((await checkpointMetadata(Buffer.from(vector.cose_hex, "hex"))) === undefined) throw new Error(`browser entry refused ${vector.name}`)'
+
+  # A red run on main or a nightly opens or comments on one ci-red issue.
+  report-failure:
+    needs: [quality, unit-and-build, browser, mysql, package-smoke]
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "TypeScript CI failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh

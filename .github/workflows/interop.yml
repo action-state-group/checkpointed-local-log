@@ -1,9 +1,21 @@
 name: Same-revision interoperability
+# Pull requests do not run this workflow, to keep their job count small.
+# The interoperability check runs nightly, on push to main when its inputs change, and
+# by hand; scripts/check.sh runs it locally before a push (CLAUDE.md).
 on:
   push:
-  pull_request:
+    branches: [main]
+    paths: ["go/**", "ts/**", "python/**", "*-vectors/**", ".github/scripts/check_checkpoint_interop.sh", ".github/workflows/interop.yml"]
+  schedule:
+    - cron: "15 8 * * *"
+  workflow_dispatch:
 permissions:
   contents: read
+# Pull request runs share a group per ref and cancel older runs; every other
+# run gets its own group, so a main or nightly run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   checkpoint-interop:
     name: Checkpoint interoperability
@@ -34,3 +46,20 @@ jobs:
       - name: Verify Go, TypeScript, and Python checkpoint bytes
         shell: bash
         run: bash .github/scripts/check_checkpoint_interop.sh
+
+  # A red run on main or a nightly opens or comments on one ci-red issue.
+  report-failure:
+    needs: [checkpoint-interop]
+    if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Same-revision interoperability failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh

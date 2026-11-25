@@ -18,7 +18,16 @@ name: Rust CI
 
 on:
   push:
+    branches: [main]
+  # Pull requests run this workflow only when they touch its inputs.
   pull_request:
+    paths: ["rust/**", "python/**", "*-vectors/**", ".github/workflows/rust.yml"]
+
+# Pull request runs share a group per ref and cancel older runs; every other
+# run gets its own group, so a main or nightly run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -105,3 +114,20 @@ jobs:
         run: |
           cargo run --quiet -p checkpointed-local-log --example trait_signed_checkpoint | \
             python3 ../checkpoint-conformance-vectors/verify_trait_signed_cose.py
+
+  # A red run on main opens or comments on one ci-red issue.
+  report-failure:
+    needs: [rust-test, cross-language-vectors]
+    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Rust CI failed on main or nightly"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh
