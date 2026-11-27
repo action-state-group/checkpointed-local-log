@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "check.sh"
 BASH = shutil.which("bash")
 
-# One script behind every fake tool name. FAKE_FAIL, FAKE_SLEEP and
-# FAKE_KILLGROUP are extended regular expressions matched against
+# One script behind every fake tool name. FAKE_FAIL, FAKE_SLEEP,
+# FAKE_KILLGROUP and FAKE_KILLLEADER are extended regular expressions matched against
 # "<tool> <args...>".
 FAKE = r"""#!/usr/bin/env bash
 name=$(basename "$0")
@@ -32,6 +32,12 @@ call="$name $*"
 echo "$$ $call" >> "$FAKE_LOG"
 if [[ -n ${FAKE_KILLGROUP:-} && $call =~ $FAKE_KILLGROUP ]]; then
   kill -KILL 0
+fi
+if [[ -n ${FAKE_KILLLEADER:-} && $call =~ $FAKE_KILLLEADER ]]; then
+  # Kill only the process group's leader (the group's shell), then outlive it.
+  kill -KILL "$(ps -o pgid= -p $$ | tr -d ' ')"
+  echo "$$ sleeping" >> "$FAKE_LOG"
+  sleep 300
 fi
 if [[ -n ${FAKE_SLEEP:-} && $call =~ $FAKE_SLEEP ]]; then
   echo "$$ sleeping" >> "$FAKE_LOG"
@@ -160,6 +166,24 @@ def test_a_group_killed_without_a_failed_step_fails_the_run(tree):
     steps = summary(proc.stdout)
     assert "go: race tests" not in steps
     assert steps["crate packaging"] == "ok"
+
+
+def test_a_group_whose_shell_dies_has_its_commands_stopped(tree):
+    # The Go group's shell is killed while its race test still runs; the run
+    # must stop that test instead of waiting for it or leaving it behind.
+    start = time.monotonic()
+    proc = run(tree, FAKE_KILLLEADER="^go test -race")
+    assert time.monotonic() - start < 60, "check.sh waited for an orphaned command"
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "group go exited 137 without a failed step" in proc.stdout
+    sleepers = [
+        int(line.split()[0]) for line in tree["log"].read_text().splitlines()
+        if line.endswith(" sleeping")
+    ]
+    assert sleepers
+    for pid in sleepers:
+        with pytest.raises(ProcessLookupError):
+            os.kill(pid, 0)
 
 
 def test_interrupt_stops_every_group_and_removes_containers(tree):

@@ -123,6 +123,9 @@ wait_groups() {
   for i in "${!group_pids[@]}"; do
     pid=${group_pids[$i]} name=${group_names[$i]}
     wait "$pid"; status=$?
+    # A group whose shell died can leave commands running in its process
+    # group; stop them before later steps use the same build directories.
+    kill -TERM -- "-$pid" 2>/dev/null
     echo
     echo "##### group $name (exit $status)"
     cat "$work/$name.log"
