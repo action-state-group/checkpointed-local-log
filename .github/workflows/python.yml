@@ -11,7 +11,7 @@ on:
     branches: [main]
   # Pull requests run this workflow only when they touch its inputs.
   pull_request:
-    paths: ["python/**", "*-vectors/**", ".github/*.py", ".github/leak_lint_allowlist.txt", ".github/releases.json", ".github/scripts/check_python_package.sh", ".github/scripts/check_python_inventory.py", ".github/scripts/test_python_inventory.py", ".github/workflows/python.yml"]
+    paths: ["python/**", "*-vectors/**", ".github/*.py", ".github/leak_lint_allowlist.txt", ".github/releases.json", ".github/scripts/check_python_package.sh", ".github/scripts/check_python_inventory.py", ".github/scripts/test_python_inventory.py", "scripts/check.sh", ".github/workflows/python.yml"]
 
 # Pull request runs share a group per ref and cancel older runs; every other
 # run gets its own group, so a main or nightly run is never cancelled.
@@ -82,6 +82,9 @@ jobs:
 
       - name: Release helper tests
         run: python -m pytest -q ../.github/test_release.py
+
+      - name: scripts/check.sh orchestration tests
+        run: python -m pytest -q ../.github/test_check_script.py
 
       - name: Source, editable, wheel and sdist package checks
         run: |

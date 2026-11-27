@@ -5,7 +5,7 @@ name: Same-revision interoperability
 on:
   push:
     branches: [main]
-    paths: ["go/**", "ts/**", "python/**", "*-vectors/**", ".github/scripts/check_checkpoint_interop.sh", ".github/workflows/interop.yml"]
+    paths: ["go/**", "ts/**", "python/**", "*-vectors/**", ".github/scripts/check_checkpoint_interop.sh", ".github/scripts/use-node-headers.sh", ".github/workflows/interop.yml"]
   schedule:
     - cron: "15 8 * * *"
   workflow_dispatch:
@@ -38,6 +38,8 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: Build native addons against this Node.js's own headers
+        run: bash .github/scripts/use-node-headers.sh
       - name: Build destination TypeScript
         run: npm ci && npm run build
         working-directory: ts

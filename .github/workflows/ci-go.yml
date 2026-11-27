@@ -23,64 +23,46 @@ defaults:
     working-directory: go
 
 jobs:
-  quality:
-    name: Quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go/go.mod
-          cache: true
-          cache-dependency-path: go/go.sum
-      - name: Check formatting and module files
-        run: |
-          test -z "$(gofmt -l .)"
-          go mod tidy
-          git diff --exit-code -- go.mod go.sum
-      - name: Vet
-        run: go vet ./...
-      - name: Runner vectors are current
-        run: go run ./test/runnervectors -check
-
-  unit:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go/go.mod
-          cache: true
-          cache-dependency-path: go/go.sum
-      - name: Test
-        run: go test ./...
-
-  race:
-    name: Race tests
+  # One job, so a run takes one runner slot instead of three: on a busy
+  # organization each job waits for its own runner (issue #152).
+  test:
+    name: Go
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Go
+        id: setup
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go/go.mod
           cache: true
           cache-dependency-path: go/go.sum
-      - name: Race test
+      # Each check below runs even after an earlier one failed, so one run
+      # reports every failure as the separate jobs did.
+      - name: Check formatting and module files
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: |
+          test -z "$(gofmt -l .)"
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Vet
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: go vet ./...
+      - name: Runner vectors are current
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: go run ./test/runnervectors -check
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
+        run: go test ./...
+      - name: Race tests
+        if: ${{ !cancelled() && steps.setup.outcome == 'success' }}
         run: go test -race ./...
 
   # A red run on main opens or comments on one ci-red issue.
   report-failure:
-    needs: [quality, unit, race]
+    needs: [test]
     if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
