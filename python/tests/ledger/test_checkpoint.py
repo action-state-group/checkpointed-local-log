@@ -9,8 +9,8 @@ Covers:
   - verify_receipt_offline: correct wiring to scitt-cose (mocked)
   - list/save/load_checkpoint: round-trips storage layer
   - Mutant test: verifying a rolled-back log returns RollbackError / fails consistency
-
-Live network tests (off by default; opt-in via CAPSULE_TEST_LIVE_TS=1).
+  - End to end against a local anchor on 127.0.0.1: register, cache the
+    authority key, verify a real COSE receipt (no network)
 
 **Ported from capsule-ledger in the CLL extraction (2026-09-01).**
 ``LocalSigner`` and the synthetic-capsule builder below are minimal,
@@ -26,11 +26,12 @@ import hashlib
 import hmac
 import itertools
 import json
-import os
 import secrets
 import tempfile
+import threading
 import unittest.mock as mock
 from dataclasses import dataclass
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 import pytest
@@ -43,10 +44,12 @@ from cll.ledger.checkpoint import (
     CheckpointRecord,
     RollbackError,
     WitnessRecord,
+    cache_ts_pubkey,
     emit_checkpoint,
     list_checkpoints,
     load_checkpoint,
     load_latest_checkpoint,
+    load_ts_pubkey,
     register_checkpoint,
     save_checkpoint,
     save_config,
@@ -55,8 +58,6 @@ from cll.ledger.checkpoint import (
     verify_receipt_offline,
 )
 from cll.ledger.store import LedgerStore
-
-_LIVE_TS = os.environ.get("CAPSULE_TEST_LIVE_TS") == "1"
 
 
 # ---------------------------------------------------------------------------
@@ -538,33 +539,168 @@ class TestStorage:
 # ---------------------------------------------------------------------------
 
 
-
-
 # ---------------------------------------------------------------------------
-# Live network tests (skipped unless CAPSULE_TEST_LIVE_TS=1)
+# End to end against a local anchor (no network)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(not _LIVE_TS, reason="set CAPSULE_TEST_LIVE_TS=1 to run live TS tests")
-class TestLiveTS:
-    def test_end_to_end_emit_register_verify(self, tmp_path):
-        """Full flow: emit → register at public anchor → verify receipt offline."""
-        from cll.ledger.checkpoint import cache_ts_pubkey
+class _LocalAnchor:
+    """A capsule-anchor stand-in on 127.0.0.1 serving the two routes this
+    module calls: ``GET /anchor/authority-pubkey`` and ``POST /v1/digest``.
+    Each POST appends ``sha256(digest)`` to its log and answers with a real
+    COSE receipt over it, signed by a fresh Ed25519 authority key."""
 
-        mmr, store, tmpd = _make_mmr_with_leaves(5)
-        signer_obj = _make_signer("live-test-key")
+    def __init__(self) -> None:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        from cryptography.hazmat.primitives.serialization import (
+            Encoding,
+            NoEncryption,
+            PrivateFormat,
+            PublicFormat,
+        )
 
-        cp = emit_checkpoint(mmr, signer_obj, timestamp="2026-08-18T00:00:00Z")
-        witness = register_checkpoint(cp, DEFAULT_TS_URL, timeout=30.0)
-        cp.witnesses.append(witness)
-        save_checkpoint(tmpd, cp)
+        key = Ed25519PrivateKey.generate()
+        self.private_pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+        self.public_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        self.pubkey_hex = key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw).hex()
+        self.entries: list[str] = []
+        self.requests: list[tuple[str, str]] = []
+        anchor = self
 
-        # Cache the TS authority public key.
-        pem = cache_ts_pubkey(tmpd, DEFAULT_TS_URL)
-        assert pem.startswith(b"-----BEGIN PUBLIC KEY-----")
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                anchor.requests.append(("GET", self.path))
+                if self.path != "/anchor/authority-pubkey":
+                    self._reply(404, {"error": "not found"})
+                    return
+                self._reply(200, {"pubkey_hex": anchor.pubkey_hex, "key_id": anchor.pubkey_hex[:16]})
 
-        # Verify receipt offline (no network needed after key is cached).
-        ok, errors = verify_receipt_offline(witness, ts_pubkey_pem=pem)
-        assert ok, f"offline verify failed: {errors}"
+            def do_POST(self):
+                anchor.requests.append(("POST", self.path))
+                body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                if self.path != "/v1/digest":
+                    self._reply(404, {"error": "not found"})
+                    return
+                self._reply(200, anchor.register(body["capsule_id"]))
 
-        store.close()
+            def _reply(self, status: int, obj: dict) -> None:
+                data = json.dumps(obj).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *args):
+                pass
+
+        self.server = HTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}"
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def register(self, digest_hex: str) -> dict:
+        from scitt_cose import build_receipt
+
+        entry = hashlib.sha256(bytes.fromhex(digest_hex)).hexdigest()
+        self.entries.append(entry)
+        receipt = build_receipt(
+            leaf_entry_hex=entry,
+            leaf_index=len(self.entries) - 1,
+            tree_entries_hex=list(self.entries),
+            alg="EdDSA",
+            log_private_key_pem=self.private_pem,
+        )
+        return {
+            "entry_hash": entry,
+            "receipt_b64": base64.b64encode(receipt).decode(),
+            "leaf_index": len(self.entries) - 1,
+            "tree_size": len(self.entries),
+        }
+
+    def close(self) -> None:
+        if not self.thread.is_alive():
+            return
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(timeout=5)
+
+
+@pytest.fixture
+def local_anchor(monkeypatch):
+    # urllib sends even loopback requests through a proxy named in the
+    # environment unless no_proxy exempts the host.
+    for name in ("no_proxy", "NO_PROXY"):
+        monkeypatch.setenv(name, "127.0.0.1")
+    anchor = _LocalAnchor()
+    try:
+        yield anchor
+    finally:
+        anchor.close()
+
+
+class TestEndToEndLocalAnchor:
+    def test_emit_register_cache_and_verify(self, local_anchor):
+        """Emit, register, cache the authority key, reload it, verify the receipt."""
+        mmr, store, root = _make_mmr_with_leaves(5)
+        try:
+            first = emit_checkpoint(mmr, _make_signer(), timestamp="2026-08-18T00:00:00Z")
+            register_checkpoint(first, local_anchor.url)
+            cp = emit_checkpoint(mmr, _make_signer(), timestamp="2026-08-18T00:00:01Z")
+            witness = register_checkpoint(cp, local_anchor.url, timeout=5.0)
+            cp.witnesses.append(witness)
+            save_checkpoint(root, cp)
+
+            assert witness.ts_url == local_anchor.url
+            assert witness.entry_hash == hashlib.sha256(bytes.fromhex(cp.digest())).hexdigest()
+            assert (witness.leaf_index, witness.tree_size) == (1, 2)
+            assert load_checkpoint(root, cp.mmr_size).witnesses[0].entry_hash == witness.entry_hash
+
+            assert load_ts_pubkey(root, local_anchor.url) is None
+            pem = cache_ts_pubkey(root, local_anchor.url, timeout=5.0)
+            assert pem == local_anchor.public_pem
+            assert load_ts_pubkey(root, local_anchor.url) == pem
+            assert load_ts_pubkey(root, "https://other.example") is None
+
+            assert verify_receipt_offline(witness, ts_pubkey_pem=pem) == (True, [])
+            # With no cached key it fetches the key from the witness's own URL.
+            assert verify_receipt_offline(witness) == (True, [])
+            assert local_anchor.requests == [
+                ("POST", "/v1/digest"),
+                ("POST", "/v1/digest"),
+                ("GET", "/anchor/authority-pubkey"),
+                ("GET", "/anchor/authority-pubkey"),
+            ]
+        finally:
+            store.close()
+
+    def test_receipt_fails_under_another_key_or_for_another_entry(self, local_anchor):
+        mmr, store, _root = _make_mmr_with_leaves(3)
+        try:
+            cp = emit_checkpoint(mmr, _make_signer(), timestamp="2026-08-18T00:00:00Z")
+            witness = register_checkpoint(cp, local_anchor.url)
+        finally:
+            store.close()
+
+        other = _LocalAnchor()
+        try:
+            ok, errors = verify_receipt_offline(witness, ts_pubkey_pem=other.public_pem)
+            assert not ok and errors
+            # Fetching the key from another anchor fails the same way.
+            ok, errors = verify_receipt_offline(witness, ts_base_url=other.url)
+            assert not ok and errors
+        finally:
+            other.close()
+
+        witness.entry_hash = "00" * 32
+        ok, errors = verify_receipt_offline(witness, ts_pubkey_pem=local_anchor.public_pem)
+        assert not ok and errors
+
+    def test_unreachable_anchor_fails_closed(self, local_anchor, tmp_path):
+        url = local_anchor.url
+        local_anchor.close()
+        witness = WitnessRecord(ts_url=url, entry_hash="ab" * 32, receipt_b64="", leaf_index=0, tree_size=1)
+        ok, errors = verify_receipt_offline(witness, timeout=2.0)
+        assert not ok and errors
+        with pytest.raises(OSError):
+            cache_ts_pubkey(tmp_path, url, timeout=2.0)
