@@ -134,10 +134,27 @@ def summary(out: str) -> dict[str, str]:
     return result
 
 
+def assert_containers_removed(calls: list[str]) -> None:
+    """Every container the run started was removed with its anonymous volumes
+    (mysql:8.4 declares /var/lib/mysql a volume; `docker rm -f` alone leaves it
+    behind and fills Docker's disk run after run)."""
+    started = {
+        line.split("--name ", 1)[1].split()[0]
+        for line in calls if line.split(None, 1)[1].startswith("docker run ")
+    }
+    assert started, calls
+    removals = [line.split(None, 1)[1] for line in calls if " docker rm " in f" {line} "]
+    # A removal without -v orphans the volume for good: a later `rm -v` of
+    # the same name finds no container.
+    assert all(r.startswith("docker rm -f -v ") for r in removals), removals
+    assert started <= {r.split()[-1] for r in removals}, calls
+
+
 def test_every_step_runs_and_passes(tree):
     proc = run(tree)
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert summary(proc.stdout) == {name: "ok" for name in ALL_STEPS}
+    assert_containers_removed(tree["log"].read_text().splitlines())
 
 
 @pytest.mark.parametrize(
@@ -209,12 +226,4 @@ def test_interrupt_stops_every_group_and_removes_containers(tree):
     for pid in sleepers:
         with pytest.raises(ProcessLookupError):
             os.kill(pid, 0)
-    started = {
-        line.split("--name ", 1)[1].split()[0]
-        for line in calls if " docker run " in f" {line.split(None, 1)[1]}"
-    }
-    assert started, calls
-    removed = {
-        line.split()[-1] for line in calls if line.split(None, 1)[1].startswith("docker rm -f")
-    }
-    assert started <= removed
+    assert_containers_removed(calls)

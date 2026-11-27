@@ -84,7 +84,7 @@ stop_groups() {
 cleanup() {
   stop_groups
   local c
-  while read -r c; do [[ -n $c ]] && docker rm -f "$c" >/dev/null 2>&1; done < "$container_list"
+  while read -r c; do [[ -n $c ]] && docker rm -f -v "$c" >/dev/null 2>&1; done < "$container_list"
   rm -rf "$work"
 }
 trap cleanup EXIT
@@ -193,7 +193,7 @@ start_mysql() {
   return 1
 }
 stop_mysql() {
-  docker rm -f "$prefix-$1-$$" >/dev/null 2>&1
+  docker rm -f -v "$prefix-$1-$$" >/dev/null 2>&1
   unset CLL_MYSQL_URL CLL_MYSQL_DSN
 }
 
