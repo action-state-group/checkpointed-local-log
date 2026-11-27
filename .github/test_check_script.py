@@ -35,8 +35,9 @@ if [[ -n ${FAKE_KILLGROUP:-} && $call =~ $FAKE_KILLGROUP ]]; then
 fi
 if [[ -n ${FAKE_KILLLEADER:-} && $call =~ $FAKE_KILLLEADER ]]; then
   # Kill only the process group's leader (the group's shell), then outlive it.
-  kill -KILL "$(ps -o pgid= -p $$ | tr -d ' ')"
+  # Logged first: once the leader dies, check.sh may stop this command.
   echo "$$ sleeping" >> "$FAKE_LOG"
+  kill -KILL "$(ps -o pgid= -p $$ | tr -d ' ')"
   sleep 300
 fi
 if [[ -n ${FAKE_SLEEP:-} && $call =~ $FAKE_SLEEP ]]; then

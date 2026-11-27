@@ -63,9 +63,21 @@ work=$(mktemp -d)
 container_list=$work/containers
 : > "$container_list"
 group_pids=()
+# kill_group <pgid>: stops every process in a process group. A process the
+# group forks while the first signal is sent can miss it, so the group is
+# signalled again until it is empty, and killed after about 5 seconds.
+kill_group() {
+  local i
+  for ((i = 0; i < 50; i++)); do
+    kill -TERM -- "-$1" 2>/dev/null || return 0
+    sleep 0.1
+  done
+  kill -KILL -- "-$1" 2>/dev/null
+  return 0
+}
 stop_groups() {
   local pid
-  for pid in "${group_pids[@]}"; do kill -TERM -- "-$pid" 2>/dev/null; done
+  for pid in "${group_pids[@]}"; do kill_group "$pid"; done
   for pid in "${group_pids[@]}"; do wait "$pid" 2>/dev/null; done
   group_pids=()
 }
@@ -125,7 +137,7 @@ wait_groups() {
     wait "$pid"; status=$?
     # A group whose shell died can leave commands running in its process
     # group; stop them before later steps use the same build directories.
-    kill -TERM -- "-$pid" 2>/dev/null
+    kill_group "$pid"
     echo
     echo "##### group $name (exit $status)"
     cat "$work/$name.log"
