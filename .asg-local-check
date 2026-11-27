@@ -1,0 +1,2 @@
+scripts/check.sh
+scripts/check.sh --full
