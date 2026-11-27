@@ -820,14 +820,20 @@ mod mysql {
         }
     }
 
+    /// A name no other test uses on the shared server: the process id and
+    /// start time separate runs, and the counter separates this run's
+    /// concurrent tests (macOS's clock has only microsecond resolution, so two
+    /// tests could read the same time; issue #152).
     fn log_id(name: &str) -> String {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         format!(
-            "rs-backend-{name}-{}-{}",
+            "rs-backend-{name}-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         )
     }
 
