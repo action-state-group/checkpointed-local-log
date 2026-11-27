@@ -5,7 +5,7 @@ on:
     branches: [main]
   # Pull requests run this workflow only when they touch its inputs.
   pull_request:
-    paths: ["ts/**", "*-vectors/**", ".github/workflows/ci-ts.yml"]
+    paths: ["ts/**", "*-vectors/**", ".github/scripts/use-node-headers.sh", ".github/scripts/check-native-addons.sh", ".github/workflows/ci-ts.yml"]
   # Pull requests test Node.js 24 only; the nightly run and main test 22 too.
   schedule:
     - cron: "15 8 * * *"
@@ -26,27 +26,14 @@ defaults:
 env:
   CLL_ROOT: ..
 jobs:
-  quality:
+  # One job per Node.js version runs every check that needs only that runtime,
+  # so a run takes two runner slots (this and browser) instead of five: on a
+  # busy organization each job waits for its own runner (issue #152).
+  test:
+    name: test (${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-          cache-dependency-path: ts/package-lock.json
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
-      - run: npm run typecheck
-
-  unit-and-build:
-    runs-on: ubuntu-latest
-    strategy:
+      fail-fast: false
       matrix:
         node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
     timeout-minutes: 20
@@ -57,58 +44,30 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
           cache-dependency-path: ts/package-lock.json
-      - run: npm ci
-        working-directory: ts
-      - run: npm run build
-        working-directory: ts
-      - run: npx vitest run --coverage --exclude test/mysql.test.ts
-        working-directory: ts
-
-  browser:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: ts/package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
-
-  mysql:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-          cache-dependency-path: ts/package-lock.json
-      - run: npm ci
-      - run: npx vitest run test/mysql.test.ts
-
-  package-smoke:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: ${{ github.event_name == 'pull_request' && fromJSON('[24]') || fromJSON('[22, 24]') }}
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-          cache-dependency-path: ts/package-lock.json
-      - run: npm ci && npm run build
+      - run: bash ../.github/scripts/use-node-headers.sh
+      - id: install
+        run: npm ci
+      - run: bash ../.github/scripts/check-native-addons.sh
+      # Each check below runs whenever the install succeeded, even after an
+      # earlier check failed, so one run reports every failure as the separate
+      # jobs did.
+      - name: Quality
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          npm run format:check
+          npm run lint
+          npm run typecheck
+      - id: build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npx vitest run --coverage --exclude test/mysql.test.ts
+      - name: MySQL tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npx vitest run test/mysql.test.ts
       - name: Install packed artifact and import every entry point
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
         run: |
           package_dir=$(mktemp -d)
@@ -121,9 +80,24 @@ jobs:
           node -e 'await import("@action-state-group/cll"); await import("@action-state-group/cll/jsonl"); await import("@action-state-group/cll/sqlite"); await import("@action-state-group/cll/mysql"); const { conformanceCases } = await import("@action-state-group/cll/conformance"); if (conformanceCases({ open: () => ({}) }).length === 0) throw new Error("no conformance cases")'
           node --conditions=browser -e 'const { checkpointMetadata } = await import("@action-state-group/cll"); const { readFileSync } = await import("node:fs"); const { cases } = JSON.parse(readFileSync(`${process.env.GITHUB_WORKSPACE}/checkpoint-conformance-vectors/cose-vectors.json`, "utf8")); for (const vector of cases) if ((await checkpointMetadata(Buffer.from(vector.cose_hex, "hex"))) === undefined) throw new Error(`browser entry refused ${vector.name}`)'
 
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+      - run: bash ../.github/scripts/use-node-headers.sh
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+
   # A red run on main or a nightly opens or comments on one ci-red issue.
   report-failure:
-    needs: [quality, unit-and-build, browser, mysql, package-smoke]
+    needs: [test, browser]
     if: failure() && ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'schedule')
     runs-on: ubuntu-latest
     permissions:

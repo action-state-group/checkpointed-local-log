@@ -19,18 +19,30 @@
 # TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock). The Python, Rust
 # and interlock MySQL tests get a mysql:8.4 container from this script, as CI
 # gives them a service; the Go and TypeScript MySQL tests start their own
-# through testcontainers. --full also needs kramdown-rfc and xml2rfc (the
-# version that built the committed spec/ files; another version changes the
-# generator line). DCO, leak lint and the neutrality scan need CI's secrets or PR range and are
+# through testcontainers. --full also needs kramdown-rfc 1.7.43 and xml2rfc
+# 3.34.1, the versions that built the committed spec/ files and that spec.yml
+# pins (another xml2rfc changes the generator line). DCO, leak lint and the neutrality scan need CI's secrets or PR range and are
 # not run (the neutrality scanner's self-test is).
+#
+# Independent groups run in parallel, each with its output in its own log:
+# Go (and, with --full, the spec build); TypeScript on Node.js 22 then 24;
+# Python then Rust and crate packaging (they share the Python 3.12
+# virtualenv, python/build and rust/target). The cross-language steps that use
+# their builds (interoperability, research vectors, storage interlock) then run
+# in sequence. A group's log is printed when the group ends; a line per step
+# reports progress meanwhile.
 #
 # Every step runs even after one fails, and a step whose MySQL container does
 # not start still runs and counts as failed (with CI set, its MySQL tests fail
 # without a server). The summary lists each step's result and the script exits
-# 1 when any failed. Containers it starts are named
+# 1 when any failed, or when a group ended without reporting its steps. Ctrl-C
+# or a TERM stops every group. Containers it starts are named
 # $CLL_CHECK_CONTAINER_PREFIX-<step>-<pid> (default prefix cll-check) and
 # removed on exit.
 set -uo pipefail
+# Job control gives each background group its own process group, so stopping
+# a group stops every command it started.
+set -m
 
 full=false
 case "${1:-}" in
@@ -46,26 +58,97 @@ cd "$root" || exit 2
 export CI=true GITHUB_WORKSPACE="$root"
 prefix=${CLL_CHECK_CONTAINER_PREFIX:-cll-check}
 work=$(mktemp -d)
-containers=()
+# Every container a step starts, from any group, is listed here so the parent
+# removes it on exit.
+container_list=$work/containers
+: > "$container_list"
+group_pids=()
+# kill_group <pgid>: stops every process in a process group. A process the
+# group forks while the first signal is sent can miss it, so the group is
+# signalled again until it is empty, and killed after about 5 seconds.
+kill_group() {
+  local i
+  for ((i = 0; i < 50; i++)); do
+    kill -TERM -- "-$1" 2>/dev/null || return 0
+    sleep 0.1
+  done
+  kill -KILL -- "-$1" 2>/dev/null
+  return 0
+}
+stop_groups() {
+  local pid
+  for pid in "${group_pids[@]}"; do kill_group "$pid"; done
+  for pid in "${group_pids[@]}"; do wait "$pid" 2>/dev/null; done
+  group_pids=()
+}
 cleanup() {
-  for c in "${containers[@]}"; do docker rm -f "$c" >/dev/null 2>&1; done
+  stop_groups
+  local c
+  while read -r c; do [[ -n $c ]] && docker rm -f "$c" >/dev/null 2>&1; done < "$container_list"
   rm -rf "$work"
 }
 trap cleanup EXIT
+trap 'echo "interrupted" >&2; exit 130' INT TERM
 
-results=()
+# step <name> <command...>: runs the command and appends its result to
+# $results_file. Progress goes to fd 3, the terminal, since a group's own
+# output goes to its log.
+exec 3>&1
+results_file=$work/main.results
+: > "$results_file"
 failed=0
 step() {
   local name=$1; shift
-  local start=$SECONDS
+  local start=$SECONDS line
   echo
   echo "=== $name"
   if "$@"; then
-    results+=("ok    $((SECONDS - start))s  $name")
+    line="ok    $((SECONDS - start))s  $name"
   else
-    results+=("FAIL  $((SECONDS - start))s  $name")
+    line="FAIL  $((SECONDS - start))s  $name"
     failed=1
   fi
+  echo "$line" >> "$results_file"
+  echo "  $line" >&3
+}
+
+# group <name> <function>: runs the function in the background with its output
+# in $work/<name>.log and its results in $work/<name>.results; the subshell
+# exits 1 when any of its steps failed.
+group() {
+  local name=$1 fn=$2
+  : > "$work/$name.results"
+  (
+    results_file=$work/$name.results failed=0
+    trap - EXIT INT TERM
+    "$fn" > "$work/$name.log" 2>&1 < /dev/null
+    exit "$failed"
+  ) &
+  group_pids+=("$!")
+  group_names+=("$name")
+}
+group_names=()
+# wait_groups: waits for every running group, prints its log and results, and
+# fails a group that exited non-zero without reporting a failed step.
+wait_groups() {
+  local i pid name status
+  for i in "${!group_pids[@]}"; do
+    pid=${group_pids[$i]} name=${group_names[$i]}
+    wait "$pid"; status=$?
+    # A group whose shell died can leave commands running in its process
+    # group; stop them before later steps use the same build directories.
+    kill_group "$pid"
+    echo
+    echo "##### group $name (exit $status)"
+    cat "$work/$name.log"
+    cat "$work/$name.results" >> "$work/main.results"
+    if ((status != 0)); then
+      failed=1
+      grep -q '^FAIL' "$work/$name.results" ||
+        echo "FAIL  -     group $name exited $status without a failed step" >> "$work/main.results"
+    fi
+  done
+  group_pids=() group_names=()
 }
 
 find_python() {
@@ -94,7 +177,7 @@ venv() {
 # password) and exports CLL_MYSQL_URL and CLL_MYSQL_DSN for it.
 start_mysql() {
   local name="$prefix-$1-$$" password=$2 port i
-  containers+=("$name")
+  echo "$name" >> "$container_list"
   docker run -d --name "$name" -e MYSQL_ROOT_PASSWORD="$password" -e MYSQL_DATABASE=cll \
     -p 127.0.0.1::3306 mysql:8.4 >/dev/null || return 1
   port=$(docker port "$name" 3306/tcp | head -n 1 | sed 's/.*://') || return 1
@@ -187,6 +270,7 @@ python_test() {
       python -c "import sys, cll, cll.log; loaded = [m for m in ('sqlite3', 'pymysql') if m in sys.modules]; assert not loaded, loaded" &&
       python -m pytest -q ../.github/test_leak_lint.py &&
       python -m pytest -q ../.github/test_release.py &&
+      python -m pytest -q ../.github/test_check_script.py &&
       python -m pip install -q build &&
       bash ../.github/scripts/check_python_package.sh
   )
@@ -338,35 +422,47 @@ spec_build() (
   grep -q 'version="3"' "$out/$draft.xml"
 )
 
-step "go: quality" go_quality
-step "go: unit tests" go_unit
-step "go: race tests" go_race
-step "node.js 22 and 24" resolve_node
+go_group() {
+  step "go: quality" go_quality
+  step "go: unit tests" go_unit
+  step "go: race tests" go_race
+  if $full; then step "spec build" spec_build; fi
+}
 # 22 first: the later steps use ts/node_modules and ts/dist from the 24 pass.
-for v in 22 24; do
-  step "ts node $v: npm ci" on_node "$v" ts_install
-  step "ts node $v: quality" on_node "$v" ts_quality
-  step "ts node $v: unit and build" on_node "$v" ts_unit_and_build
-  [[ $v != 24 ]] || step "ts node $v: browser" on_node "$v" ts_browser
-  step "ts node $v: mysql" on_node "$v" ts_mysql
-  step "ts node $v: package smoke" on_node "$v" ts_package_smoke
-done
-step "python 3.12: test" python_test 3.12
-step "rust: test" rust_test
-step "rust: cross-language vectors" rust_cross_language_vectors
-step "crate packaging" crates_package
+ts_group() {
+  local v
+  for v in 22 24; do
+    step "ts node $v: npm ci" on_node "$v" ts_install
+    step "ts node $v: quality" on_node "$v" ts_quality
+    step "ts node $v: unit and build" on_node "$v" ts_unit_and_build
+    [[ $v != 24 ]] || step "ts node $v: browser" on_node "$v" ts_browser
+    step "ts node $v: mysql" on_node "$v" ts_mysql
+    step "ts node $v: package smoke" on_node "$v" ts_package_smoke
+  done
+}
+python_rust_group() {
+  step "python 3.12: test" python_test 3.12
+  if $full; then step "python 3.9: test" python_test 3.9; fi
+  step "rust: test" rust_test
+  step "rust: cross-language vectors" rust_cross_language_vectors
+  step "crate packaging" crates_package
+}
+
+# Resolved here, before the groups start, so every later step (the groups and
+# the cross-language steps) runs on Node.js 24 from PATH.
+step "node.js 22 and 24" resolve_node
+group go go_group
+group ts ts_group
+group python-rust python_rust_group
+wait_groups
 step "same-revision interoperability" interop
 step "research vectors" research_vectors
 step "storage interlock: jsonl" storage_interlock jsonl
 step "storage interlock: sqlite" storage_interlock sqlite
 step "storage interlock: mysql" storage_interlock mysql
 step "neutrality scanner self-test" neutrality_self_test
-if $full; then
-  step "python 3.9: test" python_test 3.9
-  step "spec build" spec_build
-fi
 
 echo
 echo "=== summary ($([[ $full == true ]] && echo full || echo check), ${SECONDS}s)"
-printf '%s\n' "${results[@]}"
+cat "$work/main.results"
 exit "$failed"

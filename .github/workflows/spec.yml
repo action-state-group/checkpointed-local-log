@@ -11,8 +11,11 @@
 # stripped from both sides before diffing so the check is environment-agnostic.
 name: Spec
 
+# Pushes to main only: a tag push ran it too, and a release tag (go/v*) is no
+# change to the draft.
 on:
   push:
+    branches: [main]
     paths: ["spec/**", ".github/workflows/spec.yml"]
   pull_request:
     paths: ["spec/**", ".github/workflows/spec.yml"]
@@ -32,10 +35,15 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with: { python-version: "3.12" }
 
+      # The versions that built the committed spec/ files: each writes its
+      # version into them (kramdown-rfc's generator comment is stripped below,
+      # xml2rfc's "v2v3 conversion" comment is compared), so an unpinned newer
+      # xml2rfc made every run red (3.35.0 against 3.34.1; issue #152). Bump
+      # these together with a rebuild of spec/.
       - name: install toolchain
         run: |
-          gem install kramdown-rfc
-          python -m pip install xml2rfc
+          gem install kramdown-rfc -v 1.7.43
+          python -m pip install xml2rfc==3.34.1
 
       - name: build draft to temp + diff against tracked artifacts
         working-directory: spec
@@ -96,3 +104,20 @@ jobs:
       - name: idnits
         working-directory: spec
         run: npx --yes @ietf-tools/idnits _ci_build/"${DRAFT}.txt" || true
+
+  # A red run on main opens or comments on one ci-red issue.
+  report-failure:
+    needs: [build]
+    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Report the failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Spec failed on main"
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ASSIGNEE: ${{ vars.CI_FAILURE_ASSIGNEE }}
+        run: bash .github/scripts/report-failure.sh
